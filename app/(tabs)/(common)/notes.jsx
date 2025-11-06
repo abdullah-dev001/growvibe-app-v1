@@ -1,12 +1,6 @@
 import { useRouter } from "expo-router";
 import React from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSelector } from "react-redux";
 import Plus from "../../../assets/icons/Plus";
 import Button from "../../../components/Button";
@@ -14,33 +8,57 @@ import NoteCard from "../../../components/NoteCard";
 import SearchBar from "../../../components/SearchBar";
 import NoteCardSkeleton from "../../../components/skeletons/NoteCardSkeleton";
 import { hp } from "../../../helpers/common";
+import { useDeleteNoteMutation, useGetNotesByBranchIdQuery } from "../../../redux/api/noteApi";
 
-const Notes = () => {
+const notes = () => {
   const router = useRouter();
   const { branchId } = useSelector((state) => state.auth);
+  
+  const {
+    data: notesData,
+    isLoading: notesLoading,
+    error: notesError,
+  } = useGetNotesByBranchIdQuery(branchId, {
+    skip: !branchId,
+    refetchOnMountOrArgChange: true,
+  });
 
-  // TODO: Replace with actual API call
-  const notesLoading = false;
-  const notesError = null;
-  const notesData = []; // Mock data
+  const [deleteNote] = useDeleteNoteMutation();
 
   if (notesError) {
     Alert.alert("Error", notesError.message || "Failed to load notes");
   }
 
-  const handleEdit = (note) => console.log("Edit note:", note);
-  const handleDelete = (note) => console.log("Delete note:", note);
-  const handleAddNote = () => router.push("/screens/forms/addNote");
+  const handleEdit = (note) => {
+    // Navigate to edit screen or open modal
+    console.log("Edit note:", note);
+  };
+
+  const handleDelete = async (note) => {
+    try {
+      await deleteNote(note.id).unwrap();
+      Alert.alert("Success", "Note deleted successfully!");
+    } catch (error) {
+      const actualError = error?.data?.data || error?.data || error;
+      Alert.alert("Error", actualError.message || "Failed to delete note");
+    }
+  };
+
+  const handleAddNote = () => {
+    router.push("/screens/forms/addNote");
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.innerContainer}>
+    <View style={styles.container}>
+      <View style={styles.contentContainer}>
         {/* Header */}
-        <View style={styles.headerContainer}>
+        <View style={styles.header}>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Notes</Text>
+            <Text style={styles.headerTitle}>
+              Notes
+            </Text>
             <Text style={styles.headerSubtitle}>
-              Manage your notes and announcements
+              Manage your notes
             </Text>
           </View>
           <Button
@@ -58,13 +76,15 @@ const Notes = () => {
 
         {/* Note List Header */}
         <View style={styles.listHeader}>
-          <Text style={styles.listHeaderText}>Note List</Text>
-          <View style={styles.listHeaderLine} />
+          <Text style={styles.listHeaderText}>
+            Note List
+          </Text>
+          <View style={styles.listHeaderDivider} />
         </View>
 
         {/* Note Cards */}
         <ScrollView>
-          <View style={styles.noteListContainer}>
+          <View style={styles.scrollContent}>
             {notesLoading ? (
               Array.from({ length: 3 }).map((_, index) => (
                 <NoteCardSkeleton key={index} />
@@ -72,11 +92,13 @@ const Notes = () => {
             ) : notesData && notesData.length > 0 ? (
               notesData.map((note) => (
                 <NoteCard
-                  key={note.id || note.note_id}
+                  key={note.id}
                   note_Title={note.note_Title}
                   note_Description={note.note_Description}
                   expire_Date={note.expire_Date}
                   created_By={note.created_By}
+                  created_By_Name={note.created_By_Name}
+                  created_By_Role={note.created_By_Role}
                   is_For_Entire_Branch={note.is_For_Entire_Branch}
                   specific_Class={note.specific_Class}
                   created_at={note.created_at}
@@ -85,8 +107,8 @@ const Notes = () => {
                 />
               ))
             ) : (
-              <View style={styles.emptyStateContainer}>
-                <Text style={styles.emptyStateText}>
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
                   No notes found. Create your first note to get started.
                 </Text>
                 <Button
@@ -95,30 +117,32 @@ const Notes = () => {
                   size="small"
                   bgColor="#8B5CF6"
                   textColor="#FFFFFF"
-                  icon={<Plus size={hp(2)} color="#FFFFFF" strokeWidth={2} />}
+                  icon={<Plus size={hp(2)} color={"#FFFFFF"} strokeWidth={2} />}
                 />
               </View>
             )}
           </View>
         </ScrollView>
       </View>
-    </ScrollView>
+    </View>
   );
 };
+
+export default notes;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
   },
-  innerContainer: {
+  contentContainer: {
     flex: 1,
     paddingHorizontal: 16,
   },
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   headerTextContainer: {
@@ -136,34 +160,34 @@ const styles = StyleSheet.create({
     marginTop: hp(0.5),
   },
   listHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
-    marginTop: 16,
+    marginVertical: 16,
   },
   listHeaderText: {
-    color: "#6B7280",
-    fontWeight: "600",
-    letterSpacing: 0.5,
+    color: '#6B7280',
+    fontFamily: 'Poppins-SemiBold',
+    letterSpacing: 0.05,
     fontSize: 12,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
-  listHeaderLine: {
+  listHeaderDivider: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: '#E5E7EB',
     marginLeft: 12,
   },
-  noteListContainer: {
+  scrollContent: {
     flex: 1,
     paddingBottom: 56,
   },
-  emptyStateContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 64,
   },
-  emptyStateText: {
+  emptyText: {
     fontSize: hp(1.6),
     fontFamily: "Poppins-Medium",
     color: "#6B7280",
@@ -171,5 +195,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-
-export default Notes;

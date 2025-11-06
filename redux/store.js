@@ -6,6 +6,7 @@ import { branchApi } from './api/branchApi';
 import { classApi } from './api/classApi';
 import { coordinatorApi } from './api/coordinator';
 import { createAuthApi } from './api/createAuthApi';
+import { noteApi } from './api/noteApi';
 import { ownerApi } from './api/ownerApi';
 import { principalApi } from './api/principalApi';
 import { schoolApi } from './api/schoolApi';
@@ -27,6 +28,7 @@ const rootReducer = combineReducers({
   [principalApi.reducerPath]: principalApi.reducer,
   [studentApi.reducerPath]: studentApi.reducer,
   [coordinatorApi.reducerPath]: coordinatorApi.reducer,
+  [noteApi.reducerPath]: noteApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -53,6 +55,7 @@ export const store = configureStore({
         principalApi.middleware,
         studentApi.middleware,
         coordinatorApi.middleware,
+        noteApi.middleware,
       ),
 });
 

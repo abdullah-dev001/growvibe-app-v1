@@ -12,6 +12,7 @@ const NoteCard = ({
   is_For_Entire_Branch,
   specific_Class,
   created_at,
+  created_By_Name,
   onEdit,
   onDelete,
   className = '',
@@ -63,13 +64,6 @@ const NoteCard = ({
           <Text style={styles.title} numberOfLines={2}>
             {note_Title}
           </Text>
-          {expire_Date && (
-            <View style={[styles.statusBadgeLeft, { backgroundColor: expireBgColor }]}>
-              <Text style={[styles.statusText, { color: expireColor }]}>
-                {expired ? 'Expired' : 'Active'}
-              </Text>
-            </View>
-          )}
         </View>
         {expire_Date && (
           <View style={[styles.statusBadge, { backgroundColor: expireBgColor }]}>
@@ -106,7 +100,7 @@ const NoteCard = ({
         {created_By && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Created By:</Text>
-            <Text style={styles.detailValue}>{created_By}</Text>
+            <Text style={styles.detailValue}>{created_By_Name}</Text>
           </View>
         )}
 
