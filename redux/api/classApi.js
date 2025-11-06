@@ -1,0 +1,99 @@
+import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { supabase } from "../../supabaseClient";
+
+export const classApi = createApi({
+    reducerPath: "classApi",
+    baseQuery: fakeBaseQuery(),
+    tagTypes: ["Classes", "Teachers"],
+    keepUnusedDataFor: 7200,
+    endpoints: (builder) => ({
+        createClass: builder.mutation({
+            async queryFn(classData) {
+                const { data, error } = await supabase
+                    .from("class")
+                    .insert([
+                        {
+                            branch_Id: classData.branch_Id,
+                            class_Name: classData.class_Name,
+                            school_Id: classData.school_Id,
+                            section: classData.section,
+                            session_Id: classData.session_Id,
+                            class_Status: classData.class_Status,
+                            incharge_Id: classData.incharge_Id,
+                        },
+                    ])
+                    .select();
+
+                if (error) throw error;
+                return { data };
+            },
+            invalidatesTags: ["Classes", "Teachers"],
+        }),
+        getClassesWithSummaryByBranchAndSession: builder.query({
+            async queryFn({ branchId, sessionId }) {
+              const { data, error } = await supabase
+                .from("class_with_summary")
+                .select("*")
+                .eq("branch_Id", branchId)
+                .eq("session_Id", sessionId);
+          
+              if (error) throw error;
+              return { data };
+            },
+            providesTags: ["Classes"],
+          }),          
+        getClassesByBranch: builder.query({
+            async queryFn(branchId) {
+                const { data, error } = await supabase
+                    .from("class")
+                    .select("*")
+                    .eq("branch_Id", branchId);
+
+                if (error) throw error;
+                return { data };
+            },
+            providesTags: ["Classes"],
+        }),
+        updateClass: builder.mutation({
+            async queryFn(classData) {
+                const { data, error } = await supabase
+                    .from("class")
+                    .update({
+                        class_Name: classData.class_Name,
+                        school_Id: classData.school_Id,
+                        section: classData.section,
+                        session_Id: classData.session_Id,
+                        class_Status: classData.class_Status,
+                        incharge_Id: classData.incharge_Id,
+                    })
+                    .eq("id", classData.id)
+                    .select();
+
+                if (error) throw error;
+                return { data };
+            },
+            invalidatesTags: ["Classes"],
+        }),
+        deleteClass: builder.mutation({
+            async queryFn(classId) {
+                const { data, error } = await supabase
+                    .from("class")
+                    .delete()
+                    .eq("id", classId)
+                    .select();
+
+                if (error) throw error;
+                return { data };
+            },
+            invalidatesTags: ["Classes"],
+        }),
+    }),
+});
+
+export const {
+    useCreateClassMutation,
+    useGetClassesWithSummaryByBranchAndSessionQuery,
+    useGetClassesByBranchQuery,
+    useUpdateClassMutation,
+    useDeleteClassMutation
+} = classApi;
