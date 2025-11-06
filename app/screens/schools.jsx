@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import React from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import Plus from "../../assets/icons/Plus";
 import Button from "../../components/Button";
 import SchoolCard from "../../components/SchoolCard";
@@ -8,14 +8,82 @@ import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
 import SchoolCardSkeleton from "../../components/skeletons/SchoolCardSkeleton";
 import { hp } from "../../helpers/common";
-import { useGetSchoolsQuery } from "../../redux/api/schoolApi";
+import { useGetSchoolsPaginatedQuery, useLazyGetSchoolsPaginatedQuery } from "../../redux/api/schoolApi";
 
 const school = () => {
-  const router = useRouter()
-  const { data: schools, isLoading, error } = useGetSchoolsQuery();
-  if (error) {
-    Alert.alert("Error", error.message);
-  }
+  const router = useRouter();
+  const PAGE_SIZE = 5;
+  const [schoolsList, setSchoolsList] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetSchoolsPaginatedQuery({ offset: 0, limit: PAGE_SIZE });
+  const [trigger, { isFetching, error }] = useLazyGetSchoolsPaginatedQuery();
+
+  const getSchoolKey = (s) => String(s?.id);
+
+  const loadPage = async (nextOffset = 0, refresh = false) => {
+    try {
+      const result = await trigger({ offset: nextOffset, limit: PAGE_SIZE }).unwrap();
+      const items = result?.items || [];
+
+      setSchoolsList((prev) => {
+        if (refresh || nextOffset === 0) return items;
+        const existing = new Set(prev.map(getSchoolKey));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getSchoolKey(i)))];
+        return merged;
+      });
+      const newOffset = nextOffset + items.length;
+      setOffset(newOffset);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // handled by error alert
+    }
+  };
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error.message || "Failed to load schools");
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (schoolsList.length === 0 && initialData?.items) {
+      const items = initialData.items;
+      setSchoolsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } else if (schoolsList.length === 0 && !isFetchingInitial && !initialData) {
+      loadPage(0, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setHasMore(true);
+    setOffset(0);
+    try {
+      const res = await refetch();
+      const items = res?.data?.items || [];
+      setSchoolsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // ignore, alert handled above
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleEndReached = () => {
+    if (isRefreshing) return;
+    if (isFetching || isLoadingMore) return;
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    loadPage(offset, false).finally(() => setIsLoadingMore(false));
+  };
 
   const handleEdit = (school) => {
     // Navigate to edit screen or open modal
@@ -61,40 +129,47 @@ const school = () => {
           </Text>
           <View style={styles.listDivider} />
         </View>
-        <ScrollView>
-          <View style={styles.scrollContent}>
-            {isLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <SchoolCardSkeleton key={index} />
-              ))
-            ) : schools && schools.length > 0 ? (
-              schools.map((school) => (
-                <SchoolCard
-                  id={school.id}
-                  key={school.id}
-                  school_Name={school.school_Name}
-                  school_Address={school.school_Address}
-                  school_Contact={school.school_Contact}
-                  school_Status={school.school_Status}
-                  school_Subscription_Fee={school.total_subscription_fee}
-                  created_at={school.created_at}
-                  owner_Email={school.owner_email}
-                  total_Users={school.total_users}
-                  onEdit={() => handleEdit(school)}
-                  onDelete={() => handleDelete(school)}
-                  onEditOwner={() => handleEditOwner(school)}
-                  onViewPayments={() => handleViewPayments(school)}
-                  onViewBranches={() =>
-                    router.push({
-                      pathname: "/screens/branches",
-                      params: {
-                        schoolId: school.id,
-                        schoolName: school.school_Name,
-                      },
-                    })
-                  }
-                />
-              ))
+        <FlatList
+          data={schoolsList}
+          keyExtractor={(school) => String(school.id)}
+          renderItem={({ item: school }) => (
+            <SchoolCard
+              id={school.id}
+              school_Name={school.school_Name}
+              school_Address={school.school_Address}
+              school_Contact={school.school_Contact}
+              school_Status={school.school_Status}
+              school_Subscription_Fee={school.total_subscription_fee}
+              created_at={school.created_at}
+              owner_Email={school.owner_email}
+              total_Users={school.total_users}
+              onEdit={() => handleEdit(school)}
+              onDelete={() => handleDelete(school)}
+              onEditOwner={() => handleEditOwner(school)}
+              onViewPayments={() => handleViewPayments(school)}
+              onViewBranches={() =>
+                router.push({
+                  pathname: "/screens/branches",
+                  params: {
+                    schoolId: school.id,
+                    schoolName: school.school_Name,
+                  },
+                })
+              }
+            />
+          )}
+          contentContainerStyle={styles.scrollContent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.1}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <SchoolCardSkeleton key={index} />
+                ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
@@ -109,9 +184,17 @@ const school = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            schoolsList.length > 0 && !isRefreshing && isLoadingMore ? (
+              <SchoolCardSkeleton />
+            ) : null
+          }
+          removeClippedSubviews
+          initialNumToRender={PAGE_SIZE}
+          windowSize={PAGE_SIZE * 2}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -158,7 +241,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    flex: 1,
     paddingBottom: 56,
   },
   emptyState: {

@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
@@ -8,20 +8,90 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
 import StudentCardSkeleton from '../../components/skeletons/StudentCardSkeleton';
 import { hp } from '../../helpers/common';
-import { useGetStudentsByBranchAndClassQuery } from '../../redux/api/studentApi';
+import { useGetStudentsByBranchAndClassPaginatedQuery, useLazyGetStudentsByBranchAndClassPaginatedQuery } from '../../redux/api/studentApi';
 
 const students = () => {
   const router = useRouter();
   const { classId } = useLocalSearchParams();
   const { branchId } = useSelector((state) => state.auth);
-  const { data: studentsData, isLoading: studentsLoading, error: studentsError } = useGetStudentsByBranchAndClassQuery({branchId, classId}, {
-    skip: !branchId || !classId,
-    refetchOnMountOrArgChange: true,
-  });
 
-  if (studentsError) {
-    Alert.alert('Error', studentsError.message || 'Failed to load students');
-  }
+  const PAGE_SIZE = 5;
+  const [studentsList, setStudentsList] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetStudentsByBranchAndClassPaginatedQuery(
+    { branchId, classId, offset: 0, limit: PAGE_SIZE },
+    { skip: !branchId || !classId }
+  );
+  const [trigger, { isFetching, error: studentsError }] = useLazyGetStudentsByBranchAndClassPaginatedQuery();
+
+  const getStudentKey = (s) => String(s?.auth_User_Id);
+
+  const loadPage = async (nextOffset = 0, refresh = false) => {
+    if (!branchId || !classId) return;
+    try {
+      const result = await trigger({ branchId, classId, offset: nextOffset, limit: PAGE_SIZE }).unwrap();
+      const items = result?.items || [];
+
+      setStudentsList((prev) => {
+        if (refresh || nextOffset === 0) return items;
+        const existing = new Set(prev.map(getStudentKey));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getStudentKey(i)))];
+        return merged;
+      });
+      const newOffset = nextOffset + items.length;
+      setOffset(newOffset);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // handled by error alert
+    }
+  };
+
+  useEffect(() => {
+    if (studentsError) {
+      Alert.alert('Error', studentsError.message || 'Failed to load students');
+    }
+  }, [studentsError]);
+
+  useEffect(() => {
+    if (studentsList.length === 0 && initialData?.items) {
+      const items = initialData.items;
+      setStudentsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } else if (studentsList.length === 0 && !isFetchingInitial && !initialData && branchId && classId) {
+      loadPage(0, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial, branchId, classId]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !branchId || !classId) return;
+    setIsRefreshing(true);
+    setHasMore(true);
+    setOffset(0);
+    try {
+      const res = await refetch();
+      const items = res?.data?.items || [];
+      setStudentsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // ignore, alert handled above
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleEndReached = () => {
+    if (isRefreshing || !branchId || !classId) return;
+    if (isFetching || isLoadingMore) return;
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    loadPage(offset, false).finally(() => setIsLoadingMore(false));
+  };
 
   const handleEdit = (student) => {
     // Navigate to edit screen or open modal
@@ -103,14 +173,10 @@ const students = () => {
         </View>
 
         {/* Student Cards */}
-        <ScrollView>
-          <View style={styles.scrollContent}>
-            {studentsLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <StudentCardSkeleton key={index} />
-              ))
-            ) : studentsData && studentsData.length > 0 ? (
-              studentsData.map((student) => (
+        <FlatList
+          data={studentsList}
+          keyExtractor={(student) => String(student.auth_User_Id)}
+          renderItem={({ item: student }) => (
                 <View
                   key={student.auth_User_Id}
                   style={styles.card}
@@ -227,7 +293,19 @@ const students = () => {
                     </View>
                   </View>
                 </View>
-              ))
+          )}
+          contentContainerStyle={styles.scrollContent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.1}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <StudentCardSkeleton key={index} />
+                ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
@@ -242,9 +320,17 @@ const students = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            studentsList.length > 0 && !isRefreshing && isLoadingMore ? (
+              <StudentCardSkeleton />
+            ) : null
+          }
+          removeClippedSubviews
+          initialNumToRender={PAGE_SIZE}
+          windowSize={PAGE_SIZE * 2}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -296,7 +382,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    flex: 1,
     paddingBottom: 56,
   },
   card: {

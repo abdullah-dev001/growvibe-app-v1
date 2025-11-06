@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import React from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
 import Pen from "../../assets/icons/Pen";
 import Plus from "../../assets/icons/Plus";
@@ -10,23 +10,89 @@ import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
 import SessionCardSkeleton from "../../components/skeletons/SessionCardSkeleton";
 import { hp } from "../../helpers/common";
-import { useGetSessionsByBranchIdQuery } from "../../redux/api/sessionApi";
+import { useGetSessionsByBranchIdPaginatedQuery, useLazyGetSessionsByBranchIdPaginatedQuery } from "../../redux/api/sessionApi";
 
 const sessions = () => {
   const router = useRouter();
   const { branchId } = useSelector((state) => state.auth);
-  const {
-    data: sessionsData,
-    isLoading: sessionsLoading,
-    error: sessionsError,
-  } = useGetSessionsByBranchIdQuery(branchId, {
-    skip: !branchId,
-    refetchOnMountOrArgChange: true,
-  });
 
-  if (sessionsError) {
-    Alert.alert("Error", sessionsError.message || "Failed to load sessions");
-  }
+  const PAGE_SIZE = 5;
+  const [sessionsList, setSessionsList] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetSessionsByBranchIdPaginatedQuery(
+    { branchId, offset: 0, limit: PAGE_SIZE },
+    { skip: !branchId }
+  );
+  const [trigger, { isFetching, error: sessionsError }] = useLazyGetSessionsByBranchIdPaginatedQuery();
+
+  const getSessionKey = (s) => String(s?.id);
+
+  const loadPage = async (nextOffset = 0, refresh = false) => {
+    if (!branchId) return;
+    try {
+      const result = await trigger({ branchId, offset: nextOffset, limit: PAGE_SIZE }).unwrap();
+      const items = result?.items || [];
+
+      setSessionsList((prev) => {
+        if (refresh || nextOffset === 0) return items;
+        const existing = new Set(prev.map(getSessionKey));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getSessionKey(i)))];
+        return merged;
+      });
+      const newOffset = nextOffset + items.length;
+      setOffset(newOffset);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // handled by error alert
+    }
+  };
+
+  useEffect(() => {
+    if (sessionsError) {
+      Alert.alert("Error", sessionsError.message || "Failed to load sessions");
+    }
+  }, [sessionsError]);
+
+  useEffect(() => {
+    if (sessionsList.length === 0 && initialData?.items) {
+      const items = initialData.items;
+      setSessionsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } else if (sessionsList.length === 0 && !isFetchingInitial && !initialData && branchId) {
+      loadPage(0, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial, branchId]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !branchId) return;
+    setIsRefreshing(true);
+    setHasMore(true);
+    setOffset(0);
+    try {
+      const res = await refetch();
+      const items = res?.data?.items || [];
+      setSessionsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // ignore, alert handled above
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleEndReached = () => {
+    if (isRefreshing || !branchId) return;
+    if (isFetching || isLoadingMore) return;
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    loadPage(offset, false).finally(() => setIsLoadingMore(false));
+  };
 
   const handleEdit = (session) => {
     // Navigate to edit screen or open modal
@@ -111,14 +177,10 @@ const sessions = () => {
         </View>
 
         {/* Session Cards */}
-        <ScrollView>
-          <View style={styles.scrollContent}>
-            {sessionsLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <SessionCardSkeleton key={index} />
-              ))
-            ) : sessionsData && sessionsData.length > 0 ? (
-              sessionsData.map((session) => (
+        <FlatList
+          data={sessionsList}
+          keyExtractor={(session) => String(session.id)}
+          renderItem={({ item: session }) => (
                 <View
                   key={session.id}
                   style={styles.card}
@@ -204,7 +266,19 @@ const sessions = () => {
                     </View>
                   </View>
                 </View>
-              ))
+          )}
+          contentContainerStyle={styles.scrollContent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.1}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <SessionCardSkeleton key={index} />
+                ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
@@ -219,9 +293,17 @@ const sessions = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            sessionsList.length > 0 && !isRefreshing && isLoadingMore ? (
+              <SessionCardSkeleton />
+            ) : null
+          }
+          removeClippedSubviews
+          initialNumToRender={PAGE_SIZE}
+          windowSize={PAGE_SIZE * 2}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -273,7 +355,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    flex: 1,
     paddingBottom: 56,
   },
   card: {

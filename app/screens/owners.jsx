@@ -9,7 +9,7 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
 import OwnerCardSkeleton from '../../components/skeletons/OwnerCardSkeleton';
 import { hp } from '../../helpers/common';
-import { useLazyGetOwnersPaginatedQuery } from '../../redux/api/ownerApi';
+import { useGetOwnersPaginatedQuery, useLazyGetOwnersPaginatedQuery } from '../../redux/api/ownerApi';
 
 const owners = () => {
   const router = useRouter();
@@ -20,6 +20,7 @@ const owners = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetOwnersPaginatedQuery({ offset: 0, limit: PAGE_SIZE });
   const [trigger, { isFetching, error: ownersError } ] = useLazyGetOwnersPaginatedQuery();
 
   if (ownersError) {
@@ -50,16 +51,34 @@ const owners = () => {
   };
 
   useEffect(() => {
-    loadPage(0, true);
+    // Initialize from cache (if available) without refetch
+    if (ownersList.length === 0 && initialData?.items) {
+      const items = initialData.items;
+      setOwnersList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } else if (ownersList.length === 0 && !isFetchingInitial && !initialData) {
+      // No cache available, load first page
+      loadPage(0, true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialData, isFetchingInitial]);
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     setHasMore(true);
     setOffset(0);
-    await loadPage(0, true);
+    // Refetch initial page and update from latest result (leverages cache correctly)
+    try {
+      const res = await refetch();
+      const items = res?.data?.items || [];
+      setOwnersList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // ignore, alert handled above
+    }
     setIsRefreshing(false);
   };
 
@@ -200,7 +219,7 @@ const owners = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            (isFetching && !isRefreshing) ? (
+            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <OwnerCardSkeleton key={index} />
@@ -223,7 +242,7 @@ const owners = () => {
             )
           }
           ListFooterComponent={
-            ownersList.length > 0 && (isFetching || isLoadingMore) ? (
+            ownersList.length > 0 && !isRefreshing && isLoadingMore ? (
               <OwnerCardSkeleton />
             ) : null
           }

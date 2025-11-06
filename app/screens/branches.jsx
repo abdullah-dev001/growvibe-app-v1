@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import { useSelector } from "react-redux";
 import Plus from "../../assets/icons/Plus";
 import BranchCard from "../../components/BranchCard";
@@ -9,12 +9,96 @@ import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
 import BranchCardSkeleton from "../../components/skeletons/branchCardSkeleton";
 import { hp } from "../../helpers/common";
-import { useGetBranchesBySchoolQuery } from "../../redux/api/branchApi";
+import { useGetBranchesBySchoolPaginatedQuery, useLazyGetBranchesBySchoolPaginatedQuery } from "../../redux/api/branchApi";
 
 const Branches = () => {
   const { schoolId, schoolName } = useLocalSearchParams();
   const { sessionRestored } = useSelector((state) => state.auth);
   const router = useRouter();
+
+  const PAGE_SIZE = 5;
+  const [branchesList, setBranchesList] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Ensure numeric schoolId and wait for session restoration
+  const numericSchoolId = schoolId ? parseInt(schoolId, 10) : undefined;
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetBranchesBySchoolPaginatedQuery(
+    { schoolId: numericSchoolId, offset: 0, limit: PAGE_SIZE },
+    { skip: !sessionRestored || !numericSchoolId }
+  );
+  const [trigger, { isFetching, error }] = useLazyGetBranchesBySchoolPaginatedQuery();
+
+  const getBranchKey = (b) => String(b?.id);
+
+  const loadPage = async (nextOffset = 0, refresh = false) => {
+    if (!numericSchoolId) return;
+    try {
+      const result = await trigger({ schoolId: numericSchoolId, offset: nextOffset, limit: PAGE_SIZE }).unwrap();
+      const items = result?.items || [];
+
+      setBranchesList((prev) => {
+        if (refresh || nextOffset === 0) return items;
+        // de-duplicate by id
+        const existing = new Set(prev.map(getBranchKey));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getBranchKey(i)))];
+        return merged;
+      });
+      const newOffset = nextOffset + items.length;
+      setOffset(newOffset);
+      // If returned fewer than PAGE_SIZE, we've reached the end
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // handled by error alert
+    }
+  };
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Error', error.message || 'Failed to load branches');
+    }
+  }, [error]);
+
+  useEffect(() => {
+    // Initialize from cache (if available) without refetch
+    if (branchesList.length === 0 && initialData?.items) {
+      const items = initialData.items;
+      setBranchesList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } else if (branchesList.length === 0 && !isFetchingInitial && !initialData && numericSchoolId && sessionRestored) {
+      // No cache available, load first page
+      loadPage(0, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial, numericSchoolId, sessionRestored]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !numericSchoolId) return;
+    setIsRefreshing(true);
+    setHasMore(true);
+    setOffset(0);
+    try {
+      const res = await refetch();
+      const items = res?.data?.items || [];
+      setBranchesList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // ignore, alert handled above
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleEndReached = () => {
+    if (isRefreshing || !numericSchoolId) return;
+    if (isFetching || isLoadingMore) return;
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    loadPage(offset, false).finally(() => setIsLoadingMore(false));
+  };
 
   const handleEdit = (branch) => {
     // Navigate to edit screen or open modal
@@ -30,15 +114,6 @@ const Branches = () => {
       params: { schoolId, schoolName },
     });
   };
-
-  // Ensure numeric schoolId and wait for session restoration
-  const numericSchoolId = schoolId ? parseInt(schoolId, 10) : undefined;
-  const { data: branches, isLoading, error } = useGetBranchesBySchoolQuery(
-    numericSchoolId,
-    {
-      skip: !sessionRestored || !numericSchoolId,
-    }
-  );
 
   return (
     <ScreenWrapper>
@@ -69,30 +144,33 @@ const Branches = () => {
         </View>
 
         {/* Branch Cards */}
-        <ScrollView>
-          <View style={styles.scrollContent}>
-            {isLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <BranchCardSkeleton key={index} />
-              ))
-            ) : error ? (
-              <Text style={styles.errorText}>
-                Error loading branches: {error.message}
-              </Text>
-            ) : branches && branches.length > 0 ? (
-              branches.map((branch) => (
-                <BranchCard
-                  key={branch.id}
-                  branch_Name={branch.branch_Name}
-                  branch_Address={branch.branch_Address}
-                  branch_Contact={branch.branch_Contact}
-                  branch_Status={branch.branch_Status}
-                  branch_Subscription_Fee={branch.branch_Subscription_Fee}
-                  created_at={branch.created_at}
-                  onEdit={() => handleEdit(branch)}
-                  onDelete={() => handleDelete(branch)}
-                />
-              ))
+        <FlatList
+          data={branchesList}
+          keyExtractor={(branch) => String(branch.id)}
+          renderItem={({ item: branch }) => (
+            <BranchCard
+              branch_Name={branch.branch_Name}
+              branch_Address={branch.branch_Address}
+              branch_Contact={branch.branch_Contact}
+              branch_Status={branch.branch_Status}
+              branch_Subscription_Fee={branch.branch_Subscription_Fee}
+              created_at={branch.created_at}
+              onEdit={() => handleEdit(branch)}
+              onDelete={() => handleDelete(branch)}
+            />
+          )}
+          contentContainerStyle={styles.scrollContent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.1}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <BranchCardSkeleton key={index} />
+                ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
@@ -107,9 +185,17 @@ const Branches = () => {
                   icon={<Plus size={hp(2)} color={"#FFFFFF"} strokeWidth={2} />}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            branchesList.length > 0 && !isRefreshing && isLoadingMore ? (
+              <BranchCardSkeleton />
+            ) : null
+          }
+          removeClippedSubviews
+          initialNumToRender={PAGE_SIZE}
+          windowSize={PAGE_SIZE * 2}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -158,7 +244,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    flex: 1,
     paddingBottom: 56,
   },
   errorText: {

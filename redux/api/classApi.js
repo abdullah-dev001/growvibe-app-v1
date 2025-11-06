@@ -41,6 +41,24 @@ export const classApi = createApi({
               return { data };
             },
             providesTags: ["Classes"],
+          }),
+        getClassesWithSummaryByBranchAndSessionPaginated: builder.query({
+            async queryFn({ branchId, sessionId, offset = 0, limit = 5 } = {}) {
+              const from = offset;
+              const to = offset + limit - 1;
+
+              const { data, error, count } = await supabase
+                .from("class_with_summary")
+                .select("*", { count: "exact" })
+                .eq("branch_Id", branchId)
+                .eq("session_Id", sessionId)
+                .order("created_at", { ascending: false })
+                .range(from, to);
+          
+              if (error) throw error;
+              return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
+            },
+            providesTags: ["Classes"],
           }),          
         getClassesByBranch: builder.query({
             async queryFn(branchId) {
@@ -93,6 +111,8 @@ export const classApi = createApi({
 export const {
     useCreateClassMutation,
     useGetClassesWithSummaryByBranchAndSessionQuery,
+    useGetClassesWithSummaryByBranchAndSessionPaginatedQuery,
+    useLazyGetClassesWithSummaryByBranchAndSessionPaginatedQuery,
     useGetClassesByBranchQuery,
     useUpdateClassMutation,
     useDeleteClassMutation

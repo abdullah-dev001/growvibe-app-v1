@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Pen from '../../assets/icons/Pen';
 import Plus from '../../assets/icons/Plus';
@@ -10,19 +10,89 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
 import TeacherCardSkeleton from '../../components/skeletons/TeacherCardSkeleton';
 import { hp } from '../../helpers/common';
-import { useGetTeachersByBranchQuery } from '../../redux/api/teacherApi';
+import { useGetTeachersByBranchPaginatedQuery, useLazyGetTeachersByBranchPaginatedQuery } from '../../redux/api/teacherApi';
 
 const teachers = () => {
   const router = useRouter();
   const { branchId } = useSelector((state) => state.auth);
-  const { data: teachersData, isLoading: teachersLoading, error: teachersError } = useGetTeachersByBranchQuery(branchId, {
-    skip: !branchId,
-    refetchOnMountOrArgChange: true,
-  });
 
-  if (teachersError) {
-    Alert.alert('Error', teachersError.message || 'Failed to load teachers');
-  }
+  const PAGE_SIZE = 5;
+  const [teachersList, setTeachersList] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetTeachersByBranchPaginatedQuery(
+    { branchId, offset: 0, limit: PAGE_SIZE },
+    { skip: !branchId }
+  );
+  const [trigger, { isFetching, error: teachersError }] = useLazyGetTeachersByBranchPaginatedQuery();
+
+  const getTeacherKey = (t) => String(t?.auth_User_Id);
+
+  const loadPage = async (nextOffset = 0, refresh = false) => {
+    if (!branchId) return;
+    try {
+      const result = await trigger({ branchId, offset: nextOffset, limit: PAGE_SIZE }).unwrap();
+      const items = result?.items || [];
+
+      setTeachersList((prev) => {
+        if (refresh || nextOffset === 0) return items;
+        const existing = new Set(prev.map(getTeacherKey));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getTeacherKey(i)))];
+        return merged;
+      });
+      const newOffset = nextOffset + items.length;
+      setOffset(newOffset);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // handled by error alert
+    }
+  };
+
+  useEffect(() => {
+    if (teachersError) {
+      Alert.alert('Error', teachersError.message || 'Failed to load teachers');
+    }
+  }, [teachersError]);
+
+  useEffect(() => {
+    if (teachersList.length === 0 && initialData?.items) {
+      const items = initialData.items;
+      setTeachersList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } else if (teachersList.length === 0 && !isFetchingInitial && !initialData && branchId) {
+      loadPage(0, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial, branchId]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !branchId) return;
+    setIsRefreshing(true);
+    setHasMore(true);
+    setOffset(0);
+    try {
+      const res = await refetch();
+      const items = res?.data?.items || [];
+      setTeachersList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // ignore, alert handled above
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleEndReached = () => {
+    if (isRefreshing || !branchId) return;
+    if (isFetching || isLoadingMore) return;
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    loadPage(offset, false).finally(() => setIsLoadingMore(false));
+  };
 
   const handleEdit = (teacher) => {
     // Navigate to edit screen or open modal
@@ -98,14 +168,10 @@ const teachers = () => {
         </View>
 
         {/* Teacher Cards */}
-        <ScrollView>
-          <View style={styles.scrollContent}>
-            {teachersLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <TeacherCardSkeleton key={index} />
-              ))
-            ) : teachersData && teachersData.length > 0 ? (
-              teachersData.map((teacher) => (
+        <FlatList
+          data={teachersList}
+          keyExtractor={(teacher) => String(teacher.auth_User_Id)}
+          renderItem={({ item: teacher }) => (
                 <View
                   key={teacher.auth_User_Id}
                   style={styles.card}
@@ -196,7 +262,19 @@ const teachers = () => {
                     </View>
                   </View>
                 </View>
-              ))
+          )}
+          contentContainerStyle={styles.scrollContent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.1}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <TeacherCardSkeleton key={index} />
+                ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
@@ -211,9 +289,17 @@ const teachers = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            teachersList.length > 0 && !isRefreshing && isLoadingMore ? (
+              <TeacherCardSkeleton />
+            ) : null
+          }
+          removeClippedSubviews
+          initialNumToRender={PAGE_SIZE}
+          windowSize={PAGE_SIZE * 2}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -265,7 +351,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    flex: 1,
     paddingBottom: 56,
   },
   card: {

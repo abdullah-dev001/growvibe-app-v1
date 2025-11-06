@@ -54,6 +54,37 @@ export const branchApi = createApi({
             },
             providesTags: ["Branches"],
         }),
+        getBranchesBySchoolPaginated: builder.query({
+            async queryFn({ schoolId, offset = 0, limit = 5 } = {}) {
+                // Check if we have a valid session first
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    throw sessionError;
+                }
+                
+                if (!session) {
+                    throw new Error('No authenticated session found');
+                }
+                
+                const from = offset;
+                const to = offset + limit - 1;
+
+                const { data, error, count } = await supabase
+                    .from("branch")
+                    .select("*", { count: "exact" })
+                    .order("created_at", { ascending: false })
+                    .eq("school_Id", schoolId)
+                    .range(from, to);
+                    
+                if (error) {
+                    throw error;
+                }
+                
+                return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
+            },
+            providesTags: ["Branches"],
+        }),
         getBranchesBySchools: builder.query({
             async queryFn(schoolIds) {
                 if (!schoolIds || schoolIds.length === 0) {
@@ -108,6 +139,8 @@ export const branchApi = createApi({
 export const { 
     useCreateBranchMutation, 
     useGetBranchesBySchoolQuery,
+    useGetBranchesBySchoolPaginatedQuery,
+    useLazyGetBranchesBySchoolPaginatedQuery,
     useGetBranchesBySchoolsQuery,
     useUpdateBranchMutation,
     useDeleteBranchMutation 

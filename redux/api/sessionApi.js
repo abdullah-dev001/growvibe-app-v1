@@ -45,6 +45,23 @@ export const sessionApi = createApi({
             },
             providesTags: ["Sessions"],
         }),
+        getSessionsByBranchIdPaginated: builder.query({
+            async queryFn({ branchId, offset = 0, limit = 5 } = {}) {
+                const from = offset;
+                const to = offset + limit - 1;
+
+                const { data, error, count } = await supabase
+                    .from("session")
+                    .select("*", { count: "exact" })
+                    .eq("branch_Id", branchId)
+                    .order("created_at", { ascending: false })
+                    .range(from, to);
+                
+                if (error) throw error;
+                return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
+            },
+            providesTags: ["Sessions"],
+        }),
         updateSession: builder.mutation({
             async queryFn(session) {
                 const { data, error } = await supabase
@@ -96,6 +113,8 @@ export const sessionApi = createApi({
 export const { 
     useCreateSessionMutation, 
     useGetSessionsByBranchIdQuery,
+    useGetSessionsByBranchIdPaginatedQuery,
+    useLazyGetSessionsByBranchIdPaginatedQuery,
     useUpdateSessionMutation,
     useDeleteSessionMutation,
     useGetActiveSessionByBranchIdQuery

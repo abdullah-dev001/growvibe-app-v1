@@ -52,6 +52,36 @@ export const schoolApi = createApi({
             },
             providesTags: ["Schools"],
         }),
+        getSchoolsPaginated: builder.query({
+            async queryFn({ offset = 0, limit = 5 } = {}) {
+                // Check if we have a valid session first
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    throw sessionError;
+                }
+                
+                if (!session) {
+                    throw new Error('No authenticated session found');
+                }
+                
+                const from = offset;
+                const to = offset + limit - 1;
+
+                const { data, error, count } = await supabase
+                    .from("school_with_owner")
+                    .select("*", { count: "exact" })
+                    .order("created_at", { ascending: false })
+                    .range(from, to);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
+            },
+            providesTags: ["Schools"],
+        }),
         getSchoolsByOwner: builder.query({
             async queryFn(ownerId) {
                 const { data, error } = await supabase
@@ -90,6 +120,8 @@ export const schoolApi = createApi({
 export const {
     useCreateSchoolMutation,
     useGetSchoolsQuery,
+    useGetSchoolsPaginatedQuery,
+    useLazyGetSchoolsPaginatedQuery,
     useGetSchoolsByOwnerQuery,
     useUpdateSchoolMutation
 } = schoolApi;

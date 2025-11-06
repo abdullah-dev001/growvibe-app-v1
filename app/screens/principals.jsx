@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import React from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
 import Pen from "../../assets/icons/Pen";
 import Plus from "../../assets/icons/Plus";
@@ -9,20 +9,89 @@ import Button from "../../components/Button";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
 import { hp } from "../../helpers/common";
-import { useGetPrincipalsByBranchQuery } from "../../redux/api/principalApi";
+import { useGetPrincipalsByBranchPaginatedQuery, useLazyGetPrincipalsByBranchPaginatedQuery } from "../../redux/api/principalApi";
 
 const principals = () => {
   const router = useRouter();
-
   const { branchId } = useSelector((state) => state.auth);
-  const {
-    data: principalsData,
-    isLoading: principalsLoading,
-    error: principalsError,
-  } = useGetPrincipalsByBranchQuery(branchId, {
-    skip: !branchId,
-    refetchOnMountOrArgChange: true,
-  });
+
+  const PAGE_SIZE = 5;
+  const [principalsList, setPrincipalsList] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetPrincipalsByBranchPaginatedQuery(
+    { branchId, offset: 0, limit: PAGE_SIZE },
+    { skip: !branchId }
+  );
+  const [trigger, { isFetching, error: principalsError }] = useLazyGetPrincipalsByBranchPaginatedQuery();
+
+  const getPrincipalKey = (p) => String(p?.auth_User_Id);
+
+  const loadPage = async (nextOffset = 0, refresh = false) => {
+    if (!branchId) return;
+    try {
+      const result = await trigger({ branchId, offset: nextOffset, limit: PAGE_SIZE }).unwrap();
+      const items = result?.items || [];
+
+      setPrincipalsList((prev) => {
+        if (refresh || nextOffset === 0) return items;
+        const existing = new Set(prev.map(getPrincipalKey));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getPrincipalKey(i)))];
+        return merged;
+      });
+      const newOffset = nextOffset + items.length;
+      setOffset(newOffset);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // handled by error alert
+    }
+  };
+
+  useEffect(() => {
+    if (principalsError) {
+      Alert.alert("Error", principalsError.message || "Failed to load principals");
+    }
+  }, [principalsError]);
+
+  useEffect(() => {
+    if (principalsList.length === 0 && initialData?.items) {
+      const items = initialData.items;
+      setPrincipalsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } else if (principalsList.length === 0 && !isFetchingInitial && !initialData && branchId) {
+      loadPage(0, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial, branchId]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !branchId) return;
+    setIsRefreshing(true);
+    setHasMore(true);
+    setOffset(0);
+    try {
+      const res = await refetch();
+      const items = res?.data?.items || [];
+      setPrincipalsList(items);
+      setOffset(items.length);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // ignore, alert handled above
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleEndReached = () => {
+    if (isRefreshing || !branchId) return;
+    if (isFetching || isLoadingMore) return;
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    loadPage(offset, false).finally(() => setIsLoadingMore(false));
+  };
 
   const handleEdit = (principal) => {
     // Navigate to edit screen or open modal
@@ -99,10 +168,10 @@ const principals = () => {
         </View>
 
         {/* Principal Cards */}
-        <ScrollView>
-          <View style={styles.scrollContent}>
-            {principalsData?.length > 0 ? (
-              principalsData?.map((principal) => (
+        <FlatList
+          data={principalsList}
+          keyExtractor={(principal) => String(principal.auth_User_Id)}
+          renderItem={({ item: principal }) => (
                 <View
                   key={principal.auth_User_Id}
                   style={styles.card}
@@ -184,7 +253,27 @@ const principals = () => {
                     </View>
                   </View>
                 </View>
-              ))
+          )}
+          contentContainerStyle={styles.scrollContent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.1}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <View key={index} style={styles.card}>
+                    <View style={styles.cardHeader}>
+                      <View style={styles.avatar} />
+                      <View style={styles.cardHeaderContent}>
+                        <View style={{ height: 16, width: 120, backgroundColor: '#E5E7EB', borderRadius: 4, marginBottom: 8 }} />
+                        <View style={{ height: 12, width: 200, backgroundColor: '#E5E7EB', borderRadius: 4 }} />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
@@ -200,9 +289,25 @@ const principals = () => {
                   icon={<Plus size={hp(2)} color={"#FFFFFF"} strokeWidth={2} />}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            principalsList.length > 0 && !isRefreshing && isLoadingMore ? (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.avatar} />
+                  <View style={styles.cardHeaderContent}>
+                    <View style={{ height: 16, width: 120, backgroundColor: '#E5E7EB', borderRadius: 4, marginBottom: 8 }} />
+                    <View style={{ height: 12, width: 200, backgroundColor: '#E5E7EB', borderRadius: 4 }} />
+                  </View>
+                </View>
+              </View>
+            ) : null
+          }
+          removeClippedSubviews
+          initialNumToRender={PAGE_SIZE}
+          windowSize={PAGE_SIZE * 2}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -254,7 +359,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    flex: 1,
     paddingBottom: 56,
   },
   card: {
