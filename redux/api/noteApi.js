@@ -23,6 +23,7 @@ export const noteApi = createApi({
                                 is_For_Entire_Branch: noteData.is_For_Entire_Branch,
                                 specific_Class: noteData.specific_Class,
                                 branch_Id: noteData.branch_Id,
+                                school_Id: noteData.school_Id,
                             },
                         ])
                         .select();
