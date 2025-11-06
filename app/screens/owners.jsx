@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Pen from '../../assets/icons/Pen';
 import Plus from '../../assets/icons/Plus';
 import Trash from '../../assets/icons/Trash';
@@ -9,16 +9,67 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
 import OwnerCardSkeleton from '../../components/skeletons/OwnerCardSkeleton';
 import { hp } from '../../helpers/common';
-import { useGetOwnersQuery } from '../../redux/api/ownerApi';
+import { useLazyGetOwnersPaginatedQuery } from '../../redux/api/ownerApi';
 
 const owners = () => {
   const router = useRouter();
 
-  const { data: ownersData, isLoading: ownersLoading, error: ownersError } = useGetOwnersQuery();
+  const PAGE_SIZE = 5;
+  const [ownersList, setOwnersList] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [trigger, { isFetching, error: ownersError } ] = useLazyGetOwnersPaginatedQuery();
 
   if (ownersError) {
     Alert.alert('Error', ownersError.message || 'Failed to load owners');
   }
+
+  const getOwnerKey = (o) => String(o?.owner_id || o?.auth_User_Id);
+
+  const loadPage = async (nextOffset = 0, refresh = false) => {
+    try {
+      const result = await trigger({ offset: nextOffset, limit: PAGE_SIZE }).unwrap();
+      const items = result?.items || [];
+
+      setOwnersList((prev) => {
+        if (refresh || nextOffset === 0) return items;
+        // de-duplicate by id
+        const existing = new Set(prev.map(getOwnerKey));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getOwnerKey(i)))];
+        return merged;
+      });
+      const newOffset = nextOffset + items.length;
+      setOffset(newOffset);
+      // If returned fewer than PAGE_SIZE, we've reached the end
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (e) {
+      // handled by ownersError alert above
+    }
+  };
+
+  useEffect(() => {
+    loadPage(0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setHasMore(true);
+    setOffset(0);
+    await loadPage(0, true);
+    setIsRefreshing(false);
+  };
+
+  const handleEndReached = () => {
+    if (isRefreshing) return; // don't load more while refreshing
+    if (isFetching || isLoadingMore) return; // prevent concurrent loads
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    loadPage(offset, false).finally(() => setIsLoadingMore(false));
+  };
 
   const handleAddOwner = () => router.push('/screens/forms/addOwner');
   const handleEdit = (owner) => {
@@ -71,85 +122,90 @@ const owners = () => {
           <View style={styles.listDivider} />
         </View>
 
-        {/* Owners Cards */}
-        <ScrollView>
-          <View style={styles.scrollContent}>
-            {ownersLoading ? (
-              Array.from({ length: 3 }).map((_, index) => (
-                <OwnerCardSkeleton key={index} />
-              ))
-            ) : ownersData && ownersData?.length > 0 ? (
-              ownersData?.map((owner) => (
-                <View
-                  key={owner.owner_id || owner.auth_User_Id}
-                  style={styles.card}
-                >
-                  {/* Header with Image, Name and Status */}
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardHeaderRow}>
-                      <View style={styles.avatar} />
-                      <View style={styles.cardHeaderContent}>
-                        <Text style={styles.cardTitle}>
-                          {owner.full_Name || 'N/A'}
-                        </Text>
-                        <Text style={styles.cardSubtitle}>
-                          {owner.email || owner.phone || 'No contact'}
-                        </Text>
-                      </View>
-                    </View>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: owner.profile_Status ? '#D1FAE5' : '#FEE2E2' }
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusText,
-                          { color: getStatusColor(owner.profile_Status) }
-                        ]}
-                      >
-                        {owner.profile_Status ? 'Active' : 'Inactive'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Stats Row */}
-                  <View style={styles.cardDateRow}>
-                    <View style={styles.dateRow}>
-                      <Text style={styles.dateLabel}>
-                        Created:
-                      </Text>
-                      <Text style={styles.dateValue}>
-                        {formatDate(owner.created_at)}
-                      </Text>
-                    </View>
-                    <View style={styles.actionButtonsRow}>
-                      <TouchableOpacity
-                        onPress={() => handleEdit(owner)}
-                        style={styles.actionButton}
-                        activeOpacity={0.7}
-                      >
-                        <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
-                        <Text style={styles.editButtonText}>
-                          Edit
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => handleDelete(owner)}
-                        style={[styles.deleteButton, { marginLeft: 8 }]}
-                        activeOpacity={0.7}
-                      >
-                        <Trash size={hp(1.6)} color="#EF4444" strokeWidth={2} />
-                        <Text style={styles.deleteButtonText}>
-                          Delete
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+        {/* Owners List */}
+        <FlatList
+          data={ownersList}
+          keyExtractor={(owner) => String(owner.owner_id || owner.auth_User_Id)}
+          renderItem={({ item: owner }) => (
+            <View style={styles.card}>
+              {/* Header with Image, Name and Status */}
+              <View style={styles.cardHeader}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.avatar} />
+                  <View style={styles.cardHeaderContent}>
+                    <Text style={styles.cardTitle}>
+                      {owner.full_Name || 'N/A'}
+                    </Text>
+                    <Text style={styles.cardSubtitle}>
+                      {owner.email || owner.phone || 'No contact'}
+                    </Text>
                   </View>
                 </View>
-              ))
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: owner.profile_Status ? '#D1FAE5' : '#FEE2E2' }
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: getStatusColor(owner.profile_Status) }
+                    ]}
+                  >
+                    {owner.profile_Status ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Stats Row */}
+              <View style={styles.cardDateRow}>
+                <View style={styles.dateRow}>
+                  <Text style={styles.dateLabel}>
+                    Created:
+                  </Text>
+                  <Text style={styles.dateValue}>
+                    {formatDate(owner.created_at)}
+                  </Text>
+                </View>
+                <View style={styles.actionButtonsRow}>
+                  <TouchableOpacity
+                    onPress={() => handleEdit(owner)}
+                    style={styles.actionButton}
+                    activeOpacity={0.7}
+                  >
+                    <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
+                    <Text style={styles.editButtonText}>
+                      Edit
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => handleDelete(owner)}
+                    style={[styles.deleteButton, { marginLeft: 8 }]}
+                    activeOpacity={0.7}
+                  >
+                    <Trash size={hp(1.6)} color="#EF4444" strokeWidth={2} />
+                    <Text style={styles.deleteButtonText}>
+                      Delete
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+          contentContainerStyle={styles.scrollContent}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.1}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            (isFetching && !isRefreshing) ? (
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <OwnerCardSkeleton key={index} />
+                ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
@@ -164,9 +220,17 @@ const owners = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            ownersList.length > 0 && (isFetching || isLoadingMore) ? (
+              <OwnerCardSkeleton />
+            ) : null
+          }
+          removeClippedSubviews
+          initialNumToRender={5}
+          windowSize={5}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -218,7 +282,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    flex: 1,
     paddingBottom: 56,
   },
   card: {

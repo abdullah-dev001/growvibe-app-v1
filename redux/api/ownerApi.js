@@ -29,6 +29,23 @@ export const ownerApi = createApi({
             },
             providesTags: ["Owners"],
         }),
+        getOwnersPaginated: builder.query({
+            async queryFn({ offset = 0, limit = 5 } = {}) {
+                const from = offset;
+                const to = offset + limit - 1;
+
+                const { data, error, count } = await supabase
+                    .from("owner_with_additional_info")
+                    .select("*", { count: "exact" })
+                    .order("created_at", { ascending: false })
+                    .range(from, to);
+
+                if (error) throw error;
+
+                return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
+            },
+            providesTags: ["Owners"],
+        }),
     }),
 });
-export const { useGetOwnersWithoutSchoolIdQuery, useGetOwnersQuery } = ownerApi;
+export const { useGetOwnersWithoutSchoolIdQuery, useGetOwnersQuery, useGetOwnersPaginatedQuery, useLazyGetOwnersPaginatedQuery } = ownerApi;

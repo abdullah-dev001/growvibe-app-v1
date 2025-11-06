@@ -460,23 +460,23 @@ const addSession = () => {
                   {/* Action Buttons */}
                   <View style={styles.actionButtons}>
                     <View style={styles.buttonContainer}>
-                      <Button
-                        title="Cancel"
-                        onPress={() => router.back()}
-                        bgColor="#6B7280"
-                        textColor="#FFFFFF"
-                        className="flex-1"
-                      />
+                    <Button
+                      title="Cancel"
+                      onPress={() => router.back()}
+                      bgColor="#6B7280"
+                      textColor="#FFFFFF"
+                      className="flex-1"
+                    />
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
-                      <Button
-                        title="Add Session"
-                        onPress={formikSubmit}
-                        bgColor="#10B981"
-                        textColor="#FFFFFF"
-                        className="flex-1"
-                        loading={isSubmitting}
-                      />
+                    <Button
+                      title="Add Session"
+                      onPress={formikSubmit}
+                      bgColor="#10B981"
+                      textColor="#FFFFFF"
+                      className="flex-1"
+                      loading={isSubmitting}
+                    />
                     </View>
                   </View>
                 </>
