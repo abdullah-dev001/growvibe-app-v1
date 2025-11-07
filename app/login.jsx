@@ -3,13 +3,13 @@ import { usePathname, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React, { useEffect } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import * as Yup from "yup";
@@ -17,12 +17,14 @@ import Button from "../components/Button";
 import Input from "../components/Input";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { hp, wp } from "../helpers/common";
+import { resolveTeacherClassId } from "../redux/api/classApi";
 import {
-    setBranchId,
-    setError,
-    setLoading,
-    setSessionId,
-    setUser,
+  setBranchId,
+  setClassId,
+  setError,
+  setLoading,
+  setSessionId,
+  setUser,
 } from "../redux/slices/authSlice";
 import { supabase } from "../supabaseClient";
 
@@ -98,6 +100,28 @@ const Login = () => {
             }
           } catch (sessionErr) {
             console.error("Error fetching active session:", sessionErr);
+          }
+        }
+
+        // Fetch and set classId for teachers and students
+        if (userRole === "teacher" || userRole === "student") {
+          try {
+            let classIdToSet = null;
+
+            if (userRole === "student") {
+              // For students: get class_Id from raw_app_meta_data (app_metadata)
+              const rawAppMetaData = data.user?.raw_app_meta_data || data.user?.app_metadata;
+              classIdToSet = rawAppMetaData?.class_Id || rawAppMetaData?.classId || null;
+            } else if (userRole === "teacher") {
+              const teacherAuthId = data.user.id;
+              classIdToSet = await resolveTeacherClassId(teacherAuthId);
+            }
+
+            if (classIdToSet) {
+              dispatch(setClassId(classIdToSet));
+            }
+          } catch (classErr) {
+            console.error("Error fetching classId:", classErr);
           }
         }
 

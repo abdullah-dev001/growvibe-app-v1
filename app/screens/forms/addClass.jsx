@@ -163,34 +163,43 @@ const addClass = () => {
                         >
                           <View style={styles.teacherRow}>
                             {teachersWithoutClassData?.length > 0 ? (
-                              teachersWithoutClassData?.map((teacher) => (
-                                <TouchableOpacity
-                                  key={teacher?.auth_user_id}
-                                  onPress={() =>
-                                    setFieldValue("class_Incharge", teacher?.auth_user_id)
-                                  }
-                                  style={[
-                                    styles.teacherButton,
-                                    values.class_Incharge === teacher?.auth_user_id
-                                      ? styles.teacherButtonActive
-                                      : styles.teacherButtonInactive
-                                  ]}
-                                >
-                                  <Text
-                                    style={{
-                                      fontSize: hp(1.4),
-                                      fontFamily: "Poppins-Medium",
-                                      color:
-                                        values.class_Incharge ===
-                                        teacher?.full_Name
-                                          ? "#10B981"
-                                          : "#6B7280",
+                              teachersWithoutClassData?.map((teacher) => {
+                                const teacherAuthId =
+                                  teacher?.auth_User_Id ||
+                                  teacher?.auth_user_id ||
+                                  teacher?.auth_user_Id ||
+                                  teacher?.authUserId ||
+                                  teacher?.auth_id ||
+                                  teacher?.authId;
+                                const isSelected =
+                                  !!teacherAuthId && values.class_Incharge === teacherAuthId;
+
+                                return (
+                                  <TouchableOpacity
+                                    key={teacherAuthId || teacher?.id || teacher?.full_Name}
+                                    onPress={() => {
+                                      if (teacherAuthId) {
+                                        setFieldValue("class_Incharge", teacherAuthId);
+                                      }
                                     }}
+                                    style={[
+                                      styles.teacherButton,
+                                      isSelected
+                                        ? styles.teacherButtonActive
+                                        : styles.teacherButtonInactive,
+                                    ]}
                                   >
-                                    {teacher?.full_Name || "Not added yet..."}
-                                  </Text>
-                                </TouchableOpacity>
-                              ))
+                                    <Text
+                                      style={[
+                                        styles.teacherButtonText,
+                                        { color: isSelected ? "#10B981" : "#6B7280" },
+                                      ]}
+                                    >
+                                      {teacher?.full_Name || "Not added yet..."}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })
                             ) : (
                               <Text style={{ fontSize: hp(1.4), fontFamily: "Poppins-Medium", color: "#6B7280" }}>No teachers available</Text>
                             )}
@@ -351,6 +360,10 @@ const styles = StyleSheet.create({
   teacherButtonInactive: {
     backgroundColor: "#F9FAFB",
     borderColor: "#E5E7EB",
+  },
+  teacherButtonText: {
+    fontSize: hp(1.4),
+    fontFamily: "Poppins-Medium",
   },
   statusRow: {
     flexDirection: "row",

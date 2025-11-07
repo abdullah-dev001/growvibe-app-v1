@@ -1,6 +1,58 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
 import { supabase } from "../../supabaseClient";
 
+export const resolveTeacherClassId = async (teacherAuthId) => {
+  if (!teacherAuthId) {
+    return null;
+  }
+
+  try {
+    const { data: classRows, error: classError } = await supabase
+      .from("class")
+      .select("id")
+      .eq("incharge_Id", teacherAuthId)
+      .limit(1);
+
+    if (!classError && classRows && classRows.length > 0) {
+      return classRows[0]?.id || null;
+    }
+  } catch (error) {
+    console.error("Error fetching class from class table:", error);
+  }
+
+  try {
+    const { data: teacherRows, error: teacherError } = await supabase
+      .from("teachers_with_branch")
+      .select("class_id")
+      .eq("auth_User_Id", teacherAuthId)
+      .limit(1);
+
+    if (!teacherError && teacherRows && teacherRows.length > 0) {
+      return teacherRows[0]?.class_id || null;
+    }
+
+    const shouldTryLowercase =
+      (teacherError && teacherError.code === "42703") ||
+      (!teacherError && (!teacherRows || teacherRows.length === 0));
+
+    if (shouldTryLowercase) {
+      const { data: teacherRowsLower, error: teacherErrorLower } = await supabase
+        .from("teachers_with_branch")
+        .select("class_id")
+        .eq("auth_user_id", teacherAuthId)
+        .limit(1);
+
+      if (!teacherErrorLower && teacherRowsLower && teacherRowsLower.length > 0) {
+        return teacherRowsLower[0]?.class_id || null;
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching class from teachers_with_branch:", error);
+  }
+
+  return null;
+};
+
 export const classApi = createApi({
     reducerPath: "classApi",
     baseQuery: fakeBaseQuery(),

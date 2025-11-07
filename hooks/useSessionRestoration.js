@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { setBranchId, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
+import { resolveTeacherClassId } from '../redux/api/classApi';
+import { setBranchId, setClassId, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
 import { supabase } from '../supabaseClient';
 
 export const useSessionRestoration = () => {
@@ -36,6 +37,28 @@ export const useSessionRestoration = () => {
 
           if (restoredBranchId) {
             dispatch(setBranchId(restoredBranchId));
+          }
+
+          // Restore classId for teachers and students
+          const userRole = session.user.app_metadata?.role;
+          if (userRole === "teacher" || userRole === "student") {
+            try {
+              let classIdToSet = null;
+
+              if (userRole === "student") {
+                // For students: get class_Id from raw_app_meta_data (app_metadata)
+                const rawAppMetaData = session.user?.raw_app_meta_data || session.user?.app_metadata;
+                classIdToSet = rawAppMetaData?.class_Id || rawAppMetaData?.classId || null;
+              } else if (userRole === "teacher") {
+                classIdToSet = await resolveTeacherClassId(session.user.id);
+              }
+
+              if (classIdToSet) {
+                dispatch(setClassId(classIdToSet));
+              }
+            } catch (classErr) {
+              console.error("Error fetching classId during session restoration:", classErr);
+            }
           }
         } else {
           dispatch(setUser(null));

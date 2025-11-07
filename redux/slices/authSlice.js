@@ -9,6 +9,7 @@ const initialState = {
   schoolId: null,
   branchId: null,
   sessionId: null,
+  classId: null,
 };
 
 const authSlice = createSlice({
@@ -35,6 +36,7 @@ const authSlice = createSlice({
       state.schoolId = null;
       state.branchId = null;
       state.sessionId = null;
+      state.classId = null;
     },
     clearError: (state) => {
       state.error = null;
@@ -57,6 +59,37 @@ const authSlice = createSlice({
     clearSessionId: (state) => {
       state.sessionId = null;
     },
+    setClassId: (state, action) => {
+      state.classId = action.payload;
+    },
+    clearClassId: (state) => {
+      state.classId = null;
+    },
+    clearAuth: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.loading = false;
+      state.error = null;
+      state.schoolId = null;
+      state.branchId = null;
+      state.sessionId = null;
+      state.classId = null;
+    },
+    setAuth: (state, action) => {
+      // Process Supabase auth response
+      const authData = action.payload;
+      if (authData?.user) {
+        state.user = {
+          id: authData.user.id,
+          email: authData.user.email,
+          access_token: authData.session?.access_token,
+          refresh_token: authData.session?.refresh_token,
+          role: authData.user.app_metadata?.role,
+        };
+        state.isAuthenticated = true;
+        state.error = null;
+      }
+    },
   },
 });
 
@@ -69,8 +102,12 @@ export const {
   setSessionRestored,
   setSchoolId,
   setBranchId,
-  clearBranchId
-  ,setSessionId
-  ,clearSessionId
+  clearBranchId,
+  setSessionId,
+  clearSessionId,
+  setClassId,
+  clearClassId,
+  clearAuth,
+  setAuth
 } = authSlice.actions;
 export default authSlice.reducer;
