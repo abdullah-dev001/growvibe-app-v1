@@ -45,9 +45,9 @@ const TEACHER_OPTIONS = {
   },
   result: {
     id: "result",
-    title: "Result Management",
-    description: "Manage and publish student results",
-    link: "/screens/result",
+    title: "Student Management",
+    description: "View and manage students",
+    link: "/screens/students",
     bgColor: "bg-teal-50",
     borderColor: "border-teal-100",
     textColor: "text-teal-500",

@@ -1,9 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
-import Plus from '../../assets/icons/Plus';
-import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
 import StudentCardSkeleton from '../../components/skeletons/StudentCardSkeleton';
@@ -12,8 +10,10 @@ import { useGetStudentsByBranchAndClassPaginatedQuery, useLazyGetStudentsByBranc
 
 const students = () => {
   const router = useRouter();
-  const { classId } = useLocalSearchParams();
-  const { branchId } = useSelector((state) => state.auth);
+  const { classId: classIdFromParams } = useLocalSearchParams();
+  const { branchId, classId: classIdFromRedux } = useSelector((state) => state.auth);
+  // Use classId from params if available, otherwise from Redux (for teachers)
+  const classId = classIdFromParams || classIdFromRedux;
 
   const PAGE_SIZE = 5;
   const [studentsList, setStudentsList] = useState([]);
@@ -29,7 +29,11 @@ const students = () => {
   );
   const [trigger, { isFetching, error: studentsError }] = useLazyGetStudentsByBranchAndClassPaginatedQuery();
 
-  const getStudentKey = (s) => String(s?.auth_User_Id);
+  const getStudentKey = (s, index) => {
+    // Use email as key since we only fetch limited fields
+    if (s?.email) return String(s.email);
+    return `student-${index}`;
+  };
 
   const loadPage = async (nextOffset = 0, refresh = false) => {
     if (!branchId || !classId) return;
@@ -103,51 +107,21 @@ const students = () => {
     loadPage(offset, false).finally(() => setIsLoadingMore(false));
   };
 
-  const handleEdit = (student) => {
-    // Navigate to edit screen or open modal
-    console.log('Edit student:', student);
-  };
-
-  const handleDelete = (student) => {
-    Alert.alert(
-      'Delete Student',
-      `Are you sure you want to delete ${student.student_Name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            // Handle delete logic
-            console.log('Delete student:', student);
-          }
-        },
-      ]
-    );
-  };
-
-  const handleAddStudent = () => {
-    router.push({
-      pathname: "/screens/forms/addStudent",
-      params: {
-        classId: classId,
-      },
-    });
+  const handleResult = (student) => {
+    // Navigate to result screen or open modal
+    console.log('View result for student:', student);
+    // router.push({
+    //   pathname: "/screens/result",
+    //   params: {
+    //     studentId: student.email || student.full_Name,
+    //   },
+    // });
   };
 
   const getStatusColor = (status) => {
     return status ? '#10B981' : '#EF4444';
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -161,14 +135,6 @@ const students = () => {
               Manage school students
             </Text>
           </View>
-          <Button
-            title="Add Student"
-            onPress={handleAddStudent}
-            icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
-            bgColor="#10B981"
-            textColor="#FFFFFF"
-            size="small"
-          />
         </View>
 
         {/* Search Bar */}
@@ -185,17 +151,24 @@ const students = () => {
         {/* Student Cards */}
         <FlatList
           data={studentsList}
-          keyExtractor={(student) => String(student.auth_User_Id)}
+          keyExtractor={(student, index) => getStudentKey(student, index)}
           renderItem={({ item: student }) => (
                 <View
-                  key={student.auth_User_Id}
+                  key={getStudentKey(student, 0)}
                   style={styles.card}
                 >
                   {/* Header with Student Name and Status */}
                   <View style={styles.cardHeader}>
                     <View style={styles.cardHeaderRow}>
                       {/* Student Image */}
-                      <View style={styles.avatar} />
+                      {student.user_Image ? (
+                        <Image
+                          source={{ uri: student.user_Image }}
+                          style={styles.avatar}
+                        />
+                      ) : (
+                        <View style={styles.avatar} />
+                      )}
                       <View style={styles.cardHeaderContent}>
                         <Text style={styles.cardTitle}>
                           {student.full_Name || 'N/A'}
@@ -222,85 +195,17 @@ const students = () => {
                     </View>
                   </View>
 
-                  {/* Student Details */}
-                  <View style={styles.cardSection}>
-                    {/* Contact */}
-                    <View style={styles.detailItem}>
-                      <Text style={styles.cardLabel}>
-                        Contact
-                      </Text>
-                      <Text style={styles.cardValue}>
-                        {student.phone || "Not assigned yet..."}
-                      </Text>
-                    </View>
-
-                    {/* Fee */}
-                    <View style={styles.detailItem}>
-                      <Text style={styles.cardLabel}>
-                        Fee
-                      </Text>
-                      <Text style={styles.feeValue}>
-                        {student.fee || 'Not assigned yet...'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Created Date */}
-                  <View style={styles.cardDateRow}>
-                    <View style={styles.dateRow}>
-                      <Text style={styles.dateText}>
-                        Created: {formatDate(student.created_at)}
-                      </Text>
-                    </View>
-                  </View>
-
                   {/* Action Buttons */}
                   <View style={styles.cardActions}>
-                    {/* Primary Actions */}
-                    <View style={styles.primaryActions}>
-                      <TouchableOpacity
-                        onPress={() => handleEdit(student)}
-                        style={styles.actionButton}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.editButtonText}>
-                          Edit
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => handleDelete(student)}
-                        style={[styles.deleteButton, { marginLeft: 8 }]}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.deleteButtonText}>
-                          Delete
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Additional Action Buttons */}
-                    <View style={styles.secondaryActions}>
-                      <TouchableOpacity
-                        onPress={() => console.log('View profile:', student)}
-                        style={[styles.secondaryButton, styles.profileButton]}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.profileButtonText}>
-                          Profile
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => console.log('View payments:', student)}
-                        style={[styles.secondaryButton, styles.paymentsButton, { marginLeft: 8 }]}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.paymentsButtonText}>
-                          Payments
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleResult(student)}
+                      style={styles.resultButton}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.resultButtonText}>
+                        Result
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
           )}
@@ -319,16 +224,8 @@ const students = () => {
             ) : studentsList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  No students found. Create your first student to get started.
+                  No students found.
                 </Text>
-                <Button
-                  title="Add Student"
-                  onPress={handleAddStudent}
-                  size="small"
-                  bgColor="#10B981"
-                  textColor="#FFFFFF"
-                  icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
-                />
               </View>
             ) : null
           }
@@ -424,6 +321,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     borderRadius: 9999,
     marginRight: 12,
+    resizeMode: 'cover',
   },
   cardHeaderContent: {
     flex: 1,
@@ -448,107 +346,23 @@ const styles = StyleSheet.create({
     fontSize: hp(1.1),
     fontFamily: 'Poppins-Medium',
   },
-  cardSection: {
-    marginBottom: 16,
-  },
-  detailItem: {
-    marginBottom: 8,
-  },
-  cardLabel: {
-    fontSize: hp(1.2),
-    fontFamily: 'Poppins-Medium',
-    color: '#6B7280',
-    marginBottom: hp(0.3),
-  },
-  cardValue: {
-    fontSize: hp(1.4),
-    fontFamily: 'Poppins-Regular',
-    color: '#111827',
-  },
-  feeValue: {
-    fontSize: hp(1.4),
-    fontFamily: 'Poppins-SemiBold',
-    color: '#10B981',
-  },
-  cardDateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateText: {
-    fontSize: hp(1.2),
-    fontFamily: 'Poppins-Medium',
-    color: '#6B7280',
-  },
   cardActions: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-  },
-  primaryActions: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
   },
-  actionButton: {
+  resultButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: '#EFF6FF',
     borderRadius: 8,
   },
-  editButtonText: {
-    fontSize: hp(1.3),
+  resultButtonText: {
+    fontSize: hp(1.4),
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-  },
-  deleteButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: 'Poppins-Medium',
-    color: '#EF4444',
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    paddingTop: 8,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    width: '100%',
-    justifyContent: 'flex-end',
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  profileButton: {
-    backgroundColor: '#F3E8FF',
-  },
-  profileButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: 'Poppins-Medium',
-    color: '#8B5CF6',
-  },
-  paymentsButton: {
-    backgroundColor: '#EFF6FF',
-  },
-  paymentsButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: 'Poppins-Medium',
-    color: '#3B82F6',
   },
   emptyState: {
     alignItems: 'center',
