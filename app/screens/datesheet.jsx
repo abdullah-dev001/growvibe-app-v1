@@ -6,42 +6,42 @@ import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
-import DiaryCardSkeleton from '../../components/skeletons/DiaryCardSkeleton';
+import DatesheetCardSkeleton from '../../components/skeletons/DatesheetCardSkeleton';
 import { hp } from '../../helpers/common';
-import { useGetDiariesByBranchAndClassPaginatedQuery, useLazyGetDiariesByBranchAndClassPaginatedQuery } from '../../redux/api/diaryApi';
+import { useGetDatesheetsByBranchAndClassPaginatedQuery, useLazyGetDatesheetsByBranchAndClassPaginatedQuery } from '../../redux/api/datesheetApi';
 
 const PAGE_SIZE = 5;
 
-const diary = () => {
+const datesheet = () => {
   const router = useRouter();
   const { branchId, classId } = useSelector((state) => state.auth);
 
-  const [diaryList, setDiaryList] = useState([]);
+  const [datesheetList, setDatesheetList] = useState([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const hasLoadedOnceRef = useRef(false);
 
-  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetDiariesByBranchAndClassPaginatedQuery(
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetDatesheetsByBranchAndClassPaginatedQuery(
     { branchId, classId: classId || null, offset: 0, limit: PAGE_SIZE },
     { skip: !branchId }
   );
-  const [trigger, { isFetching, error: diaryError }] = useLazyGetDiariesByBranchAndClassPaginatedQuery();
+  const [trigger, { isFetching, error: datesheetError }] = useLazyGetDatesheetsByBranchAndClassPaginatedQuery();
 
   useEffect(() => {
-    if (diaryError) {
-      Alert.alert('Error', diaryError.message || 'Failed to load diary entries');
+    if (datesheetError) {
+      Alert.alert('Error', datesheetError.message || 'Failed to load datesheet entries');
     }
-  }, [diaryError]);
+  }, [datesheetError]);
 
-  const getDiaryKey = (d, index) => {
+  const getDatesheetKey = (d, index) => {
     // Use id if available, otherwise use index as fallback to ensure unique keys
     if (d?.id !== null && d?.id !== undefined) {
       return String(d.id);
     }
     // Fallback to index if id is missing
-    return `diary-${index}`;
+    return `datesheet-${index}`;
   };
 
   const loadPage = async (nextOffset = 0, refresh = false) => {
@@ -50,30 +50,30 @@ const diary = () => {
       const result = await trigger({ branchId, classId: classId || null, offset: nextOffset, limit: PAGE_SIZE }).unwrap();
       const items = result?.items || [];
 
-      setDiaryList((prev) => {
+      setDatesheetList((prev) => {
         if (refresh || nextOffset === 0) return items;
-        const existing = new Set(prev.map(getDiaryKey));
-        const merged = [...prev, ...items.filter((i) => !existing.has(getDiaryKey(i)))];
+        const existing = new Set(prev.map((item) => getDatesheetKey(item, 0)));
+        const merged = [...prev, ...items.filter((i) => !existing.has(getDatesheetKey(i, 0)))];
         return merged;
       });
       const newOffset = nextOffset + items.length;
       setOffset(newOffset);
       setHasMore(items.length === PAGE_SIZE);
     } catch (e) {
-      // Error handled by diaryError alert above
+      // Error handled by datesheetError alert above
     } finally {
       setIsLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    if (diaryList.length === 0 && initialData?.items) {
+    if (datesheetList.length === 0 && initialData?.items) {
       const items = initialData.items;
-      setDiaryList(items);
+      setDatesheetList(items);
       setOffset(items.length);
       setHasMore(items.length === PAGE_SIZE);
       hasLoadedOnceRef.current = true;
-    } else if (diaryList.length === 0 && !isFetchingInitial && !initialData && branchId) {
+    } else if (datesheetList.length === 0 && !isFetchingInitial && !initialData && branchId) {
       loadPage(0, true).then(() => {
         hasLoadedOnceRef.current = true;
       });
@@ -81,7 +81,7 @@ const diary = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId, classId]);
 
-  // Refetch when screen comes into focus (e.g., after creating a diary)
+  // Refetch when screen comes into focus (e.g., after creating a datesheet)
   // Only refetch if we've already loaded data once to avoid loops
   useFocusEffect(
     useCallback(() => {
@@ -90,12 +90,12 @@ const diary = () => {
         refetch().then((result) => {
           if (result?.data?.items) {
             const items = result.data.items;
-            setDiaryList(items);
+            setDatesheetList(items);
             setOffset(items.length);
             setHasMore(items.length === PAGE_SIZE);
           }
         }).catch(() => {
-          // Error already handled by diaryError alert
+          // Error already handled by datesheetError alert
         });
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,7 +110,7 @@ const diary = () => {
     try {
       const res = await refetch();
       const items = res?.data?.items || [];
-      setDiaryList(items);
+      setDatesheetList(items);
       setOffset(items.length);
       setHasMore(items.length === PAGE_SIZE);
     } catch (e) {
@@ -127,21 +127,21 @@ const diary = () => {
     loadPage(offset, false);
   };
 
-  const handleAddDiary = () => {
-    router.push('/screens/forms/addDiary');
+  const handleAddDatesheet = () => {
+    router.push('/screens/forms/addDatesheet');
   };
 
-  const handleEdit = (diary) => {
-    console.log('Edit diary:', diary);
+  const handleEdit = (datesheet) => {
+    console.log('Edit datesheet:', datesheet);
   };
 
-  const handleDelete = (diary) => {
+  const handleDelete = (datesheet) => {
     Alert.alert(
-      'Delete Diary',
-      `Are you sure you want to delete this diary entry?`,
+      'Delete Datesheet',
+      `Are you sure you want to delete "${datesheet.datesheet_Title}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete diary:', diary.id) },
+        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete datesheet:', datesheet.id) },
       ]
     );
   };
@@ -156,12 +156,12 @@ const diary = () => {
     });
   };
 
-  const renderDiaryCard = ({ item: diary }) => {
+  const renderDatesheetCard = ({ item: datesheet }) => {
     // Parse subjects if it's a string (JSON)
     let subjects = [];
-    if (diary.subjects) {
+    if (datesheet.subjects) {
       try {
-        subjects = typeof diary.subjects === 'string' ? JSON.parse(diary.subjects) : diary.subjects;
+        subjects = typeof datesheet.subjects === 'string' ? JSON.parse(datesheet.subjects) : datesheet.subjects;
       } catch (e) {
         console.error('Error parsing subjects:', e);
         subjects = [];
@@ -173,19 +173,19 @@ const diary = () => {
         {/* Header */}
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderContent}>
-            <Text style={styles.cardDate}>{formatDate(diary.date)}</Text>
-            <Text style={styles.cardEmail}>{diary.created_By_Email}</Text>
+            <Text style={styles.cardTitle}>{datesheet.datesheet_Title || 'Untitled'}</Text>
+            <Text style={styles.cardExpireDate}>Expires: {formatDate(datesheet.expire_Date)}</Text>
           </View>
           <View style={styles.cardActions}>
             <TouchableOpacity
-              onPress={() => handleEdit(diary)}
+              onPress={() => handleEdit(datesheet)}
               style={styles.editButton}
               activeOpacity={0.7}
             >
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => handleDelete(diary)}
+              onPress={() => handleDelete(datesheet)}
               style={styles.deleteButton}
               activeOpacity={0.7}
             >
@@ -194,11 +194,13 @@ const diary = () => {
           </View>
         </View>
 
-        {/* Important Note */}
-        <View style={styles.noteSection}>
-          <Text style={styles.noteLabel}>Important Note:</Text>
-          <Text style={styles.noteText}>{diary.imp_Note}</Text>
-        </View>
+        {/* Description */}
+        {datesheet.datesheet_Description && (
+          <View style={styles.descriptionSection}>
+            <Text style={styles.descriptionLabel}>Description:</Text>
+            <Text style={styles.descriptionText}>{datesheet.datesheet_Description}</Text>
+          </View>
+        )}
 
         {/* Subjects */}
         {subjects && subjects.length > 0 && (
@@ -207,7 +209,7 @@ const diary = () => {
             {subjects.map((subject, index) => (
               <View key={index} style={styles.subjectItem}>
                 <Text style={styles.subjectName}>{subject.subject_Name}</Text>
-                <Text style={styles.subjectTodo}>{subject.todo}</Text>
+                <Text style={styles.subjectDate}>Date: {formatDate(subject.date)}</Text>
               </View>
             ))}
           </View>
@@ -222,14 +224,14 @@ const diary = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Diary</Text>
-            <Text style={styles.subTitle}>Manage diary entries</Text>
+            <Text style={styles.headerTitle}>Datesheet</Text>
+            <Text style={styles.subTitle}>Manage exam datesheets</Text>
           </View>
           <Button
-            title="Add Diary"
-            onPress={handleAddDiary}
+            title="Add Datesheet"
+            onPress={handleAddDatesheet}
             icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
-            bgColor="#10B981"
+            bgColor="#8B5CF6"
             textColor="#FFFFFF"
             size="small"
           />
@@ -238,39 +240,39 @@ const diary = () => {
         {/* Search Bar */}
         <SearchBar />
 
-        {/* Diary List Header */}
+        {/* Datesheet List Header */}
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Diary List</Text>
+          <Text style={styles.listTitle}>Datesheet List</Text>
           <View style={styles.listDivider} />
         </View>
 
-        {/* Diary Cards */}
+        {/* Datesheet Cards */}
         <FlatList
-          data={diaryList}
-          keyExtractor={(diary, index) => getDiaryKey(diary, index)}
-          renderItem={renderDiaryCard}
+          data={datesheetList}
+          keyExtractor={(datesheet, index) => getDatesheetKey(datesheet, index)}
+          renderItem={renderDatesheetCard}
           contentContainerStyle={styles.scrollContent}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.1}
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            (isFetchingInitial || isFetching) && diaryList.length === 0 ? (
+            (isFetchingInitial || isFetching) && datesheetList.length === 0 ? (
               <View>
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <DiaryCardSkeleton key={index} />
+                  <DatesheetCardSkeleton key={index} />
                 ))}
               </View>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  No diary entries found. Create your first diary entry to get started.
+                  No datesheet entries found. Create your first datesheet to get started.
                 </Text>
                 <Button
-                  title="Add Diary"
-                  onPress={handleAddDiary}
+                  title="Add Datesheet"
+                  onPress={handleAddDatesheet}
                   size="small"
-                  bgColor="#10B981"
+                  bgColor="#8B5CF6"
                   textColor="#FFFFFF"
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
@@ -278,7 +280,7 @@ const diary = () => {
             )
           }
           ListFooterComponent={
-            diaryList.length > 0 && !isRefreshing && isLoadingMore ? (
+            datesheetList.length > 0 && !isRefreshing && isLoadingMore ? (
               <View style={styles.loadingMoreContainer}>
                 <Text style={styles.loadingText}>Loading more...</Text>
               </View>
@@ -293,7 +295,7 @@ const diary = () => {
   );
 };
 
-export default diary;
+export default datesheet;
 
 const styles = StyleSheet.create({
   container: {
@@ -363,13 +365,13 @@ const styles = StyleSheet.create({
   cardHeaderContent: {
     flex: 1,
   },
-  cardDate: {
-    fontSize: hp(1.6),
+  cardTitle: {
+    fontSize: hp(1.8),
     fontFamily: 'Poppins-Bold',
     color: '#111827',
     marginBottom: 4,
   },
-  cardEmail: {
+  cardExpireDate: {
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Regular',
     color: '#6B7280',
@@ -400,19 +402,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     color: '#EF4444',
   },
-  noteSection: {
+  descriptionSection: {
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  noteLabel: {
+  descriptionLabel: {
     fontSize: hp(1.3),
     fontFamily: 'Poppins-SemiBold',
     color: '#374151',
     marginBottom: 6,
   },
-  noteText: {
+  descriptionText: {
     fontSize: hp(1.4),
     fontFamily: 'Poppins-Regular',
     color: '#111827',
@@ -433,7 +435,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#10B981',
+    borderLeftColor: '#8B5CF6',
   },
   subjectName: {
     fontSize: hp(1.4),
@@ -441,7 +443,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 4,
   },
-  subjectTodo: {
+  subjectDate: {
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Regular',
     color: '#6B7280',
