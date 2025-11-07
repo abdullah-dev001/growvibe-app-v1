@@ -20,6 +20,7 @@ const classes = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetClassesWithSummaryByBranchAndSessionPaginatedQuery(
     { branchId, sessionId, offset: 0, limit: PAGE_SIZE },
@@ -54,6 +55,15 @@ const classes = () => {
       Alert.alert('Error', classesError.message || 'Failed to load classes');
     }
   }, [classesError]);
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (classesList.length === 0 && initialData?.items) {
@@ -333,13 +343,13 @@ const classes = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (showSkeleton || isFetchingInitial || isFetching || (classesList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <ClassCardSkeleton key={index} />
                 ))}
               </>
-            ) : (
+            ) : classesList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No classes found. Create your first class to get started.
@@ -353,7 +363,7 @@ const classes = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             classesList.length > 0 && !isRefreshing && isLoadingMore ? (

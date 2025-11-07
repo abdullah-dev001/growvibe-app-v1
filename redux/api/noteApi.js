@@ -51,6 +51,32 @@ export const noteApi = createApi({
             },
             providesTags: ["Notes"],
         }),
+        getNotesByBranchIdPaginated: builder.query({
+            async queryFn({ branchId, offset = 0, limit = 5 }) {
+                try {
+                    const { data, error, count } = await supabase
+                        .from("note")
+                        .select("*", { count: "exact" })
+                        .eq("branch_Id", branchId)
+                        .order("created_at", { ascending: false })
+                        .range(offset, offset + limit - 1);
+                    
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+                    
+                    return {
+                        data: {
+                            items: data || [],
+                            count: count || 0,
+                        },
+                    };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            providesTags: ["Notes"],
+        }),
         updateNote: builder.mutation({
             async queryFn(noteData) {
                 try {
@@ -101,6 +127,11 @@ export const noteApi = createApi({
 export const { 
     useCreateNoteMutation, 
     useGetNotesByBranchIdQuery,
+    useGetNotesByBranchIdPaginatedQuery,
     useUpdateNoteMutation,
     useDeleteNoteMutation
+} = noteApi;
+
+export const {
+    useLazyGetNotesByBranchIdPaginatedQuery
 } = noteApi;

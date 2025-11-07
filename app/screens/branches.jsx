@@ -22,6 +22,7 @@ const Branches = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   // Ensure numeric schoolId and wait for session restoration
   const numericSchoolId = schoolId ? parseInt(schoolId, 10) : undefined;
@@ -60,6 +61,15 @@ const Branches = () => {
       Alert.alert('Error', error.message || 'Failed to load branches');
     }
   }, [error]);
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     // Initialize from cache (if available) without refetch
@@ -165,13 +175,13 @@ const Branches = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (showSkeleton || isFetchingInitial || isFetching || (branchesList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <BranchCardSkeleton key={index} />
                 ))}
               </>
-            ) : (
+            ) : branchesList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No branches found. Create your first branch to get started.
@@ -185,7 +195,7 @@ const Branches = () => {
                   icon={<Plus size={hp(2)} color={"#FFFFFF"} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             branchesList.length > 0 && !isRefreshing && isLoadingMore ? (

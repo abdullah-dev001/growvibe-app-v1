@@ -22,6 +22,7 @@ const sessions = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetSessionsByBranchIdPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -56,6 +57,15 @@ const sessions = () => {
       Alert.alert("Error", sessionsError.message || "Failed to load sessions");
     }
   }, [sessionsError]);
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (sessionsList.length === 0 && initialData?.items) {
@@ -273,13 +283,13 @@ const sessions = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (showSkeleton || isFetchingInitial || isFetching || (sessionsList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <SessionCardSkeleton key={index} />
                 ))}
               </>
-            ) : (
+            ) : sessionsList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No sessions found. Create your first session to get started.
@@ -293,7 +303,7 @@ const sessions = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             sessionsList.length > 0 && !isRefreshing && isLoadingMore ? (

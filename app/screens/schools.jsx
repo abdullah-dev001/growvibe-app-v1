@@ -18,6 +18,7 @@ const school = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetSchoolsPaginatedQuery({ offset: 0, limit: PAGE_SIZE });
   const [trigger, { isFetching, error }] = useLazyGetSchoolsPaginatedQuery();
 
@@ -47,6 +48,15 @@ const school = () => {
       Alert.alert("Error", error.message || "Failed to load schools");
     }
   }, [error]);
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (schoolsList.length === 0 && initialData?.items) {
@@ -164,13 +174,13 @@ const school = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (showSkeleton || isFetchingInitial || isFetching || (schoolsList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <SchoolCardSkeleton key={index} />
                 ))}
               </>
-            ) : (
+            ) : schoolsList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No schools found. Create your first school to get started.
@@ -184,7 +194,7 @@ const school = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             schoolsList.length > 0 && !isRefreshing && isLoadingMore ? (

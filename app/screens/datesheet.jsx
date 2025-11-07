@@ -21,6 +21,7 @@ const datesheet = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const hasLoadedOnceRef = useRef(false);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetDatesheetsByBranchAndClassPaginatedQuery(
@@ -65,6 +66,15 @@ const datesheet = () => {
       setIsLoadingMore(false);
     }
   };
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (datesheetList.length === 0 && initialData?.items) {
@@ -257,13 +267,13 @@ const datesheet = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            (isFetchingInitial || isFetching) && datesheetList.length === 0 ? (
+            (showSkeleton || isFetchingInitial || isFetching || (datesheetList.length === 0 && !initialData)) && !isRefreshing ? (
               <View>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <DatesheetCardSkeleton key={index} />
                 ))}
               </View>
-            ) : (
+            ) : datesheetList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No datesheet entries found. Create your first datesheet to get started.
@@ -277,7 +287,7 @@ const datesheet = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             datesheetList.length > 0 && !isRefreshing && isLoadingMore ? (

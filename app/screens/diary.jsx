@@ -21,6 +21,7 @@ const diary = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const hasLoadedOnceRef = useRef(false);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetDiariesByBranchAndClassPaginatedQuery(
@@ -65,6 +66,15 @@ const diary = () => {
       setIsLoadingMore(false);
     }
   };
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (diaryList.length === 0 && initialData?.items) {
@@ -255,13 +265,13 @@ const diary = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            (isFetchingInitial || isFetching) && diaryList.length === 0 ? (
+            (showSkeleton || isFetchingInitial || isFetching || (diaryList.length === 0 && !initialData)) && !isRefreshing ? (
               <View>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <DiaryCardSkeleton key={index} />
                 ))}
               </View>
-            ) : (
+            ) : diaryList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No diary entries found. Create your first diary entry to get started.
@@ -275,7 +285,7 @@ const diary = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             diaryList.length > 0 && !isRefreshing && isLoadingMore ? (

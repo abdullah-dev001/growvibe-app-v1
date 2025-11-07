@@ -21,6 +21,7 @@ const principals = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetPrincipalsByBranchPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -55,6 +56,15 @@ const principals = () => {
       Alert.alert("Error", principalsError.message || "Failed to load principals");
     }
   }, [principalsError]);
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (principalsList.length === 0 && initialData?.items) {
@@ -260,7 +270,7 @@ const principals = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (showSkeleton || isFetchingInitial || isFetching || (principalsList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <View key={index} style={styles.card}>
@@ -274,7 +284,7 @@ const principals = () => {
                   </View>
                 ))}
               </>
-            ) : (
+            ) : principalsList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No principals found. Create your first principal to get
@@ -289,7 +299,7 @@ const principals = () => {
                   icon={<Plus size={hp(2)} color={"#FFFFFF"} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             principalsList.length > 0 && !isRefreshing && isLoadingMore ? (

@@ -20,6 +20,7 @@ const owners = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetOwnersPaginatedQuery({ offset: 0, limit: PAGE_SIZE });
   const [trigger, { isFetching, error: ownersError } ] = useLazyGetOwnersPaginatedQuery();
 
@@ -49,6 +50,15 @@ const owners = () => {
       // handled by ownersError alert above
     }
   };
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     // Initialize from cache (if available) without refetch
@@ -219,13 +229,13 @@ const owners = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (showSkeleton || isFetchingInitial || isFetching || (ownersList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <OwnerCardSkeleton key={index} />
                 ))}
               </>
-            ) : (
+            ) : ownersList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No owners found. Create your first owner to get started.
@@ -239,7 +249,7 @@ const owners = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             ownersList.length > 0 && !isRefreshing && isLoadingMore ? (

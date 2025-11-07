@@ -21,6 +21,7 @@ const students = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetStudentsByBranchAndClassPaginatedQuery(
     { branchId, classId, offset: 0, limit: PAGE_SIZE },
@@ -55,6 +56,15 @@ const students = () => {
       Alert.alert('Error', studentsError.message || 'Failed to load students');
     }
   }, [studentsError]);
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (studentsList.length === 0 && initialData?.items) {
@@ -300,13 +310,13 @@ const students = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (showSkeleton || isFetchingInitial || isFetching || (studentsList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <StudentCardSkeleton key={index} />
                 ))}
               </>
-            ) : (
+            ) : studentsList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No students found. Create your first student to get started.
@@ -320,7 +330,7 @@ const students = () => {
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             studentsList.length > 0 && !isRefreshing && isLoadingMore ? (

@@ -22,6 +22,7 @@ const coordinators = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetCoordinatorsByBranchPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -56,6 +57,15 @@ const coordinators = () => {
       Alert.alert("Error", coordinatorsError.message || "Failed to load coordinators");
     }
   }, [coordinatorsError]);
+
+  useEffect(() => {
+    // Minimum 1 second skeleton display
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (coordinatorsList.length === 0 && initialData?.items) {
@@ -146,7 +156,7 @@ const coordinators = () => {
               Manage school coordinators
             </Text>
           </View>
-          {coordinatorsData?.length < 1 && (
+          {coordinatorsList?.length < 1 && (
             <Button
               title="Add Coordinator"
               onPress={handleAddCoordinator}
@@ -262,13 +272,13 @@ const coordinators = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            ((isFetching || isFetchingInitial) && !isRefreshing) ? (
+            (isFetchingInitial || isFetching || (coordinatorsList.length === 0 && !initialData)) && !isRefreshing ? (
               <>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <CoordinatorCardSkeleton key={index} />
                 ))}
               </>
-            ) : (
+            ) : coordinatorsList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
                   No coordinators found. Create your first coordinator to get started.
@@ -282,7 +292,7 @@ const coordinators = () => {
                   icon={<Plus size={hp(2)} color={"#FFFFFF"} strokeWidth={2} />}
                 />
               </View>
-            )
+            ) : null
           }
           ListFooterComponent={
             coordinatorsList.length > 0 && !isRefreshing && isLoadingMore ? (
