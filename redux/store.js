@@ -8,6 +8,7 @@ import { coordinatorApi } from './api/coordinator';
 import { createAuthApi } from './api/createAuthApi';
 import { datesheetApi } from './api/datesheetApi';
 import { diaryApi } from './api/diaryApi';
+import { leaderboardApi } from './api/leaderboardApi';
 import { noteApi } from './api/noteApi';
 import { ownerApi } from './api/ownerApi';
 import { principalApi } from './api/principalApi';
@@ -35,6 +36,7 @@ const rootReducer = combineReducers({
   [diaryApi.reducerPath]: diaryApi.reducer,
   [datesheetApi.reducerPath]: datesheetApi.reducer,
   [resultApi.reducerPath]: resultApi.reducer,
+  [leaderboardApi.reducerPath]: leaderboardApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -65,6 +67,7 @@ export const store = configureStore({
         diaryApi.middleware,
         datesheetApi.middleware,
         resultApi.middleware,
+        leaderboardApi.middleware,
       ),
 });
 
