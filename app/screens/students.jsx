@@ -11,9 +11,10 @@ import { useGetStudentsByBranchAndClassPaginatedQuery, useLazyGetStudentsByBranc
 const students = () => {
   const router = useRouter();
   const { classId: classIdFromParams } = useLocalSearchParams();
-  const { branchId, classId: classIdFromRedux } = useSelector((state) => state.auth);
-  // Use classId from params if available, otherwise from Redux (for teachers)
-  const classId = classIdFromParams || classIdFromRedux;
+  const { branchId, classId: classIdFromRedux, user } = useSelector((state) => state.auth);
+  // For teachers, use classId from Redux store only. For other roles, use params if available.
+  const isTeacher = user?.role === 'teacher';
+  const classId = isTeacher ? classIdFromRedux : (classIdFromParams || classIdFromRedux);
 
   const PAGE_SIZE = 5;
   const [studentsList, setStudentsList] = useState([]);
@@ -108,14 +109,21 @@ const students = () => {
   };
 
   const handleResult = (student) => {
-    // Navigate to result screen or open modal
-    console.log('View result for student:', student);
-    // router.push({
-    //   pathname: "/screens/result",
-    //   params: {
-    //     studentId: student.email || student.full_Name,
-    //   },
-    // });
+    // Navigate to result screen with student ID and name
+    // Only use auth_User_Id (UUID) - required for database query
+    const studentId = student.auth_User_Id;
+    const studentName = student.full_Name || 'Student';
+    if (!studentId) {
+      Alert.alert('Error', 'Student ID not available');
+      return;
+    }
+    router.push({
+      pathname: '/screens/result',
+      params: {
+        studentId: studentId,
+        studentName: studentName,
+      },
+    });
   };
 
   const getStatusColor = (status) => {
@@ -152,63 +160,65 @@ const students = () => {
         <FlatList
           data={studentsList}
           keyExtractor={(student, index) => getStudentKey(student, index)}
-          renderItem={({ item: student }) => (
-                <View
-                  key={getStudentKey(student, 0)}
-                  style={styles.card}
-                >
-                  {/* Header with Student Name and Status */}
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardHeaderRow}>
-                      {/* Student Image */}
-                      {student.user_Image ? (
-                        <Image
-                          source={{ uri: student.user_Image }}
-                          style={styles.avatar}
-                        />
-                      ) : (
-                        <View style={styles.avatar} />
-                      )}
-                      <View style={styles.cardHeaderContent}>
-                        <Text style={styles.cardTitle}>
-                          {student.full_Name || 'N/A'}
-                        </Text>
-                        <Text style={styles.cardSubtitle}>
-                          {student.email || 'No email'}
-                        </Text>
-                      </View>
+          renderItem={({ item: student }) => {
+            return (
+              <View
+                key={getStudentKey(student, 0)}
+                style={styles.card}
+              >
+                {/* Header with Student Name and Status */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderRow}>
+                    {/* Student Image */}
+                    {student.user_Image ? (
+                      <Image
+                        source={{ uri: student.user_Image }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <View style={styles.avatar} />
+                    )}
+                    <View style={styles.cardHeaderContent}>
+                      <Text style={styles.cardTitle}>
+                        {student.full_Name || 'N/A'}
+                      </Text>
+                      <Text style={styles.cardSubtitle}>
+                        {student.email || 'No email'}
+                      </Text>
                     </View>
-                    <View
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: student.profile_Status ? '#D1FAE5' : '#FEE2E2' }
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.statusBadge,
-                        { backgroundColor: student.profile_Status ? '#D1FAE5' : '#FEE2E2' }
+                        styles.statusText,
+                        { color: getStatusColor(student.profile_Status) }
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.statusText,
-                          { color: getStatusColor(student.profile_Status) }
-                        ]}
-                      >
-                        {student.profile_Status ? 'Active' : 'Inactive'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity
-                      onPress={() => handleResult(student)}
-                      style={styles.resultButton}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.resultButtonText}>
-                        Result
-                      </Text>
-                    </TouchableOpacity>
+                      {student.profile_Status ? 'Active' : 'Inactive'}
+                    </Text>
                   </View>
                 </View>
-          )}
+
+                {/* Action Buttons */}
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    onPress={() => handleResult(student)}
+                    style={styles.resultButton}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.resultButtonText}>
+                      Result
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          }}
           contentContainerStyle={styles.scrollContent}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.1}

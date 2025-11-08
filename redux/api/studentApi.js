@@ -11,7 +11,7 @@ export const studentApi = createApi({
             async queryFn({branchId, classId}) {
               const { data, error } = await supabase
                 .from("students_with_branch_and_class")
-                .select("*")
+                .select("auth_User_Id, full_Name, email")
                 .eq("branch_Id", branchId)
                 .eq("class_Id", classId);
           
@@ -27,7 +27,7 @@ export const studentApi = createApi({
 
               const { data, error, count } = await supabase
                 .from("students_with_branch_and_class")
-                .select("user_Image, full_Name, email, profile_Status", { count: "exact" })
+                .select("auth_User_Id, user_Image, full_Name, email, profile_Status", { count: "exact" })
                 .eq("branch_Id", branchId)
                 .eq("class_Id", classId)
                 .order("created_at", { ascending: false })

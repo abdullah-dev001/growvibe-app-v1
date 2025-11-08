@@ -157,71 +157,71 @@ const owners = () => {
           keyExtractor={(owner) => String(owner.owner_id || owner.auth_User_Id)}
           renderItem={({ item: owner }) => (
             <View style={styles.card}>
-              {/* Header with Image, Name and Status */}
+                  {/* Header with Image, Name and Status */}
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.avatar} />
                   <View style={styles.cardHeaderContent}>
                     <Text style={styles.cardTitle}>
-                      {owner.full_Name || 'N/A'}
-                    </Text>
+                          {owner.full_Name || 'N/A'}
+                        </Text>
                     <Text style={styles.cardSubtitle}>
-                      {owner.email || owner.phone || 'No contact'}
-                    </Text>
-                  </View>
-                </View>
+                          {owner.email || owner.phone || 'No contact'}
+                        </Text>
+                      </View>
+                    </View>
                 <View
                   style={[
                     styles.statusBadge,
                     { backgroundColor: owner.profile_Status ? '#D1FAE5' : '#FEE2E2' }
                   ]}
                 >
-                  <Text
+                      <Text
                     style={[
                       styles.statusText,
                       { color: getStatusColor(owner.profile_Status) }
                     ]}
-                  >
-                    {owner.profile_Status ? 'Active' : 'Inactive'}
-                  </Text>
-                </View>
-              </View>
+                      >
+                        {owner.profile_Status ? 'Active' : 'Inactive'}
+                      </Text>
+                    </View>
+                  </View>
 
-              {/* Stats Row */}
+                  {/* Stats Row */}
               <View style={styles.cardDateRow}>
                 <View style={styles.dateRow}>
                   <Text style={styles.dateLabel}>
-                    Created:
-                  </Text>
+                        Created:
+                      </Text>
                   <Text style={styles.dateValue}>
-                    {formatDate(owner.created_at)}
-                  </Text>
-                </View>
+                        {formatDate(owner.created_at)}
+                      </Text>
+                    </View>
                 <View style={styles.actionButtonsRow}>
-                  <TouchableOpacity
-                    onPress={() => handleEdit(owner)}
+                      <TouchableOpacity
+                        onPress={() => handleEdit(owner)}
                     style={styles.actionButton}
-                    activeOpacity={0.7}
-                  >
-                    <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
+                        activeOpacity={0.7}
+                      >
+                        <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
                     <Text style={styles.editButtonText}>
-                      Edit
-                    </Text>
-                  </TouchableOpacity>
+                          Edit
+                        </Text>
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => handleDelete(owner)}
+                      <TouchableOpacity
+                        onPress={() => handleDelete(owner)}
                     style={[styles.deleteButton, { marginLeft: 8 }]}
-                    activeOpacity={0.7}
-                  >
-                    <Trash size={hp(1.6)} color="#EF4444" strokeWidth={2} />
+                        activeOpacity={0.7}
+                      >
+                        <Trash size={hp(1.6)} color="#EF4444" strokeWidth={2} />
                     <Text style={styles.deleteButtonText}>
-                      Delete
-                    </Text>
-                  </TouchableOpacity>
+                          Delete
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </View>
           )}
           contentContainerStyle={styles.scrollContent}
           onEndReached={handleEndReached}

@@ -11,6 +11,7 @@ import { diaryApi } from './api/diaryApi';
 import { noteApi } from './api/noteApi';
 import { ownerApi } from './api/ownerApi';
 import { principalApi } from './api/principalApi';
+import { resultApi } from './api/resultApi';
 import { schoolApi } from './api/schoolApi';
 import { sessionApi } from './api/sessionApi';
 import { studentApi } from './api/studentApi';
@@ -33,6 +34,7 @@ const rootReducer = combineReducers({
   [noteApi.reducerPath]: noteApi.reducer,
   [diaryApi.reducerPath]: diaryApi.reducer,
   [datesheetApi.reducerPath]: datesheetApi.reducer,
+  [resultApi.reducerPath]: resultApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -62,6 +64,7 @@ export const store = configureStore({
         noteApi.middleware,
         diaryApi.middleware,
         datesheetApi.middleware,
+        resultApi.middleware,
       ),
 });
 
