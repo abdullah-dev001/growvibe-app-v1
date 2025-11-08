@@ -29,7 +29,13 @@ export const diaryApi = createApi({
 
                 return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Diary"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                const { branchId, classId, offset = 0, limit = 5 } = queryArgs;
+                return `${endpointName}(${branchId},${classId || 'null'},${offset},${limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Diary", id: `${arg.branchId}-${arg.classId || 'null'}` },
+            ],
         }),
         createDiary: builder.mutation({
             async queryFn(diaryData) {
@@ -40,7 +46,9 @@ export const diaryApi = createApi({
                 if (error) throw error;
                 return { data };
             },
-            invalidatesTags: ["Diary"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Diary", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
+            ],
         }),
     }),
 });

@@ -75,7 +75,13 @@ export const noteApi = createApi({
                     return { error: { status: 'CUSTOM_ERROR', data: err } };
                 }
             },
-            providesTags: ["Notes"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                const { branchId, offset = 0, limit = 5 } = queryArgs;
+                return `${endpointName}(${branchId},${offset},${limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Notes", id: arg.branchId },
+            ],
         }),
         updateNote: builder.mutation({
             async queryFn(noteData) {

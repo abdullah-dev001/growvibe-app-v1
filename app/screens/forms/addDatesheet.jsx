@@ -326,7 +326,7 @@ const addDatesheet = () => {
                                   {errors.subjects[index].subject_Name}
                                 </Text>
                               )}
-                          </View>
+    </View>
 
                           <View style={styles.subjectFieldContainer}>
                             <Text style={styles.subjectFieldLabel}>Date *</Text>

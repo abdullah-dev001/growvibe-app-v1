@@ -119,7 +119,13 @@ export const resultApi = createApi({
                     } 
                 };
             },
-            providesTags: ["Result"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                const { branchId, studentId, offset = 0, limit = 5 } = queryArgs;
+                return `${endpointName}(${branchId},${studentId || 'null'},${offset},${limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Result", id: `${arg.branchId}-${arg.studentId || 'null'}` },
+            ],
         }),
         createResult: builder.mutation({
             async queryFn(resultData) {
@@ -130,7 +136,9 @@ export const resultApi = createApi({
                 if (error) throw error;
                 return { data };
             },
-            invalidatesTags: ["Result"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Result", id: `${arg.branch_Id}-${arg.student_Id || 'null'}` },
+            ],
         }),
     }),
 });

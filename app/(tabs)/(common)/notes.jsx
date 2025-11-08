@@ -21,7 +21,7 @@ const notes = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetNotesByBranchIdPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -38,13 +38,17 @@ const notes = () => {
   }, [notesError]);
 
   useEffect(() => {
-    // Minimum 1 second skeleton display
-    const timer = setTimeout(() => {
+    // Show skeleton for minimum 1s only on cold load (no cached data)
+    if (!initialData?.items?.length) {
+      setShowSkeleton(true);
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
       setShowSkeleton(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [initialData]);
 
   const getNoteKey = (n) => String(n?.id);
 

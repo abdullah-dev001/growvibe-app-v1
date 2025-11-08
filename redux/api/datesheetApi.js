@@ -29,7 +29,13 @@ export const datesheetApi = createApi({
 
                 return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Datesheet"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                const { branchId, classId, offset = 0, limit = 5 } = queryArgs;
+                return `${endpointName}(${branchId},${classId || 'null'},${offset},${limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Datesheet", id: `${arg.branchId}-${arg.classId || 'null'}` },
+            ],
         }),
         createDatesheet: builder.mutation({
             async queryFn(datesheetData) {
@@ -40,7 +46,9 @@ export const datesheetApi = createApi({
                 if (error) throw error;
                 return { data };
             },
-            invalidatesTags: ["Datesheet"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Datesheet", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
+            ],
         }),
     }),
 });

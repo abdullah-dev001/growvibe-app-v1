@@ -21,7 +21,7 @@ const diary = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const hasLoadedOnceRef = useRef(false);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetDiariesByBranchAndClassPaginatedQuery(
@@ -68,13 +68,17 @@ const diary = () => {
   };
 
   useEffect(() => {
-    // Minimum 1 second skeleton display
-    const timer = setTimeout(() => {
+    // Show skeleton for minimum 1s only on cold load (no cached data)
+    if (!initialData?.items?.length) {
+      setShowSkeleton(true);
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
       setShowSkeleton(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (diaryList.length === 0 && initialData?.items) {
@@ -91,26 +95,7 @@ const diary = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId, classId]);
 
-  // Refetch when screen comes into focus (e.g., after creating a diary)
-  // Only refetch if we've already loaded data once to avoid loops
-  useFocusEffect(
-    useCallback(() => {
-      if (branchId && hasLoadedOnceRef.current && !isFetchingInitial && !isRefreshing && !isFetching) {
-        // Refetch the first page to get latest data and update the list
-        refetch().then((result) => {
-          if (result?.data?.items) {
-            const items = result.data.items;
-            setDiaryList(items);
-            setOffset(items.length);
-            setHasMore(items.length === PAGE_SIZE);
-          }
-        }).catch(() => {
-          // Error already handled by diaryError alert
-        });
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [branchId, classId])
-  );
+  // Removed focus refetch to allow RTK Query cache + tag invalidation to handle freshness
 
   const handleRefresh = async () => {
     if (isRefreshing || !branchId) return;
