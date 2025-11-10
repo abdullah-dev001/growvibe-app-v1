@@ -125,7 +125,12 @@ const principals = () => {
   };
 
   const handleAddPrincipal = () => {
-    router.push("/screens/forms/addPrincipal");
+    router.push({
+      pathname: "/screens/forms/addPrincipal",
+      params: {
+        principalLength: principalsList?.length,
+      },
+    });
   };
 
   const getStatusColor = (status) => {
@@ -154,7 +159,7 @@ const principals = () => {
               Manage school principals
             </Text>
           </View>
-          {principalsList?.length < 1 && (
+          {!isFetchingInitial && initialData !== undefined && principalsList.length === 0 ? (
             <Button
               title="Add Principal"
               onPress={handleAddPrincipal}
@@ -163,7 +168,7 @@ const principals = () => {
               textColor="#FFFFFF"
               size="small"
             />
-          )}
+          ) : null}
         </View>
 
         {/* Search Bar */}

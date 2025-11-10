@@ -59,13 +59,17 @@ const coordinators = () => {
   }, [coordinatorsError]);
 
   useEffect(() => {
-    // Minimum 1 second skeleton display
-    const timer = setTimeout(() => {
+    // Show skeleton for minimum 1s only on cold load (no cached data)
+    if (!initialData?.items?.length) {
+      setShowSkeleton(true);
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
       setShowSkeleton(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (coordinatorsList.length === 0 && initialData?.items) {
@@ -156,7 +160,7 @@ const coordinators = () => {
               Manage school coordinators
             </Text>
           </View>
-          {coordinatorsList?.length < 1 && (
+          {!isFetchingInitial && initialData !== undefined && coordinatorsList.length === 0 ? (
             <Button
               title="Add Coordinator"
               onPress={handleAddCoordinator}
@@ -165,7 +169,7 @@ const coordinators = () => {
               textColor="#FFFFFF"
               size="small"
             />
-          )}
+          ) : null}
         </View>
 
         {/* Search Bar */}
@@ -272,12 +276,12 @@ const coordinators = () => {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            (isFetchingInitial || isFetching || (coordinatorsList.length === 0 && !initialData)) && !isRefreshing ? (
-              <>
+            (showSkeleton || isFetchingInitial || isFetching || (coordinatorsList.length === 0 && !initialData)) && !isRefreshing ? (
+              <View>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <CoordinatorCardSkeleton key={index} />
                 ))}
-              </>
+              </View>
             ) : coordinatorsList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>

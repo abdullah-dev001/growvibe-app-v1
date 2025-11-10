@@ -1,6 +1,6 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -34,6 +34,8 @@ const validationSchema = Yup.object().shape({
 const addPrincipal = () => {
   const router = useRouter();
   const { user, schoolId, branchId } = useSelector((state) => state.auth);
+  const { principalLength } = useLocalSearchParams();
+  console.log(principalLength);
   const [createAuth] = useCreateAuthMutation();
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
@@ -64,6 +66,19 @@ const addPrincipal = () => {
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if(principalLength > 0) {
+      Alert.alert("Error", "Principal already exists!", [
+        {
+          text: "OK",
+          onPress: () => {
+            router.back();
+          },
+        },
+      ]);
+    }
+  },[principalLength])
 
   return (
     <ScreenWrapper>

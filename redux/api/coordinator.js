@@ -34,7 +34,13 @@ export const coordinatorApi = createApi({
               if (error) throw error;
               return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Coordinators"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                const { branchId, offset = 0, limit = 5 } = queryArgs;
+                return `${endpointName}(${branchId},${offset},${limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Coordinators", id: arg.branchId },
+            ],
           }),
     }),
 });
