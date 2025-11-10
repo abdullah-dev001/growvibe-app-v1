@@ -17,12 +17,15 @@ import Button from "../components/Button";
 import Input from "../components/Input";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { hp, wp } from "../helpers/common";
-import { resolveTeacherClassId } from "../redux/api/classApi";
+import { resolveTeacherClassId, useLazyGetClassByIdQuery } from "../redux/api/classApi";
+import { useLazyGetProfileByRoleQuery } from "../redux/api/profileApi";
 import {
   setBranchId,
   setClassId,
+  setClassInfo,
   setError,
   setLoading,
+  setProfile,
   setSessionId,
   setUser,
 } from "../redux/slices/authSlice";
@@ -43,6 +46,8 @@ const Login = () => {
   const pathname = usePathname();
   const dispatch = useDispatch();
   const { user, sessionRestored } = useSelector((state) => state.auth);
+  const [fetchProfile] = useLazyGetProfileByRoleQuery();
+  const [fetchClass] = useLazyGetClassByIdQuery();
 
   const handleLogin = async (values, { setSubmitting, setFieldError }) => {
     try {
@@ -119,9 +124,34 @@ const Login = () => {
 
             if (classIdToSet) {
               dispatch(setClassId(classIdToSet));
+              
+              // Fetch class name and section
+              try {
+                const classResult = await fetchClass(classIdToSet).unwrap();
+                if (classResult) {
+                  dispatch(setClassInfo({
+                    className: classResult.class_Name,
+                    section: classResult.section,
+                  }));
+                }
+              } catch (classInfoErr) {
+                console.error("Error fetching class info:", classInfoErr);
+              }
             }
           } catch (classErr) {
             console.error("Error fetching classId:", classErr);
+          }
+        }
+
+        // Fetch profile based on role
+        if (userRole) {
+          try {
+            const profileResult = await fetchProfile({ userId: data.user.id, role: userRole }).unwrap();
+            if (profileResult) {
+              dispatch(setProfile(profileResult));
+            }
+          } catch (profileErr) {
+            console.error("Error fetching profile:", profileErr);
           }
         }
 

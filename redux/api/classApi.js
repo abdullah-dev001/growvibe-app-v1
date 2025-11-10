@@ -124,6 +124,32 @@ export const classApi = createApi({
             },
             providesTags: ["Classes"],
         }),
+        getClassById: builder.query({
+            async queryFn(classId) {
+                try {
+                    const { data, error } = await supabase
+                        .from("class")
+                        .select("class_Name, section")
+                        .eq("id", classId)
+                        .single();
+
+                    if (error) {
+                        // If no class found, return null instead of error
+                        if (error.code === 'PGRST116') {
+                            return { data: null };
+                        }
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+
+                    return { data };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Classes", id: arg },
+            ],
+        }),
         updateClass: builder.mutation({
             async queryFn(classData) {
                 const { data, error } = await supabase
@@ -166,6 +192,8 @@ export const {
     useGetClassesWithSummaryByBranchAndSessionPaginatedQuery,
     useLazyGetClassesWithSummaryByBranchAndSessionPaginatedQuery,
     useGetClassesByBranchQuery,
+    useGetClassByIdQuery,
+    useLazyGetClassByIdQuery,
     useUpdateClassMutation,
     useDeleteClassMutation
 } = classApi;

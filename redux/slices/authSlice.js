@@ -10,6 +10,9 @@ const initialState = {
   branchId: null,
   sessionId: null,
   classId: null,
+  className: null,
+  section: null,
+  profile: null,
 };
 
 const authSlice = createSlice({
@@ -37,6 +40,9 @@ const authSlice = createSlice({
       state.branchId = null;
       state.sessionId = null;
       state.classId = null;
+      state.className = null;
+      state.section = null;
+      state.profile = null;
     },
     clearError: (state) => {
       state.error = null;
@@ -64,6 +70,18 @@ const authSlice = createSlice({
     },
     clearClassId: (state) => {
       state.classId = null;
+      state.className = null;
+      state.section = null;
+    },
+    setClassName: (state, action) => {
+      state.className = action.payload;
+    },
+    setSection: (state, action) => {
+      state.section = action.payload;
+    },
+    setClassInfo: (state, action) => {
+      state.className = action.payload.className;
+      state.section = action.payload.section;
     },
     clearAuth: (state) => {
       state.user = null;
@@ -74,6 +92,9 @@ const authSlice = createSlice({
       state.branchId = null;
       state.sessionId = null;
       state.classId = null;
+      state.className = null;
+      state.section = null;
+      state.profile = null;
     },
     setAuth: (state, action) => {
       // Process Supabase auth response
@@ -89,6 +110,12 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.error = null;
       }
+    },
+    setProfile: (state, action) => {
+      state.profile = action.payload;
+    },
+    clearProfile: (state) => {
+      state.profile = null;
     },
   },
 });
@@ -107,7 +134,12 @@ export const {
   clearSessionId,
   setClassId,
   clearClassId,
+  setClassName,
+  setSection,
+  setClassInfo,
   clearAuth,
-  setAuth
+  setAuth,
+  setProfile,
+  clearProfile
 } = authSlice.actions;
 export default authSlice.reducer;

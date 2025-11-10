@@ -12,6 +12,7 @@ import { leaderboardApi } from './api/leaderboardApi';
 import { noteApi } from './api/noteApi';
 import { ownerApi } from './api/ownerApi';
 import { principalApi } from './api/principalApi';
+import { profileApi } from './api/profileApi';
 import { resultApi } from './api/resultApi';
 import { schoolApi } from './api/schoolApi';
 import { sessionApi } from './api/sessionApi';
@@ -37,6 +38,7 @@ const rootReducer = combineReducers({
   [datesheetApi.reducerPath]: datesheetApi.reducer,
   [resultApi.reducerPath]: resultApi.reducer,
   [leaderboardApi.reducerPath]: leaderboardApi.reducer,
+  [profileApi.reducerPath]: profileApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -68,6 +70,7 @@ export const store = configureStore({
         datesheetApi.middleware,
         resultApi.middleware,
         leaderboardApi.middleware,
+        profileApi.middleware,
       ),
 });
 

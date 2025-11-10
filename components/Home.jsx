@@ -90,17 +90,18 @@ const getTextColor = (textClass) => {
 
 const Home = () => {
   const router = useRouter();
-  const { user } = useSelector((state) => state.auth);
+  const { user, profile, className, section } = useSelector((state) => state.auth);
+  
 
   return (
     <ScrollView style={styles.container}>
       <Topbar />
       <View style={styles.header}>
         <Text style={styles.greeting}>
-          Hello John Doe
+          Hello {profile?.full_Name}
         </Text>
         <Text style={styles.subtitle}>
-          Student of Class 10A
+          Student of {className} {section}
         </Text>
       </View>
       <View style={styles.attendanceSection}>
@@ -344,6 +345,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontWeight: '600',
     color: '#374151',
+    marginBottom: 12,
   },
   teacherOptionsList: {
     // gap handled by marginBottom in teacherOptionCard

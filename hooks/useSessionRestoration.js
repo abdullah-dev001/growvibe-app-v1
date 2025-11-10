@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { resolveTeacherClassId } from '../redux/api/classApi';
-import { setBranchId, setClassId, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
+import { resolveTeacherClassId, useLazyGetClassByIdQuery } from '../redux/api/classApi';
+import { useLazyGetProfileByRoleQuery } from '../redux/api/profileApi';
+import { setBranchId, setClassId, setClassInfo, setProfile, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
 import { supabase } from '../supabaseClient';
 
 export const useSessionRestoration = () => {
   const dispatch = useDispatch();
-  const { sessionRestored, user, branchId } = useSelector((state) => state.auth);
+  const { sessionRestored, user, branchId, classId, className } = useSelector((state) => state.auth);
+  const [fetchProfile] = useLazyGetProfileByRoleQuery();
+  const [fetchClass] = useLazyGetClassByIdQuery();
 
   useEffect(() => {
     const restoreSession = async () => {
@@ -55,9 +58,34 @@ export const useSessionRestoration = () => {
 
               if (classIdToSet) {
                 dispatch(setClassId(classIdToSet));
+                
+                // Fetch class name and section
+                try {
+                  const classResult = await fetchClass(classIdToSet).unwrap();
+                  if (classResult) {
+                    dispatch(setClassInfo({
+                      className: classResult.class_Name,
+                      section: classResult.section,
+                    }));
+                  }
+                } catch (classInfoErr) {
+                  console.error("Error fetching class info during session restoration:", classInfoErr);
+                }
               }
             } catch (classErr) {
               console.error("Error fetching classId during session restoration:", classErr);
+            }
+          }
+
+          // Fetch profile based on role
+          if (userRole) {
+            try {
+              const profileResult = await fetchProfile({ userId: session.user.id, role: userRole }).unwrap();
+              if (profileResult) {
+                dispatch(setProfile(profileResult));
+              }
+            } catch (profileErr) {
+              console.error("Error fetching profile during session restoration:", profileErr);
             }
           }
         } else {
@@ -108,6 +136,30 @@ export const useSessionRestoration = () => {
       fetchActiveSession();
     }
   }, [dispatch, sessionRestored, user, branchId]);
+
+  // Fetch class name and section when classId is available (if not already fetched)
+  useEffect(() => {
+    const fetchClassInfo = async () => {
+      // Only fetch if we have classId, session is restored, but don't have className yet
+      if (classId && sessionRestored && !className) {
+        try {
+          const classResult = await fetchClass(classId).unwrap();
+          if (classResult) {
+            dispatch(setClassInfo({
+              className: classResult.class_Name,
+              section: classResult.section,
+            }));
+          }
+        } catch (classInfoErr) {
+          console.error("Error fetching class info:", classInfoErr);
+        }
+      }
+    };
+
+    if (classId && sessionRestored && !className) {
+      fetchClassInfo();
+    }
+  }, [dispatch, classId, sessionRestored, className, fetchClass]);
 
   return { sessionRestored, user };
 };
