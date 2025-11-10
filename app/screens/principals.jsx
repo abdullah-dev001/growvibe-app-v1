@@ -154,7 +154,7 @@ const principals = () => {
               Manage school principals
             </Text>
           </View>
-          {principalsData?.length < 1 && (
+          {principalsList?.length < 1 && (
             <Button
               title="Add Principal"
               onPress={handleAddPrincipal}

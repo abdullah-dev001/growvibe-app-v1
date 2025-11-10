@@ -167,6 +167,40 @@ const StatsSection = () => {
             url: "/screens/(principal)/branch",
           },
         ],
+        coordinator: [
+          {
+            title: "Total Classes",
+            value: "18",
+            bg: "bg-blue-50",
+            border: "border-blue-100",
+            textColor: "text-blue-500",
+            url: "/screens/(principal)/classes",
+          },
+          {
+            title: "Total Students",
+            value: "450",
+            bg: "bg-yellow-50",
+            border: "border-yellow-100",
+            textColor: "text-yellow-500",
+            url: "/screens/(principal)/students",
+          },
+          {
+            title: "Total Teachers",
+            value: "28",
+            bg: "bg-green-50",
+            border: "border-green-100",
+            textColor: "text-green-500",
+            url: "/screens/(principal)/teachers",
+          },
+          {
+            title: "Branch Name",
+            value: "Downtown Branch",
+            bg: "bg-red-50",
+            border: "border-red-100",
+            textColor: "text-red-500",
+            url: "/screens/(principal)/branch",
+          },
+        ],
       };
 
   return (
