@@ -55,6 +55,46 @@ const TEACHER_OPTIONS = {
   },
 };
 
+// Student options configuration
+const STUDENT_OPTIONS = {
+  diary: {
+    id: "diary",
+    title: "View Diary",
+    description: "View your daily diary entries",
+    link: "/screens/diary",
+    bgColor: "bg-purple-50",
+    borderColor: "border-purple-100",
+    textColor: "text-purple-500",
+  },
+  leaderboard: {
+    id: "leaderboard",
+    title: "View Leaderboard",
+    description: "View student rankings and leaderboard",
+    link: "/screens/leaderboard",
+    bgColor: "bg-pink-50",
+    borderColor: "border-pink-100",
+    textColor: "text-pink-500",
+  },
+  attendance: {
+    id: "attendance",
+    title: "View Attendance",
+    description: "View your attendance records",
+    link: "/screens/mark-attendance",
+    bgColor: "bg-orange-50",
+    borderColor: "border-orange-100",
+    textColor: "text-orange-500",
+  },
+  datesheet: {
+    id: "datesheet",
+    title: "View Datesheet",
+    description: "View exam dates and schedules",
+    link: "/screens/datesheet",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-100",
+    textColor: "text-blue-500",
+  },
+};
+
 const getBgColor = (bgClass) => {
   const colorMap = {
     "bg-indigo-50": "#EEF2FF",
@@ -62,6 +102,10 @@ const getBgColor = (bgClass) => {
     "bg-yellow-50": "#FEF3C7",
     "bg-cyan-50": "#CFFAFE",
     "bg-teal-50": "#CCFBF1",
+    "bg-purple-50": "#F3E8FF",
+    "bg-pink-50": "#FCE7F3",
+    "bg-orange-50": "#FFEDD5",
+    "bg-blue-50": "#DBEAFE",
   };
   return colorMap[bgClass] || "#F9FAFB";
 };
@@ -73,6 +117,10 @@ const getBorderColor = (borderClass) => {
     "border-yellow-100": "#FDE68A",
     "border-cyan-100": "#A5F3FC",
     "border-teal-100": "#99F6E4",
+    "border-purple-100": "#E9D5FF",
+    "border-pink-100": "#FBCFE8",
+    "border-orange-100": "#FED7AA",
+    "border-blue-100": "#BFDBFE",
   };
   return colorMap[borderClass] || "#E5E7EB";
 };
@@ -84,6 +132,10 @@ const getTextColor = (textClass) => {
     "text-yellow-500": "#F59E0B",
     "text-cyan-500": "#06B6D4",
     "text-teal-500": "#14B8A6",
+    "text-purple-500": "#A855F7",
+    "text-pink-500": "#EC4899",
+    "text-orange-500": "#F97316",
+    "text-blue-500": "#3B82F6",
   };
   return colorMap[textClass] || "#6B7280";
 };
@@ -101,7 +153,7 @@ const Home = () => {
           Hello {profile?.full_Name}
         </Text>
         <Text style={styles.subtitle}>
-          Student of {className} {section}
+          {user?.role === 'student' ? 'Student of' : 'Teacher of'} {className} {section}
         </Text>
       </View>
       <View style={styles.attendanceSection}>
@@ -162,41 +214,39 @@ const Home = () => {
         <ImportantNotes />
       </View>
       
-      {user?.role === "teacher" && (
-        <View style={styles.teacherOptions}>
-          <Text style={styles.teacherOptionsTitle}>
-            Management Options
-          </Text>
+      <View style={styles.optionsSection}>
+        <Text style={styles.optionsTitle}>
+          {user?.role === 'student' ? 'Student Options' : 'Management Options'}
+        </Text>
 
-          <View style={styles.teacherOptionsList}>
-            {Object.values(TEACHER_OPTIONS).map((option) => (
-              <Pressable
-                key={option.id}
-                onPress={() => router.push(option.link)}
+        <View style={styles.optionsList}>
+          {Object.values(user?.role === 'student' ? STUDENT_OPTIONS : TEACHER_OPTIONS).map((option) => (
+            <Pressable
+              key={option.id}
+              onPress={() => router.push(option.link)}
+              style={[
+                styles.optionCard,
+                {
+                  backgroundColor: getBgColor(option.bgColor),
+                  borderColor: getBorderColor(option.borderColor),
+                },
+              ]}
+            >
+              <Text
                 style={[
-                  styles.teacherOptionCard,
-                  {
-                    backgroundColor: getBgColor(option.bgColor),
-                    borderColor: getBorderColor(option.borderColor),
-                  },
+                  styles.optionTitle,
+                  { color: getTextColor(option.textColor) },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.teacherOptionTitle,
-                    { color: getTextColor(option.textColor) },
-                  ]}
-                >
-                  {option.title}
-                </Text>
-                <Text style={styles.teacherOptionDescription}>
-                  {option.description}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+                {option.title}
+              </Text>
+              <Text style={styles.optionDescription}>
+                {option.description}
+              </Text>
+            </Pressable>
+          ))}
         </View>
-      )}
+      </View>
     </ScrollView>
   )
 }
@@ -336,21 +386,21 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     fontSize: hp(1.4),
   },
-  teacherOptions: {
+  optionsSection: {
     paddingHorizontal: 16,
     marginBottom: 24,
   },
-  teacherOptionsTitle: {
+  optionsTitle: {
     fontSize: hp(2),
     fontFamily: 'Poppins-SemiBold',
     fontWeight: '600',
     color: '#374151',
     marginBottom: 12,
   },
-  teacherOptionsList: {
-    // gap handled by marginBottom in teacherOptionCard
+  optionsList: {
+    // gap handled by marginBottom in optionCard
   },
-  teacherOptionCard: {
+  optionCard: {
     borderRadius: 16,
     paddingVertical: 24,
     paddingHorizontal: 16,
@@ -358,12 +408,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
   },
-  teacherOptionTitle: {
+  optionTitle: {
     fontFamily: "Poppins-Bold",
     fontWeight: '700',
     fontSize: hp(2.2),
   },
-  teacherOptionDescription: {
+  optionDescription: {
     fontSize: 14,
     fontFamily: "Poppins-Medium",
     fontWeight: '500',
