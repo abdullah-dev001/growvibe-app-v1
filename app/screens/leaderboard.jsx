@@ -14,7 +14,8 @@ const PAGE_SIZE = 5;
 
 const leaderboard = () => {
   const router = useRouter();
-  const { branchId, classId } = useSelector((state) => state.auth);
+  const { branchId, classId, user } = useSelector((state) => state.auth);
+  const isStudent = user?.role === 'student';
 
   const [leaderboardList, setLeaderboardList] = useState([]);
   const [offset, setOffset] = useState(0);
@@ -155,22 +156,24 @@ const leaderboard = () => {
             <Text style={styles.cardTitle}>{title}</Text>
             <Text style={styles.cardDate}>Expires: {formatDate(leaderboard.expire_date)}</Text>
           </View>
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              onPress={() => handleEdit(leaderboard)}
-              style={styles.editButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDelete(leaderboard)}
-              style={styles.deleteButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+          {!isStudent && (
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                onPress={() => handleEdit(leaderboard)}
+                style={styles.editButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDelete(leaderboard)}
+                style={styles.deleteButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Students Ranking */}
@@ -230,16 +233,20 @@ const leaderboard = () => {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Leaderboard</Text>
-            <Text style={styles.subTitle}>Manage student leaderboards</Text>
+            <Text style={styles.subTitle}>
+              {isStudent ? 'View student leaderboards' : 'Manage student leaderboards'}
+            </Text>
           </View>
-          <Button
-            title="Add Leaderboard"
-            onPress={handleAddLeaderboard}
-            icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
-            bgColor="#10B981"
-            textColor="#FFFFFF"
-            size="small"
-          />
+          {!isStudent && (
+            <Button
+              title="Add Leaderboard"
+              onPress={handleAddLeaderboard}
+              icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
+              bgColor="#10B981"
+              textColor="#FFFFFF"
+              size="small"
+            />
+          )}
         </View>
 
         {/* Search Bar */}
@@ -271,16 +278,20 @@ const leaderboard = () => {
             ) : leaderboardList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  No leaderboards found. Create your first leaderboard to get started.
+                  {isStudent 
+                    ? 'No leaderboards found.' 
+                    : 'No leaderboards found. Create your first leaderboard to get started.'}
                 </Text>
-                <Button
-                  title="Add Leaderboard"
-                  onPress={handleAddLeaderboard}
-                  size="small"
-                  bgColor="#10B981"
-                  textColor="#FFFFFF"
-                  icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
-                />
+                {!isStudent && (
+                  <Button
+                    title="Add Leaderboard"
+                    onPress={handleAddLeaderboard}
+                    size="small"
+                    bgColor="#10B981"
+                    textColor="#FFFFFF"
+                    icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
+                  />
+                )}
               </View>
             ) : null
           }

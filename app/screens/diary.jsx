@@ -14,7 +14,8 @@ const PAGE_SIZE = 5;
 
 const diary = () => {
   const router = useRouter();
-  const { branchId, classId } = useSelector((state) => state.auth);
+  const { branchId, classId, user } = useSelector((state) => state.auth);
+  const isStudent = user?.role === 'student';
 
   const [diaryList, setDiaryList] = useState([]);
   const [offset, setOffset] = useState(0);
@@ -171,22 +172,24 @@ const diary = () => {
             <Text style={styles.cardDate}>{formatDate(diary.date)}</Text>
             <Text style={styles.cardEmail}>{diary.created_By_Email}</Text>
           </View>
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              onPress={() => handleEdit(diary)}
-              style={styles.editButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDelete(diary)}
-              style={styles.deleteButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+          {!isStudent && (
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                onPress={() => handleEdit(diary)}
+                style={styles.editButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDelete(diary)}
+                style={styles.deleteButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Important Note */}
@@ -218,16 +221,20 @@ const diary = () => {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Diary</Text>
-            <Text style={styles.subTitle}>Manage diary entries</Text>
+            <Text style={styles.subTitle}>
+              {isStudent ? 'View diary entries' : 'Manage diary entries'}
+            </Text>
           </View>
-          <Button
-            title="Add Diary"
-            onPress={handleAddDiary}
-            icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
-            bgColor="#10B981"
-            textColor="#FFFFFF"
-            size="small"
-          />
+          {!isStudent && (
+            <Button
+              title="Add Diary"
+              onPress={handleAddDiary}
+              icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
+              bgColor="#10B981"
+              textColor="#FFFFFF"
+              size="small"
+            />
+          )}
         </View>
 
         {/* Search Bar */}
@@ -259,16 +266,20 @@ const diary = () => {
             ) : diaryList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  No diary entries found. Create your first diary entry to get started.
+                  {isStudent 
+                    ? 'No diary entries found.' 
+                    : 'No diary entries found. Create your first diary entry to get started.'}
                 </Text>
-                <Button
-                  title="Add Diary"
-                  onPress={handleAddDiary}
-                  size="small"
-                  bgColor="#10B981"
-                  textColor="#FFFFFF"
-                  icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
-                />
+                {!isStudent && (
+                  <Button
+                    title="Add Diary"
+                    onPress={handleAddDiary}
+                    size="small"
+                    bgColor="#10B981"
+                    textColor="#FFFFFF"
+                    icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
+                  />
+                )}
               </View>
             ) : null
           }

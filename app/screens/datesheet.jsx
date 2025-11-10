@@ -14,7 +14,8 @@ const PAGE_SIZE = 5;
 
 const datesheet = () => {
   const router = useRouter();
-  const { branchId, classId } = useSelector((state) => state.auth);
+  const { branchId, classId, user } = useSelector((state) => state.auth);
+  const isStudent = user?.role === 'student';
 
   const [datesheetList, setDatesheetList] = useState([]);
   const [offset, setOffset] = useState(0);
@@ -171,22 +172,24 @@ const datesheet = () => {
             <Text style={styles.cardTitle}>{datesheet.datesheet_Title || 'Untitled'}</Text>
             <Text style={styles.cardExpireDate}>Expires: {formatDate(datesheet.expire_Date)}</Text>
           </View>
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              onPress={() => handleEdit(datesheet)}
-              style={styles.editButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDelete(datesheet)}
-              style={styles.deleteButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+          {!isStudent && (
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                onPress={() => handleEdit(datesheet)}
+                style={styles.editButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDelete(datesheet)}
+                style={styles.deleteButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Description */}
@@ -220,16 +223,20 @@ const datesheet = () => {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Datesheet</Text>
-            <Text style={styles.subTitle}>Manage exam datesheets</Text>
+            <Text style={styles.subTitle}>
+              {isStudent ? 'View exam datesheets' : 'Manage exam datesheets'}
+            </Text>
           </View>
-          <Button
-            title="Add Datesheet"
-            onPress={handleAddDatesheet}
-            icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
-            bgColor="#8B5CF6"
-            textColor="#FFFFFF"
-            size="small"
-          />
+          {!isStudent && (
+            <Button
+              title="Add Datesheet"
+              onPress={handleAddDatesheet}
+              icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
+              bgColor="#8B5CF6"
+              textColor="#FFFFFF"
+              size="small"
+            />
+          )}
         </View>
 
         {/* Search Bar */}
@@ -261,16 +268,20 @@ const datesheet = () => {
             ) : datesheetList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  No datesheet entries found. Create your first datesheet to get started.
+                  {isStudent 
+                    ? 'No datesheet entries found.' 
+                    : 'No datesheet entries found. Create your first datesheet to get started.'}
                 </Text>
-                <Button
-                  title="Add Datesheet"
-                  onPress={handleAddDatesheet}
-                  size="small"
-                  bgColor="#8B5CF6"
-                  textColor="#FFFFFF"
-                  icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
-                />
+                {!isStudent && (
+                  <Button
+                    title="Add Datesheet"
+                    onPress={handleAddDatesheet}
+                    size="small"
+                    bgColor="#8B5CF6"
+                    textColor="#FFFFFF"
+                    icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
+                  />
+                )}
               </View>
             ) : null
           }
