@@ -158,16 +158,16 @@ const Branches = () => {
           data={branchesList}
           keyExtractor={(branch) => String(branch.id)}
           renderItem={({ item: branch }) => (
-            <BranchCard
-              branch_Name={branch.branch_Name}
-              branch_Address={branch.branch_Address}
-              branch_Contact={branch.branch_Contact}
-              branch_Status={branch.branch_Status}
-              branch_Subscription_Fee={branch.branch_Subscription_Fee}
-              created_at={branch.created_at}
-              onEdit={() => handleEdit(branch)}
-              onDelete={() => handleDelete(branch)}
-            />
+                <BranchCard
+                  branch_Name={branch.branch_Name}
+                  branch_Address={branch.branch_Address}
+                  branch_Contact={branch.branch_Contact}
+                  branch_Status={branch.branch_Status}
+                  branch_Subscription_Fee={branch.branch_Subscription_Fee}
+                  created_at={branch.created_at}
+                  onEdit={() => handleEdit(branch)}
+                  onDelete={() => handleDelete(branch)}
+                />
           )}
           contentContainerStyle={styles.scrollContent}
           onEndReached={handleEndReached}

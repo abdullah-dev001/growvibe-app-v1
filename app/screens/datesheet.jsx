@@ -253,7 +253,7 @@ const datesheet = () => {
           onRefresh={handleRefresh}
           ListEmptyComponent={
             (showSkeleton || isFetchingInitial || isFetching || (datesheetList.length === 0 && !initialData)) && !isRefreshing ? (
-              <View>
+    <View>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <DatesheetCardSkeleton key={index} />
                 ))}
@@ -278,9 +278,9 @@ const datesheet = () => {
             datesheetList.length > 0 && !isRefreshing && isLoadingMore ? (
               <View style={styles.loadingMoreContainer}>
                 <Text style={styles.loadingText}>Loading more...</Text>
-              </View>
+    </View>
             ) : null
-          }
+}
           removeClippedSubviews
           initialNumToRender={PAGE_SIZE}
           windowSize={PAGE_SIZE * 2}

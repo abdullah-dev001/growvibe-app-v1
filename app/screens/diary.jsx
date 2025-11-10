@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Plus from '../../assets/icons/Plus';
@@ -251,7 +251,7 @@ const diary = () => {
           onRefresh={handleRefresh}
           ListEmptyComponent={
             (showSkeleton || isFetchingInitial || isFetching || (diaryList.length === 0 && !initialData)) && !isRefreshing ? (
-              <View>
+    <View>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <DiaryCardSkeleton key={index} />
                 ))}
@@ -276,7 +276,7 @@ const diary = () => {
             diaryList.length > 0 && !isRefreshing && isLoadingMore ? (
               <View style={styles.loadingMoreContainer}>
                 <Text style={styles.loadingText}>Loading more...</Text>
-              </View>
+    </View>
             ) : null
           }
           removeClippedSubviews

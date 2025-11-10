@@ -53,9 +53,9 @@ const teachers = () => {
   };
 
   useEffect(() => {
-    if (teachersError) {
-      Alert.alert('Error', teachersError.message || 'Failed to load teachers');
-    }
+  if (teachersError) {
+    Alert.alert('Error', teachersError.message || 'Failed to load teachers');
+  }
   }, [teachersError]);
 
   useEffect(() => {
@@ -310,7 +310,7 @@ const teachers = () => {
           initialNumToRender={PAGE_SIZE}
           windowSize={PAGE_SIZE * 2}
         />
-      </View>
+    </View>
     </ScreenWrapper>
   );
 };

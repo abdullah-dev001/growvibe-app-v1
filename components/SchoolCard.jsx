@@ -77,7 +77,7 @@ const SchoolCard = ({
         {/* Status Badge */}
         <View style={[styles.statusBadge, { backgroundColor: statusBgColor }]}>
           <Text style={[styles.statusText, { color: statusColor }]}>
-            {school_Status ? 'Active' : 'Inactive'}
+{school_Status ? 'Active' : 'Inactive'}
           </Text>
         </View>
       </View>
@@ -146,29 +146,29 @@ const SchoolCard = ({
 
         {/* Additional Action Buttons */}
         <View style={styles.secondaryActions}>
-          <TouchableOpacity
-            onPress={onEditOwner}
+        <TouchableOpacity
+          onPress={onEditOwner}
             style={styles.secondaryButton}
-            activeOpacity={0.7}
-          >
+          activeOpacity={0.7}
+        >
             <Text style={styles.secondaryButtonTextBlue}>Edit Owner</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={onViewPayments}
+        <TouchableOpacity
+          onPress={onViewPayments}
             style={[styles.secondaryButton, styles.secondaryButtonGreen]}
-            activeOpacity={0.7}
-          >
+          activeOpacity={0.7}
+        >
             <Text style={styles.secondaryButtonTextGreen}>View Payments</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={onViewBranches}
+        <TouchableOpacity
+          onPress={onViewBranches}
             style={[styles.secondaryButton, styles.secondaryButtonPurple]}
-            activeOpacity={0.7}
-          >
+          activeOpacity={0.7}
+        >
             <Text style={styles.secondaryButtonTextPurple}>View Branches</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
         </View>
       </View>
     </View>

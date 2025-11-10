@@ -114,7 +114,7 @@ const addDiary = () => {
               <Text style={styles.headerSubtitle}>
                 Fill in the details to create a new diary entry
               </Text>
-            </View>
+    </View>
 
             <Formik
               initialValues={{

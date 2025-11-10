@@ -3,6 +3,7 @@ import React from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSelector } from 'react-redux'
 import { hp } from '../helpers/common'
+import ImportantNotes from './ImportantNotes'
 import Topbar from './Topbar'
 
 // Teacher options configuration
@@ -149,14 +150,15 @@ const Home = () => {
       <View style={styles.notesSection}>
         <View style={styles.notesHeader}>
           <Text style={styles.notesTitle}>
-            Principal Notes
+            Important Notes
           </Text>
-          <Pressable>
+          <Pressable onPress={() => router.push('screens/impNotesList')}>
             <Text style={styles.viewAllText}>
               View All
             </Text>
           </Pressable>
         </View>
+        <ImportantNotes />
       </View>
       
       {user?.role === "teacher" && (
@@ -339,9 +341,9 @@ const styles = StyleSheet.create({
   },
   teacherOptionsTitle: {
     fontSize: hp(2),
-    fontFamily: "Poppins-Bold",
-    color: "#111827",
-    marginBottom: hp(1.5),
+    fontFamily: 'Poppins-SemiBold',
+    fontWeight: '600',
+    color: '#374151',
   },
   teacherOptionsList: {
     // gap handled by marginBottom in teacherOptionCard
