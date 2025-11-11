@@ -15,7 +15,8 @@ const PAGE_SIZE = 5;
 const result = () => {
   const router = useRouter();
   const { studentId, studentName } = useLocalSearchParams();
-  const { branchId, classId } = useSelector((state) => state.auth);
+  const { branchId, classId, user } = useSelector((state) => state.auth);
+  const isTeacher = user?.role === 'teacher';
 
   const [resultList, setResultList] = useState([]);
   const [offset, setOffset] = useState(0);
@@ -176,22 +177,24 @@ const result = () => {
             <Text style={styles.cardDescription}>{result.result_Description || 'No description'}</Text>
             <Text style={styles.cardDate}>Expires: {formatDate(result.expire_Date)}</Text>
           </View>
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              onPress={() => handleEdit(result)}
-              style={styles.editButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDelete(result)}
-              style={styles.deleteButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+          {isTeacher && (
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                onPress={() => handleEdit(result)}
+                style={styles.editButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDelete(result)}
+                style={styles.deleteButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Total Marks */}
@@ -242,17 +245,19 @@ const result = () => {
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Results</Text>
             <Text style={styles.subTitle}>
-              {studentName ? `${studentName}'s Results` : 'Manage student results'}
+              {studentName ? `${studentName}'s Results` : (isTeacher ? 'Manage student results' : 'View student results')}
             </Text>
           </View>
-          <Button
-            title="Add Result"
-            onPress={handleAddResult}
-            icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
-            bgColor="#10B981"
-            textColor="#FFFFFF"
-            size="small"
-          />
+          {isTeacher && (
+            <Button
+              title="Add Result"
+              onPress={handleAddResult}
+              icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
+              bgColor="#10B981"
+              textColor="#FFFFFF"
+              size="small"
+            />
+          )}
         </View>
 
         {/* Search Bar */}
@@ -284,16 +289,20 @@ const result = () => {
             ) : resultList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  No results found. Create your first result to get started.
+                  {isTeacher 
+                    ? 'No results found. Create your first result to get started.'
+                    : 'No results found.'}
                 </Text>
-                <Button
-                  title="Add Result"
-                  onPress={handleAddResult}
-                  size="small"
-                  bgColor="#10B981"
-                  textColor="#FFFFFF"
-                  icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
-                />
+                {isTeacher && (
+                  <Button
+                    title="Add Result"
+                    onPress={handleAddResult}
+                    size="small"
+                    bgColor="#10B981"
+                    textColor="#FFFFFF"
+                    icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
+                  />
+                )}
               </View>
             ) : null
           }

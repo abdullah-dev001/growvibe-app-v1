@@ -18,7 +18,7 @@ const leaderboard = () => {
   const { branchId, classId: classIdFromRedux, user } = useSelector((state) => state.auth);
   // Use classId from params if available, otherwise use Redux store
   const classId = classIdFromParams || classIdFromRedux;
-  const isStudent = user?.role === 'student';
+  const isTeacher = user?.role === 'teacher';
 
   const [leaderboardList, setLeaderboardList] = useState([]);
   const [offset, setOffset] = useState(0);
@@ -159,7 +159,7 @@ const leaderboard = () => {
             <Text style={styles.cardTitle}>{title}</Text>
             <Text style={styles.cardDate}>Expires: {formatDate(leaderboard.expire_date)}</Text>
           </View>
-          {!isStudent && (
+          {isTeacher && (
             <View style={styles.cardActions}>
               <TouchableOpacity
                 onPress={() => handleEdit(leaderboard)}
@@ -237,10 +237,10 @@ const leaderboard = () => {
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Leaderboard</Text>
             <Text style={styles.subTitle}>
-              {isStudent ? 'View student leaderboards' : 'Manage student leaderboards'}
+              {isTeacher ? 'Manage student leaderboards' : 'View student leaderboards'}
             </Text>
           </View>
-          {!isStudent && (
+          {isTeacher && (
             <Button
               title="Add Leaderboard"
               onPress={handleAddLeaderboard}
@@ -281,11 +281,11 @@ const leaderboard = () => {
             ) : leaderboardList.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  {isStudent 
-                    ? 'No leaderboards found.' 
-                    : 'No leaderboards found. Create your first leaderboard to get started.'}
+                  {isTeacher 
+                    ? 'No leaderboards found. Create your first leaderboard to get started.'
+                    : 'No leaderboards found.'}
                 </Text>
-                {!isStudent && (
+                {isTeacher && (
                   <Button
                     title="Add Leaderboard"
                     onPress={handleAddLeaderboard}
