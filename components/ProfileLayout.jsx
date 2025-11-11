@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Facebook from "../assets/icons/Facebook";
 import Insta from "../assets/icons/Insta";
 import Language from "../assets/icons/Language";
@@ -19,6 +19,7 @@ import Location from "../assets/icons/Location";
 import Logout from "../assets/icons/Logout";
 import Verified from "../assets/icons/Verified";
 import { hp } from "../helpers/common";
+import { useGetProfileByRoleQuery } from "../redux/api/profileApi";
 import { logout } from "../redux/slices/authSlice";
 import { supabase } from "../supabaseClient";
 
@@ -27,24 +28,49 @@ export default function ProfileLayout() {
   const dispatch = useDispatch();
   const router = useRouter();
 
-  const userProfile = {
-    fullName: "Abdullah Khan",
-    username: "abdullah_dev",
-    role: "admin",
-    about:
-      "I am a passionate web developer with a love for building sleek, functional interfaces that enhance user experience.",
-    bannerImage:
-      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80",
-    userImage:
-      "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=500&q=80",
-    email: "abdullah@example.com",
-    phone: "+92 301 1234567",
-    dateOfBirth: "1998-05-12",
-    languages: ["English", "Urdu"],
-    location: "Lahore, Pakistan",
-    instaUrl: "https://instagram.com/",
-    fbUrl: "https://facebook.com/",
-    interest: ["UI Design", "React", "GSAP Animations", "Open Source"],
+  const { user } = useSelector((state) => state.auth);
+  
+  // Fetch profile using RTK Query (cached, not persisted in Redux)
+  const { data: profile, isLoading: isLoadingProfile } = useGetProfileByRoleQuery(
+    { userId: user?.id, role: user?.role },
+    { skip: !user?.id || !user?.role }
+  );
+
+  // Default placeholder images
+  const defaultBannerImage = "https://images.unsplash.com/photo-1697886720515-a50d1cff4c2f?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170";
+  const defaultUserImage = "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png";
+
+  // Process profile data
+  const userProfile = profile ? {
+    fullName: profile.full_Name || "N/A",
+    username: user?.email?.split("@")[0] || "user",
+    role: user?.role || "user",
+    about: profile.about || "No description available.",
+    bannerImage: profile.banner_Image || defaultBannerImage,
+    userImage: profile.user_Image || defaultUserImage, // Keep null to show placeholder
+    email: profile.contact_Email || "N/A",
+    phone: profile.phone || "N/A",
+    dateOfBirth: profile.date_Of_Birth || null,
+    languages: profile.language ? profile.language.split(",").map(l => l.trim()) : [],
+    location: profile.location || "N/A",
+    instaUrl: profile.instagram_Url || null,
+    fbUrl: profile.facebook_Url || null,
+    interest: profile.interest ? profile.interest.split(",").map(i => i.trim()) : [],
+  } : {
+    fullName: isLoadingProfile ? "Loading..." : "N/A",
+    username: user?.email?.split("@")[0] || "user",
+    role: user?.role || "user",
+    about: isLoadingProfile ? "Loading profile..." : "No description available.",
+    bannerImage: defaultBannerImage,
+    userImage: null,
+    email: user?.email || "N/A",
+    phone: "N/A",
+    dateOfBirth: null,
+    languages: [],
+    location: "N/A",
+    instaUrl: null,
+    fbUrl: null,
+    interest: [],
   };
 
   const ImageSkeleton = ({ width, height, borderRadius = 0 }) => (
@@ -92,18 +118,22 @@ export default function ProfileLayout() {
           cachePolicy={"disk"}
           contentFit="cover"
           style={styles.bannerImage}
-          source={userProfile.bannerImage}
+          source={{ uri: userProfile.bannerImage }}
         />
         <View style={styles.avatarContainer}>
           <View style={[styles.avatarWrapper, { height: hp(15.5), width: hp(15.5) }]}>
             <Pressable onPress={() => setShowImagePopup(true)}>
-              <Image
-                transition={500}
-                cachePolicy={"disk"}
-                contentFit="cover"
-                style={styles.avatarImage}
-                source={userProfile.userImage}
-              />
+              {userProfile.userImage ? (
+                <Image
+                  transition={500}
+                  cachePolicy={"disk"}
+                  contentFit="cover"
+                  style={styles.avatarImage}
+                  source={{ uri: userProfile.userImage }}
+                />
+              ) : (
+                <View style={[styles.avatarImage, { backgroundColor: "#E5E7EB" }]} />
+              )}
             </Pressable>
             <Text style={styles.usernameBadge}>
               @{userProfile.username}
@@ -120,23 +150,29 @@ export default function ProfileLayout() {
             <Verified size={18} color="#1CACF3" strokeWidth={1.5} />
           </View>
         </View>
-        <Text style={styles.roleText}>
-          Founder of Growvibe
-        </Text>
+        {userProfile.role && (
+          <Text style={styles.roleText}>
+            {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
+          </Text>
+        )}
 
         <View style={styles.infoRow}>
-          <View style={styles.infoItem}>
-            <Language size={14} color="#9ca3af" strokeWidth={1.5} />
-            <Text style={styles.infoText}>
-              {userProfile.languages.join(", ")}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Location size={14} color="#9ca3af" strokeWidth={1.5} />
-            <Text style={styles.infoText}>
-              {userProfile.location}
-            </Text>
-          </View>
+          {userProfile.languages.length > 0 && (
+            <View style={styles.infoItem}>
+              <Language size={14} color="#9ca3af" strokeWidth={1.5} />
+              <Text style={styles.infoText}>
+                {userProfile.languages.join(", ")}
+              </Text>
+            </View>
+          )}
+          {userProfile.location && userProfile.location !== "N/A" && (
+            <View style={styles.infoItem}>
+              <Location size={14} color="#9ca3af" strokeWidth={1.5} />
+              <Text style={styles.infoText}>
+                {userProfile.location}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -150,17 +186,25 @@ export default function ProfileLayout() {
 
         <View style={styles.socialButtons}>
           <Pressable
-            onPress={() => Linking.openURL(userProfile.instaUrl)}
-            style={styles.socialButtonInsta}
+            onPress={() => userProfile.instaUrl && Linking.openURL(userProfile.instaUrl)}
+            style={[
+              styles.socialButtonInsta,
+              !userProfile.instaUrl && styles.socialButtonDisabled
+            ]}
+            disabled={!userProfile.instaUrl}
           >
-            <Insta size={23} color="#fff" strokeWidth={1.5} />
+            <Insta size={23} color={userProfile.instaUrl ? "#fff" : "#9CA3AF"} strokeWidth={1.5} />
           </Pressable>
 
           <Pressable
-            onPress={() => Linking.openURL(userProfile.fbUrl)}
-            style={styles.socialButtonFb}
+            onPress={() => userProfile.fbUrl && Linking.openURL(userProfile.fbUrl)}
+            style={[
+              styles.socialButtonFb,
+              !userProfile.fbUrl && styles.socialButtonDisabled
+            ]}
+            disabled={!userProfile.fbUrl}
           >
-            <Facebook size={23} color="#fff" strokeWidth={1.5} />
+            <Facebook size={23} color={userProfile.fbUrl ? "#fff" : "#9CA3AF"} strokeWidth={1.5} />
           </Pressable>
         </View>
       </View>
@@ -180,18 +224,20 @@ export default function ProfileLayout() {
             </Text>
           </View>
 
-          <View style={styles.infoCardSpacer}>
-            <Text style={styles.infoCardTitle}>
-              Date Of Birth
-            </Text>
-            <Text style={styles.infoCardValue}>
-              {new Date(userProfile.dateOfBirth).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </Text>
-          </View>
+          {userProfile.dateOfBirth && (
+            <View style={styles.infoCardSpacer}>
+              <Text style={styles.infoCardTitle}>
+                Date Of Birth
+              </Text>
+              <Text style={styles.infoCardValue}>
+                {new Date(userProfile.dateOfBirth).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* About Section */}
@@ -203,19 +249,21 @@ export default function ProfileLayout() {
         </View>
 
         {/* Interests */}
-        <View style={[styles.infoCard, styles.infoCardMargin]}>
-          <Text style={styles.infoCardTitle}>Interests</Text>
-          <View style={styles.interestsContainer}>
-            {userProfile.interest.map((item, index) => (
-              <Text
-                key={index}
-                style={styles.interestTag}
-              >
-                {item}
-              </Text>
-            ))}
+        {userProfile.interest.length > 0 && (
+          <View style={[styles.infoCard, styles.infoCardMargin]}>
+            <Text style={styles.infoCardTitle}>Interests</Text>
+            <View style={styles.interestsContainer}>
+              {userProfile.interest.map((item, index) => (
+                <Text
+                  key={index}
+                  style={styles.interestTag}
+                >
+                  {item}
+                </Text>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Logout */}
         <Pressable
@@ -240,13 +288,17 @@ export default function ProfileLayout() {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalImageContainer}>
-              <Image
-                transition={500}
-                cachePolicy={"disk"}
-                contentFit="cover"
-                style={styles.modalImage}
-                source={userProfile.userImage}
-              />
+              {userProfile.userImage ? (
+                <Image
+                  transition={500}
+                  cachePolicy={"disk"}
+                  contentFit="cover"
+                  style={styles.modalImage}
+                  source={{ uri: userProfile.userImage }}
+                />
+              ) : (
+                <View style={[styles.modalImage, { backgroundColor: "#E5E7EB" }]} />
+              )}
               <View style={styles.modalInfo}>
                 <Text style={styles.modalName}>
                   {userProfile.fullName}
@@ -379,6 +431,10 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     padding: 12,
     marginLeft: 8,
+  },
+  socialButtonDisabled: {
+    backgroundColor: '#E5E7EB',
+    opacity: 0.6,
   },
   contentSection: {
     paddingHorizontal: 16,

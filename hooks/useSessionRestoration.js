@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { resolveTeacherClassId, useLazyGetClassByIdQuery } from '../redux/api/classApi';
 import { useLazyGetProfileByRoleQuery } from '../redux/api/profileApi';
-import { setBranchId, setClassId, setClassInfo, setProfile, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
+import { setBranchId, setClassId, setClassInfo, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
 import { supabase } from '../supabaseClient';
 
 export const useSessionRestoration = () => {
@@ -77,13 +77,10 @@ export const useSessionRestoration = () => {
             }
           }
 
-          // Fetch profile based on role
+          // Fetch profile based on role (RTK Query will cache it, no need to store in Redux)
           if (userRole) {
             try {
-              const profileResult = await fetchProfile({ userId: session.user.id, role: userRole }).unwrap();
-              if (profileResult) {
-                dispatch(setProfile(profileResult));
-              }
+              await fetchProfile({ userId: session.user.id, role: userRole });
             } catch (profileErr) {
               console.error("Error fetching profile during session restoration:", profileErr);
             }

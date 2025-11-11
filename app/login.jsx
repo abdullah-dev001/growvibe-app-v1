@@ -25,7 +25,6 @@ import {
   setClassInfo,
   setError,
   setLoading,
-  setProfile,
   setSessionId,
   setUser,
 } from "../redux/slices/authSlice";
@@ -143,13 +142,10 @@ const Login = () => {
           }
         }
 
-        // Fetch profile based on role
+        // Fetch profile based on role (RTK Query will cache it, no need to store in Redux)
         if (userRole) {
           try {
-            const profileResult = await fetchProfile({ userId: data.user.id, role: userRole }).unwrap();
-            if (profileResult) {
-              dispatch(setProfile(profileResult));
-            }
+            await fetchProfile({ userId: data.user.id, role: userRole });
           } catch (profileErr) {
             console.error("Error fetching profile:", profileErr);
           }
