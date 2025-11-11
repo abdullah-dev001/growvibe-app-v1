@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
@@ -14,7 +14,10 @@ const PAGE_SIZE = 5;
 
 const leaderboard = () => {
   const router = useRouter();
-  const { branchId, classId, user } = useSelector((state) => state.auth);
+  const { classId: classIdFromParams } = useLocalSearchParams();
+  const { branchId, classId: classIdFromRedux, user } = useSelector((state) => state.auth);
+  // Use classId from params if available, otherwise use Redux store
+  const classId = classIdFromParams || classIdFromRedux;
   const isStudent = user?.role === 'student';
 
   const [leaderboardList, setLeaderboardList] = useState([]);

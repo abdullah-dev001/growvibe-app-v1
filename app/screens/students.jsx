@@ -2,6 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
+import Plus from '../../assets/icons/Plus';
+import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
 import StudentCardSkeleton from '../../components/skeletons/StudentCardSkeleton';
@@ -15,6 +17,7 @@ const students = () => {
   // For teachers, use classId from Redux store only. For other roles, use params if available.
   const isTeacher = user?.role === 'teacher';
   const classId = isTeacher ? classIdFromRedux : (classIdFromParams || classIdFromRedux);
+  const isStudent = user?.role === 'student';
 
   const PAGE_SIZE = 5;
   const [studentsList, setStudentsList] = useState([]);
@@ -130,6 +133,10 @@ const students = () => {
     });
   };
 
+  const handleAddStudent = () => {
+    router.push('/screens/forms/addStudent');
+  };
+
   const getStatusColor = (status) => {
     return status ? '#10B981' : '#EF4444';
   };
@@ -147,6 +154,16 @@ const students = () => {
               Manage school students
             </Text>
           </View>
+          {!isStudent && (
+            <Button
+              title="Add Student"
+              onPress={handleAddStudent}
+              icon={<Plus size={hp(1.8)} color="#FFFFFF" strokeWidth={2} />}
+              bgColor="#1CACF3"
+              textColor="#FFFFFF"
+              size="small"
+            />
+          )}
         </View>
 
         {/* Search Bar */}

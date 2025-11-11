@@ -126,9 +126,13 @@ const classes = () => {
   };
 
   const handleLeaderboard = (classItem) => {
-    // Navigate to leaderboard screen
-    console.log('View leaderboard for class:', classItem);
-    // router.push(`/screens/leaderboard/${classItem.id}`);
+    // Navigate to leaderboard screen with classId
+    router.push({
+      pathname: '/screens/leaderboard',
+      params: {
+        classId: classItem.class_id,
+      },
+    });
   };
 
   const handleAttendance = (classItem) => {
@@ -137,11 +141,6 @@ const classes = () => {
     // router.push(`/screens/attendance/${classItem.id}`);
   };
 
-  const handleResult = (classItem) => {
-    // Navigate to result screen
-    console.log('View results for class:', classItem);
-    // router.push(`/screens/results/${classItem.id}`);
-  };
 
   const handleStudents = (classId) => {
     // Navigate to students screen
@@ -311,16 +310,6 @@ const classes = () => {
                         >
                           <Text style={styles.attendanceButtonText}>
                             Attendance
-                          </Text>
-                        </TouchableOpacity>
-    
-                        <TouchableOpacity
-                          onPress={() => handleResult(classItem)}
-                          style={[styles.secondaryButton, styles.resultButton, { marginLeft: 8 }]}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.resultButtonText}>
-                            Result
                           </Text>
                         </TouchableOpacity>
     
@@ -573,14 +562,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Medium',
     color: '#10B981',
-  },
-  resultButton: {
-    backgroundColor: '#FEF3C7',
-  },
-  resultButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: 'Poppins-Medium',
-    color: '#F59E0B',
   },
   studentsButton: {
     backgroundColor: '#EFF6FF',
