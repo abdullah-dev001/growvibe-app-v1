@@ -160,7 +160,7 @@ const coordinators = () => {
               Manage school coordinators
             </Text>
           </View>
-          {!isFetchingInitial && initialData !== undefined && coordinatorsList.length === 0 ? (
+          {!isFetchingInitial && initialData !== undefined && initialData?.items?.length === 0 ? (
             <Button
               title="Add Coordinator"
               onPress={handleAddCoordinator}
