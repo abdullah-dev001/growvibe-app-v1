@@ -18,6 +18,7 @@ import { schoolApi } from './api/schoolApi';
 import { sessionApi } from './api/sessionApi';
 import { studentApi } from './api/studentApi';
 import { teacherApi } from './api/teacherApi';
+import { ticketApi } from './api/ticketApi';
 import authReducer from './slices/authSlice';
 
 // Root reducer
@@ -39,6 +40,7 @@ const rootReducer = combineReducers({
   [resultApi.reducerPath]: resultApi.reducer,
   [leaderboardApi.reducerPath]: leaderboardApi.reducer,
   [profileApi.reducerPath]: profileApi.reducer,
+  [ticketApi.reducerPath]: ticketApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -71,6 +73,7 @@ export const store = configureStore({
         resultApi.middleware,
         leaderboardApi.middleware,
         profileApi.middleware,
+        ticketApi.middleware,
       ),
 });
 
