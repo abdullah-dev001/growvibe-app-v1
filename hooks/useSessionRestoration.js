@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { resolveTeacherClassId, useLazyGetClassByIdQuery } from '../redux/api/classApi';
 import { useLazyGetProfileByRoleQuery } from '../redux/api/profileApi';
+import { useLazyGetActiveSessionByBranchIdQuery } from '../redux/api/sessionApi';
 import { setBranchId, setClassId, setClassInfo, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
 import { supabase } from '../supabaseClient';
 
@@ -10,9 +11,20 @@ export const useSessionRestoration = () => {
   const { sessionRestored, user, branchId, classId, className } = useSelector((state) => state.auth);
   const [fetchProfile] = useLazyGetProfileByRoleQuery();
   const [fetchClass] = useLazyGetClassByIdQuery();
+  const [fetchActiveSession] = useLazyGetActiveSessionByBranchIdQuery();
+  const hasRestoredSession = useRef(false);
+  const hasFetchedActiveSession = useRef(null); // Track which branchId we've fetched for
 
   useEffect(() => {
+    // Prevent duplicate session restoration calls
+    if (sessionRestored || hasRestoredSession.current) {
+      return;
+    }
+
     const restoreSession = async () => {
+      // Mark as started to prevent duplicate calls
+      hasRestoredSession.current = true;
+      
       try {
         // Get the current session
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -95,14 +107,18 @@ export const useSessionRestoration = () => {
       }
     };
 
-    if (!sessionRestored) {
-      restoreSession();
-    }
+    restoreSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, sessionRestored]);
 
   // Separate effect to fetch active session when branchId changes for principal/coordinator
   useEffect(() => {
-    const fetchActiveSession = async () => {
+    // Prevent duplicate session fetches for the same branchId
+    if (!sessionRestored || !user || !branchId || hasFetchedActiveSession.current === branchId) {
+      return;
+    }
+
+    const fetchActiveSessionData = async () => {
       // Only fetch for principal and coordinator roles, skip admin and owner
       const userRole = user?.role;
       if (!userRole || userRole === 'admin' || userRole === 'owner') {
@@ -111,16 +127,15 @@ export const useSessionRestoration = () => {
 
       // Only fetch if user is principal or coordinator and has branchId
       if ((userRole === 'principal' || userRole === 'coordinator') && branchId) {
+        // Mark as fetched for this branchId to prevent duplicate calls
+        hasFetchedActiveSession.current = branchId;
+        
         try {
-          const { data: activeSessions, error: sessionError } = await supabase
-            .from("session")
-            .select("*")
-            .eq("branch_Id", branchId)
-            .eq("session_Status", true)
-            .limit(1);
-
-          if (!sessionError && activeSessions && activeSessions.length > 0) {
-            dispatch(setSessionId(activeSessions[0].id));
+          // Use RTK Query for proper caching and deduplication
+          const result = await fetchActiveSession(branchId).unwrap();
+          
+          if (result && result.length > 0) {
+            dispatch(setSessionId(result[0].id));
           }
         } catch (sessionErr) {
           console.error('Error fetching active session:', sessionErr);
@@ -128,11 +143,8 @@ export const useSessionRestoration = () => {
       }
     };
 
-    // Only run if session is restored and we have the necessary data
-    if (sessionRestored && user && branchId) {
-      fetchActiveSession();
-    }
-  }, [dispatch, sessionRestored, user, branchId]);
+    fetchActiveSessionData();
+  }, [dispatch, sessionRestored, user, branchId, fetchActiveSession]);
 
   // Fetch class name and section when classId is available (if not already fetched)
   useEffect(() => {

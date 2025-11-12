@@ -2,13 +2,21 @@ import * as Font from "expo-font";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { Provider } from "react-redux";
+import { Provider, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { useSessionRestoration } from "../hooks/useSessionRestoration";
+import { useGetProfileByRoleQuery } from "../redux/api/profileApi";
 import { persistor, store } from "../redux/store";
 
 function AppContent() {
   const { sessionRestored } = useSessionRestoration();
+  const user = useSelector((state) => state.auth.user);
+
+  // Fetch profile on app open - RTK Query will cache it for use across the app
+  useGetProfileByRoleQuery(
+    { userId: user?.id, role: user?.role },
+    { skip: !sessionRestored || !user?.id || !user?.role }
+  );
 
   if (!sessionRestored) {
     return <View style={styles.container} />; // Loading state

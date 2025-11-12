@@ -100,12 +100,18 @@ export const sessionApi = createApi({
                     .from("session")
                     .select("*")
                     .eq("branch_Id", branchId)
-                    .eq("session_Status", true);
+                    .eq("session_Status", true)
+                    .limit(1);
 
                 if (error) throw error;
                 return { data };
             },
-            providesTags: ["Sessions"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs || 'null'})`;
+            },
+            providesTags: (result, error, branchId) => [
+                { type: "Sessions", id: branchId },
+            ],
         }),
     }),
 });
@@ -117,5 +123,6 @@ export const {
     useLazyGetSessionsByBranchIdPaginatedQuery,
     useUpdateSessionMutation,
     useDeleteSessionMutation,
-    useGetActiveSessionByBranchIdQuery
+    useGetActiveSessionByBranchIdQuery,
+    useLazyGetActiveSessionByBranchIdQuery
 } = sessionApi;
