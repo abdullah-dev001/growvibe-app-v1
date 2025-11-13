@@ -160,7 +160,7 @@ export const useSessionRestoration = () => {
       }
     };
 
-    restoreSession();
+      restoreSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, sessionRestored]);
 
@@ -186,7 +186,7 @@ export const useSessionRestoration = () => {
         try {
           // Use RTK Query for proper caching and deduplication
           const result = await fetchActiveSession(branchId).unwrap();
-          
+
           if (result && result.length > 0) {
             dispatch(setSessionId(result[0].id));
           }

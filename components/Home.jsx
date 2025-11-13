@@ -53,6 +53,15 @@ const TEACHER_OPTIONS = {
     borderColor: "border-teal-100",
     textColor: "text-teal-500",
   },
+  applications: {
+    id: "applications",
+    title: "Applications",
+    description: "Create and manage applications",
+    link: "/screens/applications",
+    bgColor: "bg-yellow-50",
+    borderColor: "border-yellow-100",
+    textColor: "text-yellow-500",
+  },
 };
 
 // Student options configuration
@@ -92,6 +101,15 @@ const STUDENT_OPTIONS = {
     bgColor: "bg-blue-50",
     borderColor: "border-blue-100",
     textColor: "text-blue-500",
+  },
+  applications: {
+    id: "applications",
+    title: "Applications",
+    description: "Create and view your applications",
+    link: "/screens/applications",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-emerald-100",
+    textColor: "text-emerald-500",
   },
 };
 

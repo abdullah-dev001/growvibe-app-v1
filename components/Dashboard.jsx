@@ -61,6 +61,15 @@ const DASHBOARD_OPTIONS = {
     borderColor: "border-pink-100",
     textColor: "text-pink-500",
   },
+  applications: {
+    id: "applications",
+    title: "Applications",
+    description: "Create and manage applications",
+    link: "/screens/applications",
+    bgColor: "bg-yellow-50",
+    borderColor: "border-yellow-100",
+    textColor: "text-yellow-500",
+  },
 };
 
 // Role-based options mapping
@@ -72,15 +81,18 @@ const ROLE_OPTIONS = {
     "teacher",
     "coordinator",
     "attendance",
+    "applications",
   ],
   principal: [
     "class",
     "teacher",
     "coordinator",
+    "applications",
   ],
   coordinator: [
     "class",
     "teacher",
+    "applications",
   ],
 };
 
@@ -91,6 +103,7 @@ const getBgColor = (bgClass) => {
     "bg-green-50": "#D1FAE5",
     "bg-orange-50": "#FFEDD5",
     "bg-pink-50": "#FCE7F3",
+    "bg-yellow-50": "#FEF9C3",
   };
   return colorMap[bgClass] || "#F9FAFB";
 };
@@ -102,6 +115,7 @@ const getBorderColor = (borderClass) => {
     "border-green-100": "#A7F3D0",
     "border-orange-100": "#FED7AA",
     "border-pink-100": "#FBCFE8",
+    "border-yellow-100": "#FDE68A",
   };
   return colorMap[borderClass] || "#E5E7EB";
 };
@@ -113,6 +127,7 @@ const getTextColor = (textClass) => {
     "text-green-500": "#10B981",
     "text-orange-500": "#F97316",
     "text-pink-500": "#EC4899",
+    "text-yellow-500": "#F59E0B",
   };
   return colorMap[textClass] || "#6B7280";
 };

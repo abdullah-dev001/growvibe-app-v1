@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { persistReducer, persistStore } from 'redux-persist';
+import { applicationApi } from './api/applicationApi';
 import { authApi } from './api/authApi';
 import { branchApi } from './api/branchApi';
 import { classApi } from './api/classApi';
@@ -45,6 +46,7 @@ const rootReducer = combineReducers({
   [ticketApi.reducerPath]: ticketApi.reducer,
   [timetableApi.reducerPath]: timetableApi.reducer,
   [paymentApi.reducerPath]: paymentApi.reducer,
+  [applicationApi.reducerPath]: applicationApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -80,6 +82,7 @@ export const store = configureStore({
         ticketApi.middleware,
         timetableApi.middleware,
         paymentApi.middleware,
+        applicationApi.middleware,
       ),
 });
 
