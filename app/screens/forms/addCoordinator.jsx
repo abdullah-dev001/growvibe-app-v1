@@ -51,7 +51,6 @@ const addCoordinator = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create coordinator:", error);
       Alert.alert("Error", error.message || "Failed to add coordinator");
     } finally {
       setSubmitting(false);

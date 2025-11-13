@@ -117,7 +117,7 @@ const impNotesList = () => {
   };
 
   const handleEdit = (note) => {
-    console.log('Edit note:', note);
+    // Edit note
   };
 
   const handleDelete = (note) => {
@@ -126,7 +126,9 @@ const impNotesList = () => {
       `Are you sure you want to delete "${note.note_Title || 'this note'}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete note:', note.id) },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+            // Delete note
+          } },
       ]
     );
   };

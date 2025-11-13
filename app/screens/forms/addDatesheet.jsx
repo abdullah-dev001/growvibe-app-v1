@@ -99,7 +99,6 @@ const addDatesheet = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create datesheet:", error);
       Alert.alert("Error", error.message || "Failed to create datesheet. Please try again.");
     } finally {
       setSubmitting(false);

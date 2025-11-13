@@ -107,7 +107,6 @@ const addResult = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create result:", error);
       Alert.alert("Error", error.message || "Failed to create result. Please try again.");
     } finally {
       setSubmitting(false);

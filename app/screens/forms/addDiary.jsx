@@ -87,7 +87,6 @@ const addDiary = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create diary:", error);
       Alert.alert("Error", error.message || "Failed to create diary entry. Please try again.");
     } finally {
       setSubmitting(false);

@@ -53,7 +53,6 @@ const support = () => {
       const result = await getTicketReplies(ticketId).unwrap();
       setRepliesMap((prev) => ({ ...prev, [ticketId]: result || [] }));
     } catch (error) {
-      console.error('Failed to fetch replies:', error);
       Alert.alert('Error', 'Failed to load ticket replies');
       setRepliesMap((prev) => ({ ...prev, [ticketId]: [] }));
     } finally {
@@ -88,7 +87,6 @@ const support = () => {
 
       Alert.alert('Success', 'Reply added successfully');
     } catch (error) {
-      console.error('Failed to create reply:', error);
       Alert.alert('Error', error?.data?.message || 'Failed to add reply');
     } finally {
       setSubmittingReplyMap((prev) => ({ ...prev, [ticketId]: false }));
@@ -112,7 +110,6 @@ const support = () => {
               }).unwrap();
               Alert.alert('Success', 'Ticket closed successfully');
             } catch (error) {
-              console.error('Failed to close ticket:', error);
               Alert.alert('Error', error?.data?.message || 'Failed to close ticket');
             }
           },

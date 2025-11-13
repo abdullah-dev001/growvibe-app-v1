@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { resolveTeacherClassId, useLazyGetClassByIdQuery } from '../redux/api/classApi';
 import { useLazyGetProfileByRoleQuery } from '../redux/api/profileApi';
 import { useLazyGetActiveSessionByBranchIdQuery } from '../redux/api/sessionApi';
-import { setBranchId, setClassId, setClassInfo, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
+import { setBranchId, setClassId, setClassInfo, setSchoolId, setSessionId, setSessionRestored, setUser } from '../redux/slices/authSlice';
 import { supabase } from '../supabaseClient';
 
 export const useSessionRestoration = () => {
@@ -45,13 +45,66 @@ export const useSessionRestoration = () => {
           };
           dispatch(setUser(userData));
 
+          // Attempt to derive schoolId from various possible metadata keys
+          const rawAppMetaData = session.user?.raw_app_meta_data || {};
+          const appMetaData = session.user?.app_metadata || {};
+          const rawUserMetaData = session.user?.user_metadata || {};
+
+          const schoolIdFromRaw = 
+            rawAppMetaData?.school_Id ?? 
+            rawAppMetaData?.schoolId ?? 
+            rawAppMetaData?.school_id;
+          
+          const schoolIdFromAppMeta = 
+            appMetaData?.school_Id ?? 
+            appMetaData?.schoolId ?? 
+            appMetaData?.school_id;
+          
+          const schoolIdFromUserMeta = 
+            rawUserMetaData?.school_Id ?? 
+            rawUserMetaData?.schoolId ?? 
+            rawUserMetaData?.school_id;
+          
+          const restoredSchoolId = schoolIdFromRaw ?? schoolIdFromAppMeta ?? schoolIdFromUserMeta ?? null;
+
+          if (restoredSchoolId) {
+            dispatch(setSchoolId(restoredSchoolId));
+          }
+
           // Attempt to derive branchId from various possible metadata keys
-          const branchIdFromAppMeta = session.user?.app_metadata?.branchId || session.user?.app_metadata?.branch_Id;
-          const branchIdFromUserMeta = session.user?.user_metadata?.branchId || session.user?.user_metadata?.branch_Id;
-          const restoredBranchId = branchIdFromAppMeta ?? branchIdFromUserMeta ?? null;
+          // Priority: raw_app_meta_data > app_metadata > user_metadata
+          const branchIdFromRaw =
+            rawAppMetaData?.branch_Id ??
+            rawAppMetaData?.branchId ??
+            rawAppMetaData?.branch_id;
+          const branchIdFromAppMeta =
+            appMetaData?.branch_Id ??
+            appMetaData?.branchId ??
+            appMetaData?.branch_id;
+          const branchIdFromUserMeta =
+            rawUserMetaData?.branch_Id ??
+            rawUserMetaData?.branchId ??
+            rawUserMetaData?.branch_id;
+          
+          const restoredBranchId = branchIdFromRaw ?? branchIdFromAppMeta ?? branchIdFromUserMeta ?? null;
 
           if (restoredBranchId) {
             dispatch(setBranchId(restoredBranchId));
+            // Fallback: derive schoolId from branch if still not set
+            try {
+              if (!restoredSchoolId) {
+                const { data: branchRows, error: branchErr } = await supabase
+                  .from('branch')
+                  .select('school_Id')
+                  .eq('id', restoredBranchId)
+                  .limit(1);
+                if (!branchErr && branchRows && branchRows.length > 0 && branchRows[0]?.school_Id) {
+                  dispatch(setSchoolId(branchRows[0].school_Id));
+                }
+              }
+            } catch (branchLookupErr) {
+              // Non-fatal
+            }
           }
 
           // Restore classId for teachers and students
@@ -81,11 +134,11 @@ export const useSessionRestoration = () => {
                     }));
                   }
                 } catch (classInfoErr) {
-                  console.error("Error fetching class info during session restoration:", classInfoErr);
+                  // Error fetching class info during session restoration
                 }
               }
             } catch (classErr) {
-              console.error("Error fetching classId during session restoration:", classErr);
+              // Error fetching classId during session restoration
             }
           }
 
@@ -94,7 +147,7 @@ export const useSessionRestoration = () => {
             try {
               await fetchProfile({ userId: session.user.id, role: userRole });
             } catch (profileErr) {
-              console.error("Error fetching profile during session restoration:", profileErr);
+              // Error fetching profile during session restoration
             }
           }
         } else {
@@ -138,7 +191,7 @@ export const useSessionRestoration = () => {
             dispatch(setSessionId(result[0].id));
           }
         } catch (sessionErr) {
-          console.error('Error fetching active session:', sessionErr);
+          // Error fetching active session
         }
       }
     };
@@ -160,7 +213,7 @@ export const useSessionRestoration = () => {
             }));
           }
         } catch (classInfoErr) {
-          console.error("Error fetching class info:", classInfoErr);
+          // Error fetching class info
         }
       }
     };

@@ -40,7 +40,6 @@ const addStudent = () => {
 //       };
 
 //       // TODO: Replace with actual API call
-//       console.log('Student data:', studentData);
       
 //       Alert.alert(
 //         'Success',
@@ -83,7 +82,6 @@ const handleSubmit = async (values, { setSubmitting, resetForm }) => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create student:", error);
       Alert.alert("Error", error.message || "Failed to add student");
     } finally {
       setSubmitting(false);

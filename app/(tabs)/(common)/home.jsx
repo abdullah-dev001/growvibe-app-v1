@@ -5,7 +5,7 @@ import Dashboard from "../../../components/Dashboard";
 import Home from "../../../components/Home";
 
 const home = () => {
-  const {user, branchId} = useSelector((state) => state.auth)
+  const {user, branchId, schoolId} = useSelector((state) => state.auth)
     
   return (
     <View style={{ flex: 1 }}>

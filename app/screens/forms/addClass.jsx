@@ -49,7 +49,6 @@ const addClass = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create class:", error);
       Alert.alert("Error", error.message || "Failed to add class");
     } finally {
       setSubmitting(false);

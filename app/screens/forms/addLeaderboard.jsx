@@ -126,7 +126,6 @@ const addLeaderboard = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create leaderboard:", error);
       Alert.alert("Error", error.message || "Failed to create leaderboard. Please try again.");
     } finally {
       setSubmitting(false);

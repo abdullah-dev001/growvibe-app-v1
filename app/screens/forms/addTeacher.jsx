@@ -46,7 +46,6 @@ const addTeacher = () => {
   //     };
 
   //     // TODO: Replace with actual API call
-  //     console.log('Teacher data:', teacherData);
 
   //     Alert.alert(
   //       'Success',
@@ -88,7 +87,6 @@ const addTeacher = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create teacher:", error);
       Alert.alert("Error", error.message || "Failed to add teacher");
     } finally {
       setSubmitting(false);

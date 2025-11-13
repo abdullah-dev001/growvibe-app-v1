@@ -104,7 +104,6 @@ const classes = () => {
 
   const handleEdit = (classItem) => {
     // Navigate to edit screen or open modal
-    console.log('Edit class:', classItem);
   };
 
   const handleDelete = (classItem) => {
@@ -118,7 +117,6 @@ const classes = () => {
           style: 'destructive',
           onPress: () => {
             // Handle delete logic
-            console.log('Delete class:', classItem);
           }
         },
       ]
@@ -137,7 +135,6 @@ const classes = () => {
 
   const handleAttendance = (classItem) => {
     // Navigate to attendance screen
-    console.log('View attendance for class:', classItem);
     // router.push(`/screens/attendance/${classItem.id}`);
   };
 
@@ -148,6 +145,17 @@ const classes = () => {
       pathname: "/screens/students",
       params: {
         classId: classId,
+      },
+    });
+  };
+
+  const handleTimetable = (classItem) => {
+    // Navigate to timetable screen
+    router.push({
+      pathname: "/screens/timetable",
+      params: {
+        classId: classItem.class_id,
+        className: `${classItem.class_Name} - Section ${classItem.section}`,
       },
     });
   };
@@ -320,6 +328,16 @@ const classes = () => {
                         >
                           <Text style={styles.studentsButtonText}>
                             Students
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => handleTimetable(classItem)}
+                          style={[styles.secondaryButton, styles.timetableButton, { marginLeft: 8 }]}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.timetableButtonText}>
+                            Timetable
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -570,6 +588,14 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Medium',
     color: '#3B82F6',
+  },
+  timetableButton: {
+    backgroundColor: '#FEF3C7',
+  },
+  timetableButtonText: {
+    fontSize: hp(1.3),
+    fontFamily: 'Poppins-Medium',
+    color: '#F59E0B',
   },
   emptyState: {
     alignItems: 'center',

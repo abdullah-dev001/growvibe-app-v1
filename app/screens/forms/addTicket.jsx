@@ -84,7 +84,6 @@ const addTicket = () => {
       ]);
     } catch (error) {
       const actualError = error?.data?.data || error?.data || error;
-      console.error('Failed to create ticket:', error);
       Alert.alert('Error', actualError.message || error.message || 'Failed to create ticket. Please try again.');
     } finally {
       setSubmitting(false);

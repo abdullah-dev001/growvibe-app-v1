@@ -113,7 +113,6 @@ const notes = () => {
 
   const handleEdit = (note) => {
     // Navigate to edit screen or open modal
-    console.log("Edit note:", note);
   };
 
   const handleDelete = async (note) => {

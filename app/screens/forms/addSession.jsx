@@ -83,10 +83,6 @@ const addSession = () => {
           [{ text: "OK" }]
         );
       } else {
-        // Only log unexpected errors, not constraint violations
-        if (!isDuplicateActiveSession) {
-          console.error("Failed to create session:", error);
-        }
         Alert.alert("Error", actualError.message || error.message || "Failed to add session");
       }
     } finally {

@@ -67,7 +67,6 @@ const addOwner = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create owner:", error);
       Alert.alert("Error", error.message || "Failed to add owner");
     } finally {
       setSubmitting(false);

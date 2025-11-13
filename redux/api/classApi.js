@@ -17,7 +17,7 @@ export const resolveTeacherClassId = async (teacherAuthId) => {
       return classRows[0]?.id || null;
     }
   } catch (error) {
-    console.error("Error fetching class from class table:", error);
+    // Error fetching class from class table
   }
 
   try {
@@ -47,7 +47,7 @@ export const resolveTeacherClassId = async (teacherAuthId) => {
       }
     }
   } catch (error) {
-    console.error("Error fetching class from teachers_with_branch:", error);
+    // Error fetching class from teachers_with_branch
   }
 
   return null;

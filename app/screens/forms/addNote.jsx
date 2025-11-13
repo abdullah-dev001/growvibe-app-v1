@@ -111,7 +111,6 @@ const addNote = () => {
       ]);
     } catch (error) {
       const actualError = error?.data?.data || error?.data || error;
-      console.error("Failed to create note:", error);
       Alert.alert("Error", actualError.message || error.message || "Failed to add note");
     } finally {
       setSubmitting(false);

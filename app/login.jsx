@@ -25,6 +25,7 @@ import {
   setClassInfo,
   setError,
   setLoading,
+  setSchoolId,
   setSessionId,
   setUser,
 } from "../redux/slices/authSlice";
@@ -72,6 +73,29 @@ const Login = () => {
           })
         );
 
+        // Derive and set schoolId immediately from metadata (so downstream screens have it)
+        try {
+          const rawAppMetaData = data.user?.raw_app_meta_data || {};
+          const appMetaData = data.user?.app_metadata || {};
+          const userMetaData = data.user?.user_metadata || {};
+
+          const schoolIdFromRaw =
+            rawAppMetaData?.school_Id ?? rawAppMetaData?.schoolId ?? rawAppMetaData?.school_id;
+          const schoolIdFromAppMeta =
+            appMetaData?.school_Id ?? appMetaData?.schoolId ?? appMetaData?.school_id;
+          const schoolIdFromUserMeta =
+            userMetaData?.school_Id ?? userMetaData?.schoolId ?? userMetaData?.school_id;
+
+          const schoolId =
+            schoolIdFromRaw ?? schoolIdFromAppMeta ?? schoolIdFromUserMeta ?? null;
+
+          if (schoolId) {
+            dispatch(setSchoolId(schoolId));
+          }
+        } catch (_) {
+          // non-fatal
+        }
+
         // Derive branchId
         const branchIdFromAppMeta =
           data.user?.app_metadata?.branchId ||
@@ -83,6 +107,23 @@ const Login = () => {
 
         if (branchId) {
           dispatch(setBranchId(branchId));
+          // Fallback: derive schoolId from branch if not already set
+          try {
+            const state = (await import("../redux/store")).store.getState();
+            const currentSchoolId = state?.auth?.schoolId;
+            if (!currentSchoolId) {
+              const { data: branchRows, error: branchErr } = await supabase
+                .from("branch")
+                .select("school_Id")
+                .eq("id", branchId)
+                .limit(1);
+              if (!branchErr && branchRows && branchRows.length > 0 && branchRows[0]?.school_Id) {
+                dispatch(setSchoolId(branchRows[0].school_Id));
+              }
+            }
+          } catch (_) {
+            // ignore
+          }
         }
 
         // Fetch active session for principal and coordinator
@@ -103,7 +144,7 @@ const Login = () => {
               dispatch(setSessionId(activeSessions[0].id));
             }
           } catch (sessionErr) {
-            console.error("Error fetching active session:", sessionErr);
+            // Error fetching active session
           }
         }
 
@@ -134,11 +175,11 @@ const Login = () => {
                   }));
                 }
               } catch (classInfoErr) {
-                console.error("Error fetching class info:", classInfoErr);
+                // Error fetching class info
               }
             }
           } catch (classErr) {
-            console.error("Error fetching classId:", classErr);
+            // Error fetching classId
           }
         }
 
@@ -147,7 +188,7 @@ const Login = () => {
           try {
             await fetchProfile({ userId: data.user.id, role: userRole });
           } catch (profileErr) {
-            console.error("Error fetching profile:", profileErr);
+            // Error fetching profile
           }
         }
 

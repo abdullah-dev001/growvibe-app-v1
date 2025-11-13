@@ -137,7 +137,7 @@ const result = () => {
   };
 
   const handleEdit = (result) => {
-    console.log('Edit result:', result);
+    // Edit result
   };
 
   const handleDelete = (result) => {
@@ -146,7 +146,9 @@ const result = () => {
       `Are you sure you want to delete this result?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete result:', result.id) },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+            // Delete result
+          } },
       ]
     );
   };

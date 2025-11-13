@@ -128,7 +128,7 @@ const diary = () => {
   };
 
   const handleEdit = (diary) => {
-    console.log('Edit diary:', diary);
+    // Edit diary
   };
 
   const handleDelete = (diary) => {
@@ -137,7 +137,9 @@ const diary = () => {
       `Are you sure you want to delete this diary entry?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete diary:', diary.id) },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+            // Delete diary
+          } },
       ]
     );
   };
@@ -159,7 +161,6 @@ const diary = () => {
       try {
         subjects = typeof diary.subjects === 'string' ? JSON.parse(diary.subjects) : diary.subjects;
       } catch (e) {
-        console.error('Error parsing subjects:', e);
         subjects = [];
       }
     }

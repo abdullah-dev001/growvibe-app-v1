@@ -128,7 +128,7 @@ const datesheet = () => {
   };
 
   const handleEdit = (datesheet) => {
-    console.log('Edit datesheet:', datesheet);
+    // Edit datesheet
   };
 
   const handleDelete = (datesheet) => {
@@ -137,7 +137,9 @@ const datesheet = () => {
       `Are you sure you want to delete "${datesheet.datesheet_Title}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete datesheet:', datesheet.id) },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+            // Delete datesheet
+          } },
       ]
     );
   };
@@ -159,7 +161,6 @@ const datesheet = () => {
       try {
         subjects = typeof datesheet.subjects === 'string' ? JSON.parse(datesheet.subjects) : datesheet.subjects;
       } catch (e) {
-        console.error('Error parsing subjects:', e);
         subjects = [];
       }
     }

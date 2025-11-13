@@ -122,7 +122,7 @@ const leaderboard = () => {
   };
 
   const handleEdit = (leaderboard) => {
-    console.log('Edit leaderboard:', leaderboard);
+    // Edit leaderboard
   };
 
   const handleDelete = (leaderboard) => {
@@ -132,7 +132,9 @@ const leaderboard = () => {
       `Are you sure you want to delete "${title}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete leaderboard:', leaderboard.leaderboard_id) },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+            // Delete leaderboard
+          } },
       ]
     );
   };

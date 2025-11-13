@@ -35,9 +35,7 @@ const addPrincipal = () => {
   const router = useRouter();
   const { user, schoolId, branchId } = useSelector((state) => state.auth);
   const { principalLength } = useLocalSearchParams();
-  console.log(principalLength);
   const [createAuth] = useCreateAuthMutation();
-
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       await createAuth({
@@ -60,7 +58,6 @@ const addPrincipal = () => {
         },
       ]);
     } catch (error) {
-      console.error("Failed to create principal:", error);
       Alert.alert("Error", error.message || "Failed to add principal");
     } finally {
       setSubmitting(false);
