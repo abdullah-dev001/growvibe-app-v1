@@ -108,7 +108,13 @@ const school = () => {
   };
 
   const handleViewPayments = (school) => {
-    // Navigate to payments screen
+    router.push({
+      pathname: '/screens/payments',
+      params: {
+        schoolId: school.id,
+        schoolName: school.school_Name,
+      },
+    });
   };
 
   return (

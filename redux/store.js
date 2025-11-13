@@ -11,6 +11,7 @@ import { diaryApi } from './api/diaryApi';
 import { leaderboardApi } from './api/leaderboardApi';
 import { noteApi } from './api/noteApi';
 import { ownerApi } from './api/ownerApi';
+import { paymentApi } from './api/paymentApi';
 import { principalApi } from './api/principalApi';
 import { profileApi } from './api/profileApi';
 import { resultApi } from './api/resultApi';
@@ -43,6 +44,7 @@ const rootReducer = combineReducers({
   [profileApi.reducerPath]: profileApi.reducer,
   [ticketApi.reducerPath]: ticketApi.reducer,
   [timetableApi.reducerPath]: timetableApi.reducer,
+  [paymentApi.reducerPath]: paymentApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -77,6 +79,7 @@ export const store = configureStore({
         profileApi.middleware,
         ticketApi.middleware,
         timetableApi.middleware,
+        paymentApi.middleware,
       ),
 });
 
