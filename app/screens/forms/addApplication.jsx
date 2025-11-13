@@ -23,6 +23,7 @@ import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
 import { resolveApplicationAssignedTo, useCreateApplicationMutation } from "../../../redux/api/applicationApi";
+import { useLazyGetProfileByRoleQuery } from "../../../redux/api/profileApi";
 import { supabase } from "../../../supabaseClient";
 
 const validationSchema = Yup.object().shape({
@@ -35,6 +36,7 @@ const addApplication = () => {
   const { user, schoolId, branchId, classId } = useSelector((state) => state.auth);
   const [createApplication, { isLoading: isCreating }] = useCreateApplicationMutation();
   const [attachment, setAttachment] = useState(null);
+  const [getProfile] = useLazyGetProfileByRoleQuery();
 
   const role = user?.role;
   const authId = user?.id;
@@ -254,8 +256,23 @@ const addApplication = () => {
 
       const attachmentUrl = await uploadAttachmentIfNeeded();
 
-      const createdByName =
-        user?.email?.split("@")[0] || "Unknown User";
+      // Fetch user's profile to get full_Name
+      let createdByName = user?.email?.split("@")[0] || "Unknown User";
+      let createdByImage = null;
+
+      try {
+        if (authId && role) {
+          const profileResult = await getProfile({ userId: authId, role }).unwrap();
+          if (profileResult?.full_Name) {
+            createdByName = profileResult.full_Name;
+          }
+          if (profileResult?.user_Image) {
+            createdByImage = profileResult.user_Image;
+          }
+        }
+      } catch (profileError) {
+        // If profile fetch fails, use email as fallback (already set above)
+      }
 
       await createApplication({
         school_Id: schoolId || null,
@@ -266,7 +283,7 @@ const addApplication = () => {
         assigned_To: assignedTo,
         status: "pending",
         created_By_Name: createdByName,
-        created_By_Image: null,
+        created_By_Image: createdByImage,
         attachment_Url: attachmentUrl,
       }).unwrap();
 
