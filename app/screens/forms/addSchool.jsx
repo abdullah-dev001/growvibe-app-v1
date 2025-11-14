@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Formik } from 'formik';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -9,10 +9,10 @@ import Input from '../../../components/Input';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
 import { useGetOwnersWithoutSchoolIdQuery } from '../../../redux/api/ownerApi';
-import { useCreateSchoolMutation } from '../../../redux/api/schoolApi';
+import { useCreateSchoolMutation, useGetSchoolByIdQuery, useUpdateSchoolMutation } from '../../../redux/api/schoolApi';
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
+// Validation Schema Factory
+const getValidationSchema = (isEditMode) => Yup.object().shape({
   school_Name: Yup.string()
     .required('School name is required')
     .min(2, 'School name must be at least 2 characters')
@@ -28,21 +28,23 @@ const validationSchema = Yup.object().shape({
       'Please enter a valid phone number or email'
     ),
   school_Status: Yup.boolean().required('School status is required'),
-  school_Subscription_Plan: Yup.string()
-    .required('Subscription plan is required')
-    .min(2, 'Subscription plan must be at least 2 characters')
-    .max(50, 'Subscription plan must be less than 50 characters'),
-  school_Owner: Yup.string()
-    .required('School owner is required'),
+  school_Owner: isEditMode 
+    ? Yup.string() 
+    : Yup.string().required('School owner is required'),
 });
 
 const addSchool = () => {
   const router = useRouter();
+  const { schoolId } = useLocalSearchParams();
+  const isEditMode = !!schoolId;
   const { user } = useSelector((state) => state.auth);
-  const [createSchool, { isLoading }] = useCreateSchoolMutation();
-  const { data: owners } = useGetOwnersWithoutSchoolIdQuery();
+  const [createSchool, { isLoading: isCreating }] = useCreateSchoolMutation();
+  const [updateSchool, { isLoading: isUpdating }] = useUpdateSchoolMutation();
+  const { data: owners } = useGetOwnersWithoutSchoolIdQuery(undefined, { skip: isEditMode });
+  const { data: schoolData, isLoading: isLoadingSchool } = useGetSchoolByIdQuery(schoolId, { skip: !isEditMode });
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState(null);
+  const isLoading = isCreating || isUpdating;
 
   const handleOwnerSelect = (owner, setFieldValue) => {
     setSelectedOwner(owner);
@@ -52,29 +54,51 @@ const addSchool = () => {
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const schoolData = {
-        school_Name: values.school_Name,
-        school_Address: values.school_Address,
-        school_Contact: values.school_Contact,
-        school_Status: values.school_Status,
-        school_Subscription_Fee: values.school_Subscription_Fee,
-        owner_Id: values.school_Owner,
-      };
+      if (isEditMode) {
+        const updateData = {
+          id: schoolId,
+          school_Name: values.school_Name,
+          school_Address: values.school_Address,
+          school_Contact: values.school_Contact,
+          school_Status: values.school_Status,
+        };
 
-      await createSchool(schoolData).unwrap();
-      
-      Alert.alert(
-        'Success',
-        'School added successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
-      );
+        await updateSchool(updateData).unwrap();
+        
+        Alert.alert(
+          'Success',
+          'School updated successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        const schoolData = {
+          school_Name: values.school_Name,
+          school_Address: values.school_Address,
+          school_Contact: values.school_Contact,
+          school_Status: values.school_Status,
+          owner_Id: values.school_Owner,
+        };
+
+        await createSchool(schoolData).unwrap();
+        
+        Alert.alert(
+          'Success',
+          'School added successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to add school');
+      Alert.alert('Error', error.message || `Failed to ${isEditMode ? 'update' : 'add'} school`);
     } finally {
       setSubmitting(false);
     }
@@ -97,23 +121,28 @@ const addSchool = () => {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>
-              Add New School
+              {isEditMode ? 'Edit School' : 'Add New School'}
             </Text>
             <Text style={styles.headerSubtitle}>
-              Fill in the details to add a new school
+              {isEditMode ? 'Update the school details' : 'Fill in the details to add a new school'}
             </Text>
           </View>
 
+          {isLoadingSchool ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading school data...</Text>
+            </View>
+          ) : (
           <Formik
             initialValues={{
-              school_Name: '',
-              school_Address: '',
-              school_Contact: '',
-              school_Status: true,
-              school_Subscription_Plan: '',
-              school_Owner: '',
+              school_Name: schoolData?.school_Name || '',
+              school_Address: schoolData?.school_Address || '',
+              school_Contact: schoolData?.school_Contact || '',
+              school_Status: schoolData?.school_Status ?? true,
+              school_Owner: schoolData?.owner_Id || '',
             }}
-            validationSchema={validationSchema}
+            enableReinitialize
+            validationSchema={getValidationSchema(isEditMode)}
             onSubmit={handleSubmit}
           >
             {({ 
@@ -231,81 +260,64 @@ const addSchool = () => {
                     </View>
                   </View>
 
-                  {/* Subscription Plan */}
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>
-                      Subscription Plan *
-                    </Text>
-                    <Input
-                      placeholder="Enter subscription plan (e.g., Basic, Premium, Enterprise)"
-                      value={values.school_Subscription_Plan}
-                      onChangeText={handleChange('school_Subscription_Plan')}
-                      onBlur={handleBlur('school_Subscription_Plan')}
-                      type="text"
-                    />
-                    {touched.school_Subscription_Plan && errors.school_Subscription_Plan && (
-                      <Text style={styles.errorText}>
-                        {errors.school_Subscription_Plan}
+                  {/* School Owner - Only show in create mode */}
+                  {!isEditMode && (
+                    <View style={styles.fieldContainer}>
+                      <Text style={styles.fieldLabel}>
+                        School Owner *
                       </Text>
-                    )}
-                  </View>
-
-                  {/* School Owner */}
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>
-                      School Owner *
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setShowOwnerDropdown(!showOwnerDropdown)}
-                      style={styles.ownerSelector}
-                    >
-                      <Text
-                        style={[
-                          styles.ownerSelectorText,
-                          { color: selectedOwner ? '#111827' : '#9CA3AF' }
-                        ]}
+                      <TouchableOpacity
+                        onPress={() => setShowOwnerDropdown(!showOwnerDropdown)}
+                        style={styles.ownerSelector}
                       >
-                        {selectedOwner ? `${selectedOwner.full_Name} (${selectedOwner.email})` : 'Select school owner'}
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.ownerSelectorText,
+                            { color: selectedOwner ? '#111827' : '#9CA3AF' }
+                          ]}
+                        >
+                          {selectedOwner ? `${selectedOwner.full_Name} (${selectedOwner.email})` : 'Select school owner'}
+                        </Text>
+                      </TouchableOpacity>
 
-                    {/* Owner Dropdown */}
-                    {showOwnerDropdown && (
-                      <View style={styles.ownerDropdown}>
-                        {owners?.map((owner) => (
-                          <TouchableOpacity
-                            key={owner?.id}
-                            onPress={() => handleOwnerSelect(owner, setFieldValue)}
-                            style={styles.ownerDropdownItem}
-                          >
-                            <Text
-                              style={{
-                                fontSize: hp(1.5),
-                                fontFamily: 'Poppins-Medium',
-                                color: '#111827',
-                              }}
+                      {/* Owner Dropdown */}
+                      {showOwnerDropdown && (
+                        <View style={styles.ownerDropdown}>
+                          {owners?.map((owner) => (
+                            <TouchableOpacity
+                              key={owner?.id}
+                              onPress={() => handleOwnerSelect(owner, setFieldValue)}
+                              style={styles.ownerDropdownItem}
                             >
-                              {owner?.full_Name}
-                            </Text>
-                            <Text
-                              style={{
-                                fontSize: hp(1.3),
-                                fontFamily: 'Poppins-Regular',
-                                color: '#6B7280',
-                              }}
-                            >
-                              {owner.email}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                    {touched.school_Owner && errors.school_Owner && (
-                      <Text style={styles.errorText}>
-                        {errors.school_Owner}
-                      </Text>
-                    )}
-                  </View>
+                              <Text
+                                style={{
+                                  fontSize: hp(1.5),
+                                  fontFamily: 'Poppins-Medium',
+                                  color: '#111827',
+                                }}
+                              >
+                                {owner?.full_Name}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontSize: hp(1.3),
+                                  fontFamily: 'Poppins-Regular',
+                                  color: '#6B7280',
+                                }}
+                              >
+                                {owner.email}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                      {touched.school_Owner && errors.school_Owner && (
+                        <Text style={styles.errorText}>
+                          {errors.school_Owner}
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </View>
 
                 {/* Action Buttons */}
@@ -321,7 +333,7 @@ const addSchool = () => {
                   </View>
                   <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                     <Button
-                      title="Add School"
+                      title={isEditMode ? "Update School" : "Add School"}
                       onPress={formikSubmit}
                       bgColor="#1CACF3"
                       textColor="#FFFFFF"
@@ -333,6 +345,7 @@ const addSchool = () => {
               </>
             )}
           </Formik>
+          )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -447,5 +460,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
   },
 });

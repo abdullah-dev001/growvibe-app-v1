@@ -18,7 +18,6 @@ export const schoolApi = createApi({
                             school_Address: school.school_Address,
                             school_Contact: school.school_Contact,
                             school_Status: school.school_Status,
-                            school_Subscription_Fee: school.school_Subscription_Fee,
                             owner_Id: school.owner_Id,
                         },
                     ])
@@ -94,6 +93,19 @@ export const schoolApi = createApi({
             },
             providesTags: ["Schools"],
         }),
+        getSchoolById: builder.query({
+            async queryFn(schoolId) {
+                const { data, error } = await supabase
+                    .from("school")
+                    .select("*")
+                    .eq("id", schoolId)
+                    .single();
+
+                if (error) throw error;
+                return { data };
+            },
+            providesTags: (result, error, arg) => [{ type: "Schools", id: arg }],
+        }),
         updateSchool: builder.mutation({
             async queryFn(school) {
                 const { data, error } = await supabase
@@ -103,8 +115,6 @@ export const schoolApi = createApi({
                         school_Address: school.school_Address,
                         school_Contact: school.school_Contact,
                         school_Status: school.school_Status,
-                        school_Subscription_Plan: school.school_Subscription_Plan,
-                        owner_Id: school.owner_Id,
                     })
                     .eq("id", school.id)
                     .select();
@@ -123,5 +133,6 @@ export const {
     useGetSchoolsPaginatedQuery,
     useLazyGetSchoolsPaginatedQuery,
     useGetSchoolsByOwnerQuery,
+    useGetSchoolByIdQuery,
     useUpdateSchoolMutation
 } = schoolApi;

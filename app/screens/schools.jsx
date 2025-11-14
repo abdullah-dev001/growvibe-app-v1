@@ -96,15 +96,12 @@ const school = () => {
   };
 
   const handleEdit = (school) => {
-    // Navigate to edit screen or open modal
-  };
-
-  const handleDelete = (school) => {
-    // Handle delete logic
-  };
-
-  const handleEditOwner = (school) => {
-    // Navigate to edit owner screen
+    router.push({
+      pathname: '/screens/forms/addSchool',
+      params: {
+        schoolId: school.id,
+      },
+    });
   };
 
   const handleViewPayments = (school) => {
@@ -160,8 +157,6 @@ const school = () => {
               owner_Email={school.owner_email}
               total_Users={school.total_users}
               onEdit={() => handleEdit(school)}
-              onDelete={() => handleDelete(school)}
-              onEditOwner={() => handleEditOwner(school)}
               onViewPayments={() => handleViewPayments(school)}
               onViewBranches={() =>
                 router.push({
