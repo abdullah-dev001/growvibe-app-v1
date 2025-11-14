@@ -19,6 +19,7 @@ import { resultApi } from './api/resultApi';
 import { schoolApi } from './api/schoolApi';
 import { sessionApi } from './api/sessionApi';
 import { studentApi } from './api/studentApi';
+import { taskApi } from './api/taskApi';
 import { teacherApi } from './api/teacherApi';
 import { ticketApi } from './api/ticketApi';
 import { timetableApi } from './api/timetableApi';
@@ -47,6 +48,7 @@ const rootReducer = combineReducers({
   [timetableApi.reducerPath]: timetableApi.reducer,
   [paymentApi.reducerPath]: paymentApi.reducer,
   [applicationApi.reducerPath]: applicationApi.reducer,
+  [taskApi.reducerPath]: taskApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -83,6 +85,7 @@ export const store = configureStore({
         timetableApi.middleware,
         paymentApi.middleware,
         applicationApi.middleware,
+        taskApi.middleware,
       ),
 });
 

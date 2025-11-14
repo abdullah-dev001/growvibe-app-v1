@@ -62,6 +62,15 @@ const TEACHER_OPTIONS = {
     borderColor: "border-yellow-100",
     textColor: "text-yellow-500",
   },
+  tasks: {
+    id: "tasks",
+    title: "Tasks",
+    description: "View and manage tasks",
+    link: "/screens/tasks",
+    bgColor: "bg-cyan-50",
+    borderColor: "border-cyan-100",
+    textColor: "text-cyan-500",
+  },
 };
 
 // Student options configuration
@@ -111,6 +120,15 @@ const STUDENT_OPTIONS = {
     borderColor: "border-emerald-100",
     textColor: "text-emerald-500",
   },
+  tasks: {
+    id: "tasks",
+    title: "Tasks",
+    description: "View tasks assigned to you",
+    link: "/screens/tasks",
+    bgColor: "bg-cyan-50",
+    borderColor: "border-cyan-100",
+    textColor: "text-cyan-500",
+  },
 };
 
 const getBgColor = (bgClass) => {
@@ -124,6 +142,7 @@ const getBgColor = (bgClass) => {
     "bg-pink-50": "#FCE7F3",
     "bg-orange-50": "#FFEDD5",
     "bg-blue-50": "#DBEAFE",
+    "bg-emerald-50": "#D1FAE5",
   };
   return colorMap[bgClass] || "#F9FAFB";
 };
@@ -139,6 +158,7 @@ const getBorderColor = (borderClass) => {
     "border-pink-100": "#FBCFE8",
     "border-orange-100": "#FED7AA",
     "border-blue-100": "#BFDBFE",
+    "border-emerald-100": "#A7F3D0",
   };
   return colorMap[borderClass] || "#E5E7EB";
 };
@@ -154,6 +174,7 @@ const getTextColor = (textClass) => {
     "text-pink-500": "#EC4899",
     "text-orange-500": "#F97316",
     "text-blue-500": "#3B82F6",
+    "text-emerald-500": "#10B981",
   };
   return colorMap[textClass] || "#6B7280";
 };

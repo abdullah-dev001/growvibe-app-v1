@@ -116,7 +116,7 @@ export const classApi = createApi({
             async queryFn(branchId) {
                 const { data, error } = await supabase
                     .from("class")
-                    .select("*")
+                    .select("id, class_Name")
                     .eq("branch_Id", branchId);
 
                 if (error) throw error;
