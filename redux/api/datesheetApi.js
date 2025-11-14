@@ -37,6 +37,31 @@ export const datesheetApi = createApi({
                 { type: "Datesheet", id: `${arg.branchId}-${arg.classId || 'null'}` },
             ],
         }),
+        getDatesheetById: builder.query({
+            async queryFn(datesheetId) {
+                try {
+                    const { data, error } = await supabase
+                        .from("datesheet_with_subjects")
+                        .select("*")
+                        .eq("datesheet_id", datesheetId)
+                        .single();
+
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+                    return { data: data || null };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
+            providesTags: (result, error, datesheetId) => [
+                { type: "Datesheet", id: datesheetId },
+                { type: "Datesheet", id: "LIST" },
+            ],
+        }),
         createDatesheet: builder.mutation({
             async queryFn(datesheetData) {
                 const { data, error } = await supabase.functions.invoke('insert-datesheet', {
@@ -50,12 +75,28 @@ export const datesheetApi = createApi({
                 { type: "Datesheet", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
             ],
         }),
+        updateDatesheet: builder.mutation({
+            async queryFn(datesheetData) {
+                const { data, error } = await supabase.functions.invoke('update-datesheet', {
+                    body: datesheetData
+                });
+
+                if (error) throw error;
+                return { data };
+            },
+            invalidatesTags: (result, error, arg) => [
+                { type: "Datesheet", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
+                { type: "Datesheet", id: arg.datesheet_Id },
+            ],
+        }),
     }),
 });
 
 export const {
     useGetDatesheetsByBranchAndClassPaginatedQuery,
     useLazyGetDatesheetsByBranchAndClassPaginatedQuery,
-    useCreateDatesheetMutation
+    useGetDatesheetByIdQuery,
+    useCreateDatesheetMutation,
+    useUpdateDatesheetMutation
 } = datesheetApi;
 

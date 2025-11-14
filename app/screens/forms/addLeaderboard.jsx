@@ -1,5 +1,5 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React, { useState } from "react";
 import {
@@ -19,7 +19,7 @@ import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
-import { useCreateLeaderboardMutation } from "../../../redux/api/leaderboardApi";
+import { useCreateLeaderboardMutation, useGetLeaderboardByIdQuery, useUpdateLeaderboardMutation } from "../../../redux/api/leaderboardApi";
 import { useGetStudentsByBranchAndClassQuery } from "../../../redux/api/studentApi";
 
 // Validation Schema
@@ -40,8 +40,16 @@ const validationSchema = Yup.object().shape({
 
 const addLeaderboard = () => {
   const router = useRouter();
+  const { leaderboardId } = useLocalSearchParams();
+  const isEditMode = !!leaderboardId;
   const { branchId, classId, user } = useSelector((state) => state.auth);
   const [createLeaderboard, { isLoading: isCreating }] = useCreateLeaderboardMutation();
+  const [updateLeaderboard, { isLoading: isUpdating }] = useUpdateLeaderboardMutation();
+  const { data: leaderboardData, isLoading: isLoadingLeaderboard } = useGetLeaderboardByIdQuery(leaderboardId, {
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
 
   // Fetch students for selector
   const { data: studentsData } = useGetStudentsByBranchAndClassQuery(
@@ -108,25 +116,45 @@ const addLeaderboard = () => {
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const leaderboardData = {
-        branch_Id: branchId,
-        class_Id: classId || null,
-        leaderboard_Title: values.leaderboard_Title,
-        expire_Date: values.expire_Date,
-        created_By: user?.id,
-        students: values.students,
-      };
+      if (isEditMode) {
+        const updateData = {
+          leaderboard_Id: leaderboardId,
+          branch_Id: branchId,
+          class_Id: classId || null,
+          leaderboard_Title: values.leaderboard_Title,
+          expire_Date: values.expire_Date,
+          students: values.students,
+        };
 
-      await createLeaderboard(leaderboardData).unwrap();
+        await updateLeaderboard(updateData).unwrap();
 
-      Alert.alert("Success", "Leaderboard created successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]);
+        Alert.alert("Success", "Leaderboard updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]);
+      } else {
+        const createData = {
+          branch_Id: branchId,
+          class_Id: classId || null,
+          leaderboard_Title: values.leaderboard_Title,
+          expire_Date: values.expire_Date,
+          created_By: user?.id,
+          students: values.students,
+        };
+
+        await createLeaderboard(createData).unwrap();
+
+        Alert.alert("Success", "Leaderboard created successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]);
+      }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to create leaderboard. Please try again.");
+      Alert.alert("Error", error.message || `Failed to ${isEditMode ? 'update' : 'create'} leaderboard. Please try again.`);
     } finally {
       setSubmitting(false);
     }
@@ -148,23 +176,36 @@ const addLeaderboard = () => {
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Add New Leaderboard</Text>
+              <Text style={styles.headerTitle}>
+                {isEditMode ? "Edit Leaderboard" : "Add New Leaderboard"}
+              </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to create a new leaderboard
+                {isEditMode 
+                  ? "Update the leaderboard details below"
+                  : "Fill in the details to create a new leaderboard"}
               </Text>
             </View>
 
+            {isLoadingLeaderboard ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading leaderboard data...</Text>
+              </View>
+            ) : (
             <Formik
               initialValues={{
-                leaderboard_Title: "",
-                expire_Date: "",
-                students: [
+                leaderboard_Title: leaderboardData?.title || leaderboardData?.leaderboard_title || "",
+                expire_Date: leaderboardData?.expire_date || "",
+                students: leaderboardData?.students?.map((student) => ({
+                  student_Id: student.studentId || student.student_id || "",
+                  rank: student.rank || "",
+                })) || [
                   {
                     student_Id: "",
                     rank: "",
                   },
                 ],
               }}
+              enableReinitialize
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
             >
@@ -204,6 +245,8 @@ const addLeaderboard = () => {
                         onPress={() => {
                           if (values.expire_Date) {
                             setTempExpireDate(new Date(values.expire_Date));
+                          } else {
+                            setTempExpireDate(new Date());
                           }
                           setShowExpireDatePicker(true);
                         }}
@@ -450,11 +493,11 @@ const addLeaderboard = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Leaderboard"
+                        title={isEditMode ? "Update Leaderboard" : "Add Leaderboard"}
                         onPress={formikSubmit}
                         bgColor="#10B981"
                         textColor="#FFFFFF"
-                        loading={isSubmitting || isCreating}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
@@ -462,6 +505,7 @@ const addLeaderboard = () => {
                 );
               }}
             </Formik>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -704,6 +748,16 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Medium',
+    color: '#6B7280',
   },
 });
 

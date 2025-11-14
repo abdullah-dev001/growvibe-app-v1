@@ -113,6 +113,84 @@ export const leaderboardApi = createApi({
                 { type: "Leaderboard", id: `${arg.branchId}-${arg.classId || 'null'}` },
             ],
         }),
+        getLeaderboardById: builder.query({
+            async queryFn(leaderboardId) {
+                try {
+                    const { data, error } = await supabase
+                        .from("leaderboard_view")
+                        .select("*")
+                        .eq("leaderboard_id", leaderboardId);
+
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+
+                    // Process the data similar to getLeaderboardsByBranchAndClassPaginated
+                    let leaderboard = null;
+                    if (data && data.length > 0) {
+                        if (data[0].students && Array.isArray(data[0].students)) {
+                            leaderboard = {
+                                leaderboard_id: data[0].leaderboard_id || data[0].id,
+                                title: data[0].title || data[0].leaderboard_title,
+                                expire_date: data[0].expire_date,
+                                class_id: data[0].class_id,
+                                branch_id: data[0].branch_id,
+                                created_at: data[0].created_at,
+                                created_by: data[0].created_by,
+                                students: (data[0].students || []).map((student) => ({
+                                    studentId: student.studentId || student.student_id,
+                                    fullName: student.fullName || student.full_name,
+                                    email: student.email,
+                                    userImage: student.userImage || student.user_image,
+                                    rank: student.rank,
+                                })),
+                            };
+                        } else {
+                            const leaderboardsMap = new Map();
+                            (data || []).forEach((row) => {
+                                const id = row.leaderboard_id;
+                                if (!leaderboardsMap.has(id)) {
+                                    leaderboardsMap.set(id, {
+                                        leaderboard_id: row.leaderboard_id,
+                                        title: row.title || row.leaderboard_title,
+                                        expire_date: row.expire_date,
+                                        class_id: row.class_id,
+                                        branch_id: row.branch_id,
+                                        created_at: row.created_at,
+                                        created_by: row.created_by,
+                                        students: [],
+                                    });
+                                }
+                                const lb = leaderboardsMap.get(id);
+                                const studentId = row.student_id || row.studentId;
+                                if (studentId && !lb.students.find(s => 
+                                    (s.studentId || s.student_id) === studentId
+                                )) {
+                                    lb.students.push({
+                                        studentId: studentId,
+                                        fullName: row.full_name || row.fullName,
+                                        email: row.email,
+                                        userImage: row.user_image || row.userImage,
+                                        rank: row.rank,
+                                    });
+                                }
+                            });
+                            leaderboard = Array.from(leaderboardsMap.values())[0] || null;
+                        }
+                    }
+                    return { data: leaderboard };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
+            providesTags: (result, error, leaderboardId) => [
+                { type: "Leaderboard", id: leaderboardId },
+                { type: "Leaderboard", id: "LIST" },
+            ],
+        }),
         createLeaderboard: builder.mutation({
             async queryFn(leaderboardData) {
                 const { data, error } = await supabase.functions.invoke('insert-leaderboard', {
@@ -126,12 +204,28 @@ export const leaderboardApi = createApi({
                 { type: "Leaderboard", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
             ],
         }),
+        updateLeaderboard: builder.mutation({
+            async queryFn(leaderboardData) {
+                const { data, error } = await supabase.functions.invoke('update-leaderboard', {
+                    body: leaderboardData
+                });
+
+                if (error) throw error;
+                return { data };
+            },
+            invalidatesTags: (result, error, arg) => [
+                { type: "Leaderboard", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
+                { type: "Leaderboard", id: arg.leaderboard_Id },
+            ],
+        }),
     }),
 });
 
 export const {
     useGetLeaderboardsByBranchAndClassPaginatedQuery,
     useLazyGetLeaderboardsByBranchAndClassPaginatedQuery,
-    useCreateLeaderboardMutation
+    useGetLeaderboardByIdQuery,
+    useCreateLeaderboardMutation,
+    useUpdateLeaderboardMutation
 } = leaderboardApi;
 

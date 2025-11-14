@@ -1,7 +1,7 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Alert,
     KeyboardAvoidingView,
@@ -19,7 +19,7 @@ import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
-import { useCreateDatesheetMutation } from "../../../redux/api/datesheetApi";
+import { useCreateDatesheetMutation, useGetDatesheetByIdQuery, useUpdateDatesheetMutation } from "../../../redux/api/datesheetApi";
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
@@ -40,8 +40,27 @@ const validationSchema = Yup.object().shape({
 
 const addDatesheet = () => {
   const router = useRouter();
+  const { datesheetId } = useLocalSearchParams();
+  const isEditMode = !!datesheetId;
   const { branchId, user, classId } = useSelector((state) => state.auth);
   const [createDatesheet, { isLoading: isCreating }] = useCreateDatesheetMutation();
+  const [updateDatesheet, { isLoading: isUpdating }] = useUpdateDatesheetMutation();
+  const {
+    data: datesheetData,
+    isLoading: isLoadingDatesheet,
+    error: datesheetError,
+  } = useGetDatesheetByIdQuery(datesheetId, {
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
+
+  // Check for errors when loading datesheet data
+  useEffect(() => {
+    if (isEditMode && datesheetError) {
+      Alert.alert("Error", "Failed to load datesheet data. Please try again.");
+    }
+  }, [datesheetError, isEditMode]);
 
   // Date picker states
   const [showExpireDatePicker, setShowExpireDatePicker] = useState(false);
@@ -80,26 +99,47 @@ const addDatesheet = () => {
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const datesheetData = {
-        branch_Id: branchId,
-        class_Id: classId || null,
-        datesheet_Title: values.datesheet_Title,
-        datesheet_Description: values.datesheet_Description || "",
-        created_By: user?.id,
-        expire_Date: values.expire_Date,
-        subjects: values.subjects,
-      };
+      if (isEditMode) {
+        const updateData = {
+          datesheet_Id: datesheetId,
+          branch_Id: branchId,
+          class_Id: classId || null,
+          datesheet_Title: values.datesheet_Title,
+          datesheet_Description: values.datesheet_Description || "",
+          expire_Date: values.expire_Date,
+          subjects: values.subjects,
+        };
 
-      await createDatesheet(datesheetData).unwrap();
+        await updateDatesheet(updateData).unwrap();
 
-      Alert.alert("Success", "Datesheet created successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]);
+        Alert.alert("Success", "Datesheet updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]);
+      } else {
+        const createData = {
+          branch_Id: branchId,
+          class_Id: classId || null,
+          datesheet_Title: values.datesheet_Title,
+          datesheet_Description: values.datesheet_Description || "",
+          created_By: user?.id,
+          expire_Date: values.expire_Date,
+          subjects: values.subjects,
+        };
+
+        await createDatesheet(createData).unwrap();
+
+        Alert.alert("Success", "Datesheet created successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]);
+      }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to create datesheet. Please try again.");
+      Alert.alert("Error", error.message || `Failed to ${isEditMode ? 'update' : 'create'} datesheet. Please try again.`);
     } finally {
       setSubmitting(false);
     }
@@ -121,19 +161,54 @@ const addDatesheet = () => {
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Add New Datesheet</Text>
+              <Text style={styles.headerTitle}>
+                {isEditMode ? "Edit Datesheet" : "Add New Datesheet"}
+              </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to create a new datesheet
+                {isEditMode 
+                  ? "Update the datesheet details below"
+                  : "Fill in the details to create a new datesheet"}
               </Text>
             </View>
 
+            {isLoadingDatesheet ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading datesheet data...</Text>
+              </View>
+            ) : (isEditMode && !datesheetData) ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Failed to load datesheet data. Please go back and try again.</Text>
+              </View>
+            ) : (
             <Formik
+              key={isEditMode && datesheetData ? `edit-${datesheetData.datesheet_id || datesheetData.datesheet_Id || datesheetData.id}` : 'create'}
               initialValues={{
-                datesheet_Title: "",
-                datesheet_Description: "",
-                expire_Date: "",
-                subjects: [{ subject_Name: "", date: "" }],
+                datesheet_Title: datesheetData?.datesheet_Title || datesheetData?.title || "",
+                datesheet_Description: datesheetData?.datesheet_Description || datesheetData?.description || "",
+                expire_Date: datesheetData?.expire_Date || datesheetData?.expire_date || "",
+                subjects: (() => {
+                  if (!datesheetData?.subjects) {
+                    return [{ subject_Name: "", date: "" }];
+                  }
+                  // Handle both string (JSON) and array formats
+                  let subjectsArray = [];
+                  try {
+                    const subjectsData = datesheetData.subjects;
+                    subjectsArray = typeof subjectsData === 'string' 
+                      ? JSON.parse(subjectsData) 
+                      : Array.isArray(subjectsData) ? subjectsData : [];
+                  } catch (e) {
+                    subjectsArray = [];
+                  }
+                  return subjectsArray.length > 0 
+                    ? subjectsArray.map((subject) => ({
+                        subject_Name: subject.subject_Name || subject.subject_name || "",
+                        date: subject.date || "",
+                      }))
+                    : [{ subject_Name: "", date: "" }];
+                })(),
               }}
+              enableReinitialize={true}
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
             >
@@ -189,6 +264,8 @@ const addDatesheet = () => {
                         onPress={() => {
                           if (values.expire_Date) {
                             setTempExpireDate(new Date(values.expire_Date));
+                          } else {
+                            setTempExpireDate(new Date());
                           }
                           setShowExpireDatePicker(true);
                         }}
@@ -433,17 +510,18 @@ const addDatesheet = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Datesheet"
+                        title={isEditMode ? "Update Datesheet" : "Add Datesheet"}
                         onPress={formikSubmit}
                         bgColor="#8B5CF6"
                         textColor="#FFFFFF"
-                        loading={isSubmitting || isCreating}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
                 </>
               )}
             </Formik>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -587,5 +665,15 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Medium',
+    color: '#6B7280',
   },
 });

@@ -92,6 +92,20 @@ const leaderboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId, classId]);
 
+  // Sync local state with updated cache data when cache is invalidated (e.g., after edit)
+  useEffect(() => {
+    if (initialData?.items && !isFetchingInitial) {
+      // Always sync if we're on the first page (offset <= PAGE_SIZE)
+      // This ensures updates are reflected when coming back from edit
+      if (offset <= PAGE_SIZE) {
+        setLeaderboardList(initialData.items);
+        setOffset(initialData.items.length);
+        setHasMore(initialData.items.length === PAGE_SIZE);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial]);
+
   const handleRefresh = async () => {
     if (isRefreshing || !branchId) return;
     setIsRefreshing(true);
@@ -122,21 +136,12 @@ const leaderboard = () => {
   };
 
   const handleEdit = (leaderboard) => {
-    // Edit leaderboard
-  };
-
-  const handleDelete = (leaderboard) => {
-    const title = leaderboard.title || leaderboard.leaderboard_title || 'this leaderboard';
-    Alert.alert(
-      'Delete Leaderboard',
-      `Are you sure you want to delete "${title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
-            // Delete leaderboard
-          } },
-      ]
-    );
+    router.push({
+      pathname: '/screens/forms/addLeaderboard',
+      params: {
+        leaderboardId: leaderboard.leaderboard_id,
+      },
+    });
   };
 
   const formatDate = (dateString) => {
@@ -169,13 +174,6 @@ const leaderboard = () => {
                 activeOpacity={0.7}
               >
                 <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDelete(leaderboard)}
-                style={styles.deleteButton}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -411,17 +409,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
-  },
-  deleteButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: 'Poppins-Medium',
-    color: '#EF4444',
   },
   studentsSection: {
     marginTop: 12,

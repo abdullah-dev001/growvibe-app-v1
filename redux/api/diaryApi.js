@@ -37,6 +37,31 @@ export const diaryApi = createApi({
                 { type: "Diary", id: `${arg.branchId}-${arg.classId || 'null'}` },
             ],
         }),
+        getDiaryById: builder.query({
+            async queryFn(diaryId) {
+                try {
+                    const { data, error } = await supabase
+                        .from("diary_with_subjects")
+                        .select("*")
+                        .eq("diary_id", diaryId)
+                        .single();
+
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+                    return { data: data || null };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
+            providesTags: (result, error, diaryId) => [
+                { type: "Diary", id: diaryId },
+                { type: "Diary", id: "LIST" },
+            ],
+        }),
         createDiary: builder.mutation({
             async queryFn(diaryData) {
                 const { data, error } = await supabase.functions.invoke('insert-diary', {
@@ -50,12 +75,28 @@ export const diaryApi = createApi({
                 { type: "Diary", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
             ],
         }),
+        updateDiary: builder.mutation({
+            async queryFn(diaryData) {
+                const { data, error } = await supabase.functions.invoke('update-diary', {
+                    body: diaryData
+                });
+
+                if (error) throw error;
+                return { data };
+            },
+            invalidatesTags: (result, error, arg) => [
+                { type: "Diary", id: `${arg.branch_Id}-${arg.class_Id || 'null'}` },
+                { type: "Diary", id: arg.diary_Id },
+            ],
+        }),
     }),
 });
 
 export const {
     useGetDiariesByBranchAndClassPaginatedQuery,
     useLazyGetDiariesByBranchAndClassPaginatedQuery,
-    useCreateDiaryMutation
+    useGetDiaryByIdQuery,
+    useCreateDiaryMutation,
+    useUpdateDiaryMutation
 } = diaryApi;
 

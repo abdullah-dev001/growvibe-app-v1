@@ -1,6 +1,6 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
-import React from "react";
+import React, { useEffect } from "react";
 import {
     Alert,
     KeyboardAvoidingView,
@@ -18,7 +18,7 @@ import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
-import { useCreateDiaryMutation } from "../../../redux/api/diaryApi";
+import { useCreateDiaryMutation, useGetDiaryByIdQuery, useUpdateDiaryMutation } from "../../../redux/api/diaryApi";
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
@@ -38,8 +38,23 @@ const validationSchema = Yup.object().shape({
 
 const addDiary = () => {
   const router = useRouter();
+  const { diaryId } = useLocalSearchParams();
+  const isEditMode = !!diaryId;
   const { branchId, user, classId } = useSelector((state) => state.auth);
   const [createDiary, { isLoading: isCreating }] = useCreateDiaryMutation();
+  const [updateDiary, { isLoading: isUpdating }] = useUpdateDiaryMutation();
+  const { data: diaryData, isLoading: isLoadingDiary, error: diaryError } = useGetDiaryByIdQuery(diaryId, {
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
+
+  // Check for errors when loading diary data
+  useEffect(() => {
+    if (isEditMode && diaryError) {
+      Alert.alert("Error", "Failed to load diary data. Please try again.");
+    }
+  }, [diaryError, isEditMode]);
 
   const formatDateForInput = (date) => {
     if (!date) return "";
@@ -67,27 +82,47 @@ const addDiary = () => {
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const diaryData = {
-        branch_Id: branchId,
-        class_Id: classId || null,
-        created_By: user?.id,
-        date: formatDateForInput(new Date()), // Auto-set to today
-        expire_Date: values.expire_Date,
-        imp_Note: values.imp_Note,
-        created_By_Email: user?.email || "", // Auto-set from user
-        subjects: values.subjects,
-      };
+      if (isEditMode) {
+        const updateData = {
+          diary_Id: diaryId,
+          branch_Id: branchId,
+          class_Id: classId || null,
+          expire_Date: values.expire_Date,
+          imp_Note: values.imp_Note,
+          subjects: values.subjects,
+        };
 
-      await createDiary(diaryData).unwrap();
+        await updateDiary(updateData).unwrap();
 
-      Alert.alert("Success", "Diary entry created successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]);
+        Alert.alert("Success", "Diary entry updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]);
+      } else {
+        const createData = {
+          branch_Id: branchId,
+          class_Id: classId || null,
+          created_By: user?.id,
+          date: formatDateForInput(new Date()), // Auto-set to today
+          expire_Date: values.expire_Date,
+          imp_Note: values.imp_Note,
+          created_By_Email: user?.email || "", // Auto-set from user
+          subjects: values.subjects,
+        };
+
+        await createDiary(createData).unwrap();
+
+        Alert.alert("Success", "Diary entry created successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]);
+      }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to create diary entry. Please try again.");
+      Alert.alert("Error", error.message || `Failed to ${isEditMode ? 'update' : 'create'} diary entry. Please try again.`);
     } finally {
       setSubmitting(false);
     }
@@ -109,18 +144,53 @@ const addDiary = () => {
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Add New Diary Entry</Text>
-              <Text style={styles.headerSubtitle}>
-                Fill in the details to create a new diary entry
+              <Text style={styles.headerTitle}>
+                {isEditMode ? "Edit Diary Entry" : "Add New Diary Entry"}
               </Text>
-    </View>
+              <Text style={styles.headerSubtitle}>
+                {isEditMode 
+                  ? "Update the diary entry details below"
+                  : "Fill in the details to create a new diary entry"}
+              </Text>
+            </View>
 
+            {isLoadingDiary ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading diary data...</Text>
+              </View>
+            ) : (isEditMode && !diaryData) ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Failed to load diary data. Please go back and try again.</Text>
+              </View>
+            ) : (
             <Formik
+              key={isEditMode && diaryData ? `edit-${diaryData.diary_id || diaryData.diary_Id || diaryData.id}` : 'create'}
               initialValues={{
-                expire_Date: "",
-                imp_Note: "",
-                subjects: [{ subject_Name: "", todo: "" }],
+                expire_Date: diaryData?.expire_Date || diaryData?.expire_date || "",
+                imp_Note: diaryData?.imp_Note || diaryData?.imp_note || "",
+                subjects: (() => {
+                  if (!diaryData?.subjects) {
+                    return [{ subject_Name: "", todo: "" }];
+                  }
+                  // Handle both string (JSON) and array formats
+                  let subjectsArray = [];
+                  try {
+                    const subjectsData = diaryData.subjects;
+                    subjectsArray = typeof subjectsData === 'string' 
+                      ? JSON.parse(subjectsData) 
+                      : Array.isArray(subjectsData) ? subjectsData : [];
+                  } catch (e) {
+                    subjectsArray = [];
+                  }
+                  return subjectsArray.length > 0 
+                    ? subjectsArray.map((subject) => ({
+                        subject_Name: subject.subject_Name || subject.subject_name || "",
+                        todo: subject.todo || "",
+                      }))
+                    : [{ subject_Name: "", todo: "" }];
+                })(),
               }}
+              enableReinitialize={true}
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
             >
@@ -314,17 +384,18 @@ const addDiary = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Diary"
+                        title={isEditMode ? "Update Diary" : "Add Diary"}
                         onPress={formikSubmit}
                         bgColor="#10B981"
                         textColor="#FFFFFF"
-                        loading={isSubmitting || isCreating}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
                 </>
               )}
             </Formik>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -448,5 +519,15 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Medium',
+    color: '#6B7280',
   },
 });

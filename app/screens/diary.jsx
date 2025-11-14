@@ -38,9 +38,10 @@ const diary = () => {
   }, [diaryError]);
 
   const getDiaryKey = (d, index) => {
-    // Use id if available, otherwise use index as fallback to ensure unique keys
-    if (d?.id !== null && d?.id !== undefined) {
-      return String(d.id);
+    // Use diary_id if available, otherwise use index as fallback to ensure unique keys
+    const diaryId = d?.diary_id ?? d?.diary_Id ?? d?.id;
+    if (diaryId !== null && diaryId !== undefined) {
+      return String(diaryId);
     }
     // Fallback to index if id is missing
     return `diary-${index}`;
@@ -96,6 +97,20 @@ const diary = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId, classId]);
 
+  // Sync local state with updated cache data when cache is invalidated (e.g., after edit)
+  useEffect(() => {
+    if (initialData?.items && !isFetchingInitial) {
+      // Always sync if we're on the first page (offset <= PAGE_SIZE)
+      // This ensures updates are reflected when coming back from edit
+      if (offset <= PAGE_SIZE) {
+        setDiaryList(initialData.items);
+        setOffset(initialData.items.length);
+        setHasMore(initialData.items.length === PAGE_SIZE);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial]);
+
   // Removed focus refetch to allow RTK Query cache + tag invalidation to handle freshness
 
   const handleRefresh = async () => {
@@ -128,20 +143,24 @@ const diary = () => {
   };
 
   const handleEdit = (diary) => {
-    // Edit diary
-  };
+    // Safely resolve the diary identifier (handle possible naming differences)
+    const resolvedId =
+      diary?.diary_id ??
+      diary?.diary_Id ??
+      diary?.id;
 
-  const handleDelete = (diary) => {
-    Alert.alert(
-      'Delete Diary',
-      `Are you sure you want to delete this diary entry?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
-            // Delete diary
-          } },
-      ]
-    );
+    if (!resolvedId) {
+      // If for some reason we don't have an id, just open the add form
+      router.push('/screens/forms/addDiary');
+      return;
+    }
+
+    router.push({
+      pathname: '/screens/forms/addDiary',
+      params: {
+        diaryId: String(resolvedId),
+      },
+    });
   };
 
   const formatDate = (dateString) => {
@@ -181,13 +200,6 @@ const diary = () => {
                 activeOpacity={0.7}
               >
                 <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDelete(diary)}
-                style={styles.deleteButton}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -395,17 +407,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.2),
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
-  },
-  deleteButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    fontSize: hp(1.2),
-    fontFamily: 'Poppins-Medium',
-    color: '#EF4444',
   },
   noteSection: {
     marginBottom: 16,
