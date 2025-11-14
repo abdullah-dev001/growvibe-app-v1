@@ -125,22 +125,6 @@ const classes = () => {
     });
   };
 
-  const handleDelete = (classItem) => {
-    Alert.alert(
-      'Delete Class',
-      `Are you sure you want to delete ${classItem.class_Name} - Section ${classItem.class_Section}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            // Handle delete logic
-          }
-        },
-      ]
-    );
-  };
 
   const handleLeaderboard = (classItem) => {
     // Navigate to leaderboard screen with classId
@@ -304,16 +288,6 @@ const classes = () => {
                         >
                           <Text style={styles.editButtonText}>
                             Edit
-                          </Text>
-                        </TouchableOpacity>
-    
-                        <TouchableOpacity
-                          onPress={() => handleDelete(classItem)}
-                          style={[styles.deleteButton, { marginLeft: 8 }]}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.deleteButtonText}>
-                            Delete
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -554,19 +528,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-  },
-  deleteButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: 'Poppins-Medium',
-    color: '#EF4444',
   },
   secondaryActions: {
     flexDirection: 'row',

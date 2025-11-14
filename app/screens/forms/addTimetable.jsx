@@ -20,39 +20,104 @@ import Input from '../../../components/Input';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
 import { useGetTeachersByBranchQuery } from '../../../redux/api/teacherApi';
-import { useCreateTimetableMutation, useGetTimetablesByClassQuery } from '../../../redux/api/timetableApi';
+import { useCreateTimetableMutation, useGetTimetableByIdQuery, useGetTimetablesByClassQuery, useUpdateTimetableMutation } from '../../../redux/api/timetableApi';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
-  day: Yup.string().required('Day is required'),
-  periods: Yup.array()
-    .of(
-      Yup.object().shape({
-        subject_Name: Yup.string().required('Subject name is required'),
-        teacher_Id: Yup.string().required('Teacher is required'),
-        start_Time: Yup.string()
-          .required('Start time is required')
-          .matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/, 'Time must be in HH:MM:SS format'),
-        end_Time: Yup.string()
-          .required('End time is required')
-          .matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/, 'Time must be in HH:MM:SS format')
-          .test('is-after-start', 'End time must be after start time', function (value) {
-            const { start_Time } = this.parent;
-            if (!value || !start_Time) return true;
-            return value > start_Time;
-          }),
+// Helper function to check if two time ranges overlap
+const doPeriodsOverlap = (period1, period2) => {
+  if (!period1.start_Time || !period1.end_Time || !period2.start_Time || !period2.end_Time) {
+    return false;
+  }
+  // Check if period1 overlaps with period2
+  // Overlap occurs if: period1.start < period2.end AND period1.end > period2.start
+  return period1.start_Time < period2.end_Time && period1.end_Time > period2.start_Time;
+};
+
+// Validation Schema Factory
+const getValidationSchema = (existingTimetables, currentDay, currentWeekNumber, isEditMode, currentTimetableId) => {
+  return Yup.object().shape({
+    day: Yup.string().required('Day is required'),
+    periods: Yup.array()
+      .of(
+        Yup.object().shape({
+          subject_Name: Yup.string().required('Subject name is required'),
+          teacher_Id: Yup.string().required('Teacher is required'),
+          start_Time: Yup.string()
+            .required('Start time is required')
+            .matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/, 'Time must be in HH:MM:SS format'),
+          end_Time: Yup.string()
+            .required('End time is required')
+            .matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/, 'Time must be in HH:MM:SS format')
+            .test('is-after-start', 'End time must be after start time', function (value) {
+              const { start_Time } = this.parent;
+              if (!value || !start_Time) return true;
+              return value > start_Time;
+            }),
+        })
+      )
+      .min(1, 'At least one period is required')
+      .test('no-overlap-within', 'Periods cannot overlap with each other', function (periods) {
+        if (!periods || periods.length < 2) return true;
+        
+        // Check for overlaps within the same periods array
+        for (let i = 0; i < periods.length; i++) {
+          for (let j = i + 1; j < periods.length; j++) {
+            if (doPeriodsOverlap(periods[i], periods[j])) {
+              return this.createError({
+                path: `periods[${j}]`,
+                message: `Period ${j + 1} overlaps with Period ${i + 1}`,
+              });
+            }
+          }
+        }
+        return true;
       })
-    )
-    .min(1, 'At least one period is required'),
-});
+      .test('no-overlap-with-existing', 'Periods cannot overlap with existing periods for this day', function (periods) {
+        if (!currentDay || !existingTimetables || !periods) return true;
+        
+        // Get existing periods for the same day and week (excluding current timetable if editing)
+        const existingPeriods = existingTimetables
+          .filter(tt => {
+            if (tt.day !== currentDay || tt.week_number !== currentWeekNumber) return false;
+            if (isEditMode && tt.timetable_id === currentTimetableId) return false;
+            return true;
+          })
+          .flatMap(tt => tt.periods || []);
+        
+        // Check if any new period overlaps with existing periods
+        for (let i = 0; i < periods.length; i++) {
+          for (let j = 0; j < existingPeriods.length; j++) {
+            if (doPeriodsOverlap(periods[i], existingPeriods[j])) {
+              return this.createError({
+                path: `periods[${i}]`,
+                message: `Period ${i + 1} overlaps with an existing period (${existingPeriods[j].subject_Name || 'Unknown'})`,
+              });
+            }
+          }
+        }
+        return true;
+      }),
+  });
+};
 
 const addTimetable = () => {
   const router = useRouter();
-  const { classId, className, schoolId, branchId, weekNumber } = useLocalSearchParams();
+  const { timetableId, classId, className, schoolId, branchId, weekNumber, selectedDay } = useLocalSearchParams();
+  const isEditMode = !!timetableId;
   const { branchId: branchIdFromRedux, schoolId: schoolIdFromRedux } = useSelector((state) => state.auth);
   const [createTimetable, { isLoading: isCreating }] = useCreateTimetableMutation();
+  const [updateTimetable, { isLoading: isUpdating }] = useUpdateTimetableMutation();
+  const isLoading = isCreating || isUpdating;
+  
+  const { data: timetableData, isLoading: isLoadingTimetable } = useGetTimetableByIdQuery(
+    { timetableId, classId },
+    {
+      skip: !isEditMode || !timetableId || !classId,
+      refetchOnMountOrArgChange: true,
+    }
+  );
+  
   const [showStartTimePicker, setShowStartTimePicker] = useState(null); // null or period index
   const [showEndTimePicker, setShowEndTimePicker] = useState(null); // null or period index
   const [tempStartTime, setTempStartTime] = useState(new Date());
@@ -139,9 +204,18 @@ const addTimetable = () => {
     setShowEndTimePicker(null);
   };
 
-  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+  const handleSubmit = async (values, { setSubmitting, resetForm, setFieldTouched }) => {
+    // Mark all fields as touched to show validation errors
+    setFieldTouched('day', true);
+    values.periods.forEach((_, index) => {
+      setFieldTouched(`periods[${index}].subject_Name`, true);
+      setFieldTouched(`periods[${index}].teacher_Id`, true);
+      setFieldTouched(`periods[${index}].start_Time`, true);
+      setFieldTouched(`periods[${index}].end_Time`, true);
+    });
+
     try {
-      const timetableData = {
+      const submitData = {
         school_Id: Number(finalSchoolId),
         branch_Id: Number(finalBranchId),
         class_Id: Number(classId),
@@ -155,19 +229,31 @@ const addTimetable = () => {
         })),
       };
 
-      await createTimetable(timetableData).unwrap();
-
-      Alert.alert('Success', 'Timetable added successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            resetForm();
-            router.back();
+      if (isEditMode) {
+        submitData.timetable_Id = Number(timetableId);
+        await updateTimetable(submitData).unwrap();
+        Alert.alert('Success', 'Timetable updated successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              router.back();
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        await createTimetable(submitData).unwrap();
+        Alert.alert('Success', 'Timetable added successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              resetForm();
+              router.back();
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      Alert.alert('Error', error?.data?.message || error?.message || 'Failed to add timetable');
+      Alert.alert('Error', error?.data?.message || error?.message || `Failed to ${isEditMode ? 'update' : 'add'} timetable`);
     } finally {
       setSubmitting(false);
     }
@@ -188,18 +274,86 @@ const addTimetable = () => {
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Add New Timetable</Text>
+              <Text style={styles.headerTitle}>
+                {isEditMode ? 'Edit Timetable' : 'Add New Timetable'}
+              </Text>
               <Text style={styles.headerSubtitle}>
                 Week {weekNumber} - {className || 'Class Timetable'}
               </Text>
             </View>
 
+            {isLoadingTimetable ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading timetable data...</Text>
+              </View>
+            ) : (
             <Formik
               initialValues={{
-                day: '',
-                periods: [{ subject_Name: '', teacher_Id: '', start_Time: '', end_Time: '' }],
+                day: timetableData?.day || selectedDay || '',
+                periods: timetableData?.periods?.map((p) => ({
+                  subject_Name: p.subject_Name || '',
+                  teacher_Id: p.teacher_Id || '',
+                  start_Time: p.start_Time || '',
+                  end_Time: p.end_Time || '',
+                })) || [{ subject_Name: '', teacher_Id: '', start_Time: '', end_Time: '' }],
               }}
-              validationSchema={validationSchema}
+              enableReinitialize
+              validate={(values) => {
+                const schema = getValidationSchema(
+                  existingTimetables,
+                  values.day,
+                  Number(weekNumber),
+                  isEditMode,
+                  Number(timetableId)
+                );
+                try {
+                  schema.validateSync(values, { abortEarly: false });
+                  return {};
+                } catch (err) {
+                  const errors = {};
+                  err.inner.forEach((error) => {
+                    if (error.path) {
+                      // Yup uses dot notation (periods.0.start_Time), convert to bracket notation for Formik
+                      const normalizedPath = error.path.replace(/\.(\d+)/g, '[$1]');
+                      const pathParts = normalizedPath.split(/[\[\]\.]/).filter(Boolean);
+                      
+                      if (pathParts.length === 1 && pathParts[0] === 'periods') {
+                        // If error is on the periods array itself, set it as a string
+                        errors.periods = error.message;
+                      } else if (pathParts.length === 2 && pathParts[0] === 'periods') {
+                        // Error on a period item like periods[0]
+                        const periodIndex = parseInt(pathParts[1], 10);
+                        if (!errors.periods) {
+                          errors.periods = [];
+                        }
+                        if (!errors.periods[periodIndex]) {
+                          errors.periods[periodIndex] = error.message;
+                        } else if (typeof errors.periods[periodIndex] === 'string') {
+                          // If there's already an error, combine them
+                          errors.periods[periodIndex] = `${errors.periods[periodIndex]}\n${error.message}`;
+                        }
+                      } else if (pathParts.length > 2 && pathParts[0] === 'periods') {
+                        // Error on a nested field like periods[0].start_Time
+                        const periodIndex = parseInt(pathParts[1], 10);
+                        const fieldName = pathParts[2];
+                        if (!errors.periods) {
+                          errors.periods = [];
+                        }
+                        if (!errors.periods[periodIndex]) {
+                          errors.periods[periodIndex] = {};
+                        }
+                        if (typeof errors.periods[periodIndex] === 'object') {
+                          errors.periods[periodIndex][fieldName] = error.message;
+                        }
+                      } else {
+                        // Simple field error
+                        errors[error.path] = error.message;
+                      }
+                    }
+                  });
+                  return errors;
+                }
+              }}
               onSubmit={handleSubmit}
             >
               {({
@@ -210,16 +364,22 @@ const addTimetable = () => {
                 errors,
                 touched,
                 setFieldValue,
+                setFieldTouched,
                 isSubmitting,
               }) => {
-                // Auto-select first available day if none selected
+                // Auto-select selectedDay if passed, or first available day if none selected (only in add mode)
                 useEffect(() => {
-                  if (availableDays.length === 1 && values.day === '') {
-                    setFieldValue('day', availableDays[0], false);
-                  } else if (availableDays.length === 0 && values.day !== '') {
-                    setFieldValue('day', '', false);
+                  if (!isEditMode) {
+                    if (selectedDay && values.day === '') {
+                      // If selectedDay is passed, always use it (even if not in availableDays, it will be validated)
+                      setFieldValue('day', selectedDay, false);
+                    } else if (availableDays.length === 1 && values.day === '') {
+                      setFieldValue('day', availableDays[0], false);
+                    } else if (availableDays.length === 0 && values.day !== '' && !selectedDay) {
+                      setFieldValue('day', '', false);
+                    }
                   }
-                }, [availableDays, values.day, setFieldValue]);
+                }, [availableDays, values.day, setFieldValue, isEditMode, selectedDay]);
 
                 const addPeriod = () => {
                   setFieldValue('periods', [
@@ -245,43 +405,69 @@ const addTimetable = () => {
                       <View style={styles.fieldContainer}>
                         <Text style={styles.fieldLabel}>Day *</Text>
                         <View style={styles.daySelector}>
-                          <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.dayScrollView}
-                          >
-                            <View style={styles.dayRow}>
-                              {availableDays.length > 0 ? (
-                                availableDays.map((day) => {
-                                  const isSelected = values.day === day;
-                                  return (
-                                    <TouchableOpacity
-                                      key={day}
-                                      onPress={() => setFieldValue('day', day)}
-                                      style={[
-                                        styles.dayButton,
-                                        isSelected ? styles.dayButtonActive : styles.dayButtonInactive,
-                                      ]}
-                                      activeOpacity={0.7}
-                                    >
-                                      <Text
-                                        style={[
-                                          styles.dayButtonText,
-                                          { color: isSelected ? '#F59E0B' : '#6B7280' },
-                                        ]}
-                                      >
-                                        {day}
-                                      </Text>
-                                    </TouchableOpacity>
-                                  );
-                                })
-                              ) : (
-                                <Text style={styles.noDaysText}>
-                                  All days already have timetables for this week
+                          {isEditMode || selectedDay ? (
+                            // In edit mode or when selectedDay is passed, show selected day as disabled (non-clickable)
+                            <View style={styles.daySelectorContent}>
+                              <View
+                                style={[
+                                  styles.dayButton,
+                                  styles.dayButtonDisabled,
+                                  styles.dayButtonFullWidth,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.dayButtonText,
+                                    styles.dayButtonTextDisabled,
+                                  ]}
+                                >
+                                  {values.day || selectedDay || 'N/A'}
                                 </Text>
-                              )}
+                              </View>
                             </View>
-                          </ScrollView>
+                          ) : (
+                            <ScrollView
+                              horizontal
+                              showsHorizontalScrollIndicator={false}
+                              style={styles.dayScrollView}
+                            >
+                              <View style={styles.dayRow}>
+                                {availableDays.length > 0 ? (
+                                  // In add mode, show only available days
+                                  availableDays.map((day) => {
+                                    const isSelected = values.day === day;
+                                    return (
+                                      <TouchableOpacity
+                                        key={day}
+                                        onPress={() => {
+                                          setFieldValue('day', day);
+                                          setFieldTouched('day', true);
+                                        }}
+                                        style={[
+                                          styles.dayButton,
+                                          isSelected ? styles.dayButtonActive : styles.dayButtonInactive,
+                                        ]}
+                                        activeOpacity={0.7}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.dayButtonText,
+                                            { color: isSelected ? '#F59E0B' : '#6B7280' },
+                                          ]}
+                                        >
+                                          {day}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    );
+                                  })
+                                ) : (
+                                  <Text style={styles.noDaysText}>
+                                    All days already have timetables for this week
+                                  </Text>
+                                )}
+                              </View>
+                            </ScrollView>
+                          )}
                         </View>
                         {touched.day && errors.day && (
                           <Text style={styles.errorText}>{errors.day}</Text>
@@ -296,6 +482,13 @@ const addTimetable = () => {
                             <Text style={styles.addPeriodButtonText}>+ Add Period</Text>
                           </TouchableOpacity>
                         </View>
+                        
+                        {/* Display period-level errors (overlap errors) at the top */}
+                        {errors.periods && typeof errors.periods === 'string' && (
+                          <View style={styles.periodErrorContainer}>
+                            <Text style={styles.periodErrorText}>{errors.periods}</Text>
+                          </View>
+                        )}
 
                       {values.periods.map((period, index) => (
                         <View key={index} style={styles.periodCard}>
@@ -540,11 +733,23 @@ const addTimetable = () => {
                               </View>
                             )}
                           </View>
+                          
+                          {/* Display period-level errors (overlap errors) right after each period card */}
+                          {errors.periods?.[index] && typeof errors.periods[index] === 'string' && (
+                            <View style={styles.periodErrorContainer}>
+                              <Text style={styles.periodErrorText}>
+                                {errors.periods[index]}
+                              </Text>
+                            </View>
+                          )}
                         </View>
                       ))}
-
-                        {touched.periods && errors.periods && typeof errors.periods === 'string' && (
-                          <Text style={styles.errorText}>{errors.periods}</Text>
+                      
+                        {/* Display general period errors at the bottom */}
+                        {errors.periods && typeof errors.periods === 'string' && (
+                          <View style={styles.periodErrorContainer}>
+                            <Text style={styles.periodErrorText}>{errors.periods}</Text>
+                          </View>
                         )}
                       </View>
                     </View>
@@ -562,13 +767,54 @@ const addTimetable = () => {
                       </View>
                       <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                         <Button
-                          title={isCreating || isSubmitting ? 'Adding...' : 'Add Timetable'}
-                          onPress={formikSubmit}
+                          title={isEditMode 
+                            ? (isUpdating || isSubmitting ? 'Updating...' : 'Update Timetable')
+                            : (isCreating || isSubmitting ? 'Adding...' : 'Add Timetable')
+                          }
+                          onPress={async () => {
+                            // Mark periods as touched to show errors
+                            values.periods.forEach((_, index) => {
+                              setFieldTouched(`periods[${index}]`, true);
+                              setFieldTouched(`periods[${index}].subject_Name`, true);
+                              setFieldTouched(`periods[${index}].teacher_Id`, true);
+                              setFieldTouched(`periods[${index}].start_Time`, true);
+                              setFieldTouched(`periods[${index}].end_Time`, true);
+                            });
+                            
+                            // Validate before submitting
+                            const schema = getValidationSchema(
+                              existingTimetables,
+                              values.day,
+                              Number(weekNumber),
+                              isEditMode,
+                              Number(timetableId)
+                            );
+                            
+                            try {
+                              await schema.validate(values, { abortEarly: false });
+                              formikSubmit();
+                            } catch (validationError) {
+                              // Show alert with overlap errors
+                              const overlapErrors = validationError.inner
+                                .filter(err => err.message.includes('overlap'))
+                                .map(err => err.message);
+                              
+                              if (overlapErrors.length > 0) {
+                                Alert.alert(
+                                  'Validation Error',
+                                  overlapErrors.join('\n'),
+                                  [{ text: 'OK' }]
+                                );
+                              }
+                              // Still call formikSubmit to show field-level errors
+                              formikSubmit();
+                            }
+                          }}
                           bgColor="#F59E0B"
                           textColor="#FFFFFF"
                           className="flex-1"
-                          loading={isCreating || isSubmitting}
-                          disabled={isCreating || isSubmitting || isLoadingTeachers || availableDays.length === 0}
+                          loading={isLoading || isSubmitting}
+                          disabled={isLoading || isSubmitting || isLoadingTeachers || (!isEditMode && availableDays.length === 0)}
                         />
                       </View>
                     </View>
@@ -576,6 +822,7 @@ const addTimetable = () => {
                 );
               }}
             </Formik>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -632,6 +879,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
   },
+  daySelectorContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   dayScrollView: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -641,22 +892,37 @@ const styles = StyleSheet.create({
   },
   dayButton: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginRight: 8,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayButtonFullWidth: {
+    width: '100%',
+    marginRight: 0,
   },
   dayButtonActive: {
     backgroundColor: '#FEF3C7',
-    borderColor: '#FCD34D',
+    borderColor: '#F59E0B',
   },
   dayButtonInactive: {
     backgroundColor: '#F9FAFB',
     borderColor: '#E5E7EB',
   },
+  dayButtonDisabled: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
+    opacity: 0.7,
+  },
   dayButtonText: {
     fontSize: hp(1.4),
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  dayButtonTextDisabled: {
+    color: '#6B7280',
   },
   noDaysText: {
     fontSize: hp(1.4),
@@ -811,6 +1077,29 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
+  },
+  periodErrorContainer: {
+    backgroundColor: '#FEE2E2',
+    borderLeftWidth: 3,
+    borderLeftColor: '#EF4444',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  periodErrorText: {
+    fontSize: hp(1.4),
+    fontFamily: 'Poppins-Medium',
+    color: '#EF4444',
   },
 });
 

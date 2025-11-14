@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
@@ -12,8 +12,7 @@ const timetable = () => {
   const router = useRouter();
   const { classId, className } = useLocalSearchParams();
   const { schoolId, branchId } = useSelector((state) => state.auth);
-  const [selectedWeek, setSelectedWeek] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedWeek, setSelectedWeek] = useState(1); // Default to Week 1
   const [refreshing, setRefreshing] = useState(false);
 
   const { 
@@ -21,44 +20,33 @@ const timetable = () => {
     isLoading, 
     isFetching, 
     refetch 
-  } = useGetTimetablesByClassQuery(classId, {
-    skip: !classId,
-  });
+  } = useGetTimetablesByClassQuery(
+    { classId, weekNumber: selectedWeek },
+    {
+      skip: !classId,
+    }
+  );
 
-  // Group timetables by week
-  const timetablesByWeek = useMemo(() => {
+  // Group timetables by day for the selected week
+  const timetablesByDay = useMemo(() => {
     if (!timetables || timetables.length === 0) return {};
     
     const grouped = {};
     timetables.forEach((tt) => {
-      const week = tt.week_number;
-      if (!grouped[week]) {
-        grouped[week] = {};
-      }
       // Store the entire timetable object (which contains periods array)
-      grouped[week][tt.day] = tt;
+      grouped[tt.day] = tt;
     });
     return grouped;
   }, [timetables]);
 
-  // Get available weeks (1-4) that don't have timetables
-  const availableWeeks = useMemo(() => {
-    const existingWeeks = Object.keys(timetablesByWeek).map(Number);
-    return [1, 2, 3, 4].filter((week) => !existingWeeks.includes(week));
-  }, [timetablesByWeek]);
+  // Check if the selected week has a timetable
+  const hasTimetableForWeek = useMemo(() => {
+    return timetables && timetables.length > 0;
+  }, [timetables]);
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   const handleAddTimetable = () => {
-    if (availableWeeks.length === 0) {
-      Alert.alert('Info', 'All weeks (1-4) already have timetables.');
-      return;
-    }
-    setShowAddModal(true);
-  };
-
-  const handleWeekSelection = (week) => {
-    setShowAddModal(false);
     router.push({
       pathname: '/screens/forms/addTimetable',
       params: {
@@ -66,13 +54,27 @@ const timetable = () => {
         className,
         schoolId,
         branchId,
-        weekNumber: week.toString(),
+        weekNumber: selectedWeek.toString(),
       },
     });
   };
 
+  const handleWeekChange = (week) => {
+    setSelectedWeek(week);
+  };
+
   const handleEditTimetable = (timetable) => {
-    
+    router.push({
+      pathname: '/screens/forms/addTimetable',
+      params: {
+        timetableId: timetable.timetable_id,
+        classId,
+        className,
+        schoolId,
+        branchId,
+        weekNumber: timetable.week_number.toString(),
+      },
+    });
   };
 
   const formatTime = (timeString) => {
@@ -90,42 +92,65 @@ const timetable = () => {
     }
   };
 
-  const renderWeekCard = ({ item: week }) => {
-    const weekData = timetablesByWeek[week];
-    if (!weekData) return null;
-
+  const renderTimetableContent = () => {
     return (
       <View style={styles.weekCard}>
-        <View style={styles.weekHeader}>
-          <Text style={styles.weekTitle}>Week {week}</Text>
-        </View>
         <View style={styles.daysContainer}>
           {daysOfWeek.map((day) => {
-            const timetable = weekData[day];
-            if (!timetable || !timetable.periods || timetable.periods.length === 0) return null;
+            const timetable = timetablesByDay[day];
+            const hasTimetable = timetable && timetable.periods && timetable.periods.length > 0;
 
             return (
               <View key={day} style={styles.dayCard}>
                 <View style={styles.dayHeader}>
                   <Text style={styles.dayTitle}>{day}</Text>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </TouchableOpacity>
+                  {hasTimetable ? (
+                    <TouchableOpacity
+                      onPress={() => handleEditTimetable(timetable)}
+                      style={styles.editButton}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => {
+                        router.push({
+                          pathname: '/screens/forms/addTimetable',
+                          params: {
+                            classId,
+                            className,
+                            schoolId,
+                            branchId,
+                            weekNumber: selectedWeek.toString(),
+                            selectedDay: day,
+                          },
+                        });
+                      }}
+                      style={styles.addButton}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.addButtonText}>Add</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                {timetable.periods.map((period, index) => (
-                  <View key={period.period_id || index} style={styles.periodCard}>
-                    <Text style={styles.periodSubject}>{period.subject_Name || 'N/A'}</Text>
-                    <Text style={styles.periodTime}>
-                      {formatTime(period.start_Time)} - {formatTime(period.end_Time)}
-                    </Text>
-                    {period.teacher_name && (
-                      <Text style={styles.periodTeacher}>Teacher: {period.teacher_name}</Text>
-                    )}
+                {hasTimetable ? (
+                  timetable.periods.map((period, index) => (
+                    <View key={period.period_id || index} style={styles.periodCard}>
+                      <Text style={styles.periodSubject}>{period.subject_Name || 'N/A'}</Text>
+                      <Text style={styles.periodTime}>
+                        {formatTime(period.start_Time)} - {formatTime(period.end_Time)}
+                      </Text>
+                      {period.teacher_name && (
+                        <Text style={styles.periodTeacher}>Teacher: {period.teacher_name}</Text>
+                      )}
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.noTimetableContainer}>
+                    <Text style={styles.noTimetableText}>No timetable for this day</Text>
                   </View>
-                ))}
+                )}
               </View>
             );
           })}
@@ -133,8 +158,6 @@ const timetable = () => {
       </View>
     );
   };
-
-  const weeks = Object.keys(timetablesByWeek).map(Number).sort((a, b) => a - b);
 
   return (
     <ScreenWrapper>
@@ -145,7 +168,7 @@ const timetable = () => {
             <Text style={styles.headerTitle}>Timetable</Text>
             <Text style={styles.subTitle}>{className || 'Class Timetable'}</Text>
           </View>
-          {availableWeeks.length > 0 && (
+          {!isFetching && !hasTimetableForWeek && (
             <Button
               title="Add Timetable"
               onPress={handleAddTimetable}
@@ -157,76 +180,66 @@ const timetable = () => {
           )}
         </View>
 
-        {/* Timetables List */}
-        {isLoading && !timetables ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading timetables...</Text>
-          </View>
-        ) : weeks.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No timetables found. Create your first timetable to get started.</Text>
-            {availableWeeks.length > 0 && (
-              <Button
-                title="Add Timetable"
-                onPress={handleAddTimetable}
-                size="small"
-                bgColor="#F59E0B"
-                textColor="#FFFFFF"
-                icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
-              />
-            )}
-          </View>
-        ) : (
-          <FlatList
-            data={weeks}
-            keyExtractor={(week) => String(week)}
-            renderItem={renderWeekCard}
-            contentContainerStyle={styles.scrollContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing || isFetching}
-                onRefresh={handleRefresh}
-                colors={['#F59E0B']}
-                tintColor="#F59E0B"
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-
-        {/* Week Selection Modal */}
-        <Modal
-          visible={showAddModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowAddModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Week</Text>
-              <Text style={styles.modalSubtitle}>Choose a week to create timetable for</Text>
-              <ScrollView style={styles.weekOptionsContainer}>
-                {availableWeeks.map((week) => (
-                  <TouchableOpacity
-                    key={week}
-                    style={styles.weekOption}
-                    onPress={() => handleWeekSelection(week)}
-                    activeOpacity={0.7}
+        {/* Week Selector */}
+        <View style={styles.weekSelectorContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.weekSelectorContent}
+          >
+            {[1, 2, 3, 4].map((week) => {
+              const isSelected = selectedWeek === week;
+              return (
+                <TouchableOpacity
+                  key={week}
+                  onPress={() => handleWeekChange(week)}
+                  style={[
+                    styles.weekSelectorButton,
+                    isSelected ? styles.weekSelectorButtonActive : styles.weekSelectorButtonInactive,
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.weekSelectorText,
+                      { color: isSelected ? '#F59E0B' : '#6B7280' },
+                    ]}
                   >
-                    <Text style={styles.weekOptionText}>Week {week}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setShowAddModal(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+                    Week {week}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Timetables List */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing || isFetching}
+              onRefresh={handleRefresh}
+              colors={['#F59E0B']}
+              tintColor="#F59E0B"
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {isLoading && !timetables ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading timetables...</Text>
             </View>
-          </View>
-        </Modal>
+          ) : !hasTimetableForWeek ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>
+                No timetable found for Week {selectedWeek}. Create a timetable to get started.
+              </Text>
+            </View>
+          ) : (
+            renderTimetableContent()
+          )}
+        </ScrollView>
       </View>
     </ScreenWrapper>
   );
@@ -261,6 +274,35 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 56,
+  },
+  weekSelectorContainer: {
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  weekSelectorContent: {
+    paddingHorizontal: 4,
+  },
+  weekSelectorButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    marginRight: 12,
+    minWidth: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekSelectorButtonActive: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  weekSelectorButtonInactive: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
+  weekSelectorText: {
+    fontSize: hp(1.5),
+    fontFamily: 'Poppins-SemiBold',
   },
   weekCard: {
     backgroundColor: '#FFFFFF',
@@ -313,6 +355,30 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: 'Poppins-SemiBold',
     color: '#F59E0B',
+  },
+  addButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#D1FAE5',
+    borderRadius: 6,
+  },
+  addButtonText: {
+    fontSize: hp(1.3),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#10B981',
+  },
+  noTimetableContainer: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  noTimetableText: {
+    fontSize: hp(1.4),
+    fontFamily: 'Poppins-Regular',
+    color: '#9CA3AF',
   },
   periodCard: {
     backgroundColor: '#F9FAFB',

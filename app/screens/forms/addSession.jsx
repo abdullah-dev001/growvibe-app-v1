@@ -97,23 +97,23 @@ const addSession = () => {
           },
         ]);
       } else {
-        await createSession({
-          session_Name: values.session_Name,
-          session_Start: values.session_Start_Date,
-          session_End: values.session_End_Date,
-          session_Status: values.session_Status,
-          branch_Id: branchId,
-        }).unwrap();
+      await createSession({
+        session_Name: values.session_Name,
+        session_Start: values.session_Start_Date,
+        session_End: values.session_End_Date,
+        session_Status: values.session_Status,
+        branch_Id: branchId,
+      }).unwrap();
 
-        Alert.alert("Success", "Session added successfully!", [
-          {
-            text: "OK",
-            onPress: () => {
-              resetForm();
-              router.back();
-            },
+      Alert.alert("Success", "Session added successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            resetForm();
+            router.back();
           },
-        ]);
+        },
+      ]);
       }
     } catch (error) {
       // Extract the actual error from RTK Query error structure
