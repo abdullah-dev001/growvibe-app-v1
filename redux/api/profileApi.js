@@ -43,17 +43,13 @@ export const profileApi = createApi({
                         .from(tableName)
                         .select("*")
                         .eq("auth_Id", userId)
-                        .single();
+                        .maybeSingle();
 
                     if (error) {
-                        // If no profile found, return null instead of error
-                        if (error.code === 'PGRST116') {
-                            return { data: null };
-                        }
                         return { error: { status: 'CUSTOM_ERROR', data: error } };
                     }
 
-                    return { data };
+                    return { data: data || null };
                 } catch (err) {
                     return { error: { status: 'CUSTOM_ERROR', data: err } };
                 }
@@ -62,11 +58,64 @@ export const profileApi = createApi({
                 { type: "Profile", id: `${arg.role}-${arg.userId}` },
             ],
         }),
+        updateProfile: builder.mutation({
+            async queryFn({ role, userId, profileData }) {
+                try {
+                    let tableName = '';
+                    
+                    // Map role to table name
+                    switch (role) {
+                        case 'admin':
+                        case 'owner':
+                            tableName = 'admin_profile';
+                            break;
+                        case 'coordinator':
+                            tableName = 'coordinator_profile';
+                            break;
+                        case 'principal':
+                            tableName = 'principal_profile';
+                            break;
+                        case 'teacher':
+                            tableName = 'teacher_profile';
+                            break;
+                        case 'student':
+                            tableName = 'student_profile';
+                            break;
+                        default:
+                            return { error: { status: 'CUSTOM_ERROR', data: { message: `Unknown role: ${role}` } } };
+                    }
+
+                    if (!tableName) {
+                        return { error: { status: 'CUSTOM_ERROR', data: { message: 'Invalid role' } } };
+                    }
+
+                    // Update profile based on auth_Id
+                    const { data, error } = await supabase
+                        .from(tableName)
+                        .update(profileData)
+                        .eq("auth_Id", userId)
+                        .select()
+                        .maybeSingle();
+
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+
+                    return { data };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            invalidatesTags: (result, error, arg) => [
+                { type: "Profile", id: `${arg.role}-${arg.userId}` },
+            ],
+        }),
     }),
 });
 
 export const {
     useGetProfileByRoleQuery,
-    useLazyGetProfileByRoleQuery
+    useLazyGetProfileByRoleQuery,
+    useUpdateProfileMutation
 } = profileApi;
 

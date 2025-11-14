@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Linking,
@@ -36,9 +36,89 @@ export default function ProfileLayout() {
     { skip: !user?.id || !user?.role }
   );
 
+  // State for signed URLs
+  const [bannerImageSignedUrl, setBannerImageSignedUrl] = useState(null);
+  const [userImageSignedUrl, setUserImageSignedUrl] = useState(null);
+
   // Default placeholder images
   const defaultBannerImage = "https://images.unsplash.com/photo-1697886720515-a50d1cff4c2f?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170";
   const defaultUserImage = "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png";
+
+  // Extract file path from Supabase storage URL
+  const extractFilePath = (url) => {
+    if (!url) return null;
+    try {
+      // URL format: https://xxx.supabase.co/storage/v1/object/public/profile-attachments/school37/branch26/file.jpg
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      const bucketIndex = pathParts.findIndex(part => part === 'profile-attachments');
+      if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+        return pathParts.slice(bucketIndex + 1).join('/');
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Generate signed URLs for existing images
+  useEffect(() => {
+    const generateSignedUrls = async () => {
+      if (!profile) {
+        setBannerImageSignedUrl(null);
+        setUserImageSignedUrl(null);
+        return;
+      }
+
+      // Generate signed URL for banner image
+      if (profile.banner_Image) {
+        const bannerImagePath = extractFilePath(profile.banner_Image);
+        if (bannerImagePath) {
+          try {
+            const { data, error } = await supabase.storage
+              .from("profile-attachments")
+              .createSignedUrl(bannerImagePath, 3600);
+            if (!error && data?.signedUrl) {
+              setBannerImageSignedUrl(data.signedUrl);
+            } else {
+              setBannerImageSignedUrl(null);
+            }
+          } catch (e) {
+            setBannerImageSignedUrl(null);
+          }
+        } else {
+          setBannerImageSignedUrl(null);
+        }
+      } else {
+        setBannerImageSignedUrl(null);
+      }
+
+      // Generate signed URL for user image
+      if (profile.user_Image) {
+        const userImagePath = extractFilePath(profile.user_Image);
+        if (userImagePath) {
+          try {
+            const { data, error } = await supabase.storage
+              .from("profile-attachments")
+              .createSignedUrl(userImagePath, 3600);
+            if (!error && data?.signedUrl) {
+              setUserImageSignedUrl(data.signedUrl);
+            } else {
+              setUserImageSignedUrl(null);
+            }
+          } catch (e) {
+            setUserImageSignedUrl(null);
+          }
+        } else {
+          setUserImageSignedUrl(null);
+        }
+      } else {
+        setUserImageSignedUrl(null);
+      }
+    };
+
+    generateSignedUrls();
+  }, [profile]);
 
   // Process profile data
   const userProfile = profile ? {
@@ -46,8 +126,8 @@ export default function ProfileLayout() {
     username: user?.email?.split("@")[0] || "user",
     role: user?.role || "user",
     about: profile.about || "No description available.",
-    bannerImage: profile.banner_Image || defaultBannerImage,
-    userImage: profile.user_Image || defaultUserImage, // Keep null to show placeholder
+    bannerImage: bannerImageSignedUrl || defaultBannerImage,
+    userImage: userImageSignedUrl || null,
     email: profile.contact_Email || "N/A",
     phone: profile.phone || "N/A",
     dateOfBirth: profile.date_Of_Birth || null,
@@ -119,6 +199,7 @@ export default function ProfileLayout() {
           contentFit="cover"
           style={styles.bannerImage}
           source={{ uri: userProfile.bannerImage }}
+          onError={() => {}}
         />
         <View style={styles.avatarContainer}>
           <View style={[styles.avatarWrapper, { height: hp(15.5), width: hp(15.5) }]}>
@@ -130,6 +211,7 @@ export default function ProfileLayout() {
                   contentFit="cover"
                   style={styles.avatarImage}
                   source={{ uri: userProfile.userImage }}
+                  onError={() => {}}
                 />
               ) : (
                 <View style={[styles.avatarImage, { backgroundColor: "#E5E7EB" }]} />
@@ -178,7 +260,10 @@ export default function ProfileLayout() {
 
       {/* Buttons */}
       <View style={styles.buttonsRow}>
-        <Pressable style={styles.editButton}>
+        <Pressable 
+          style={styles.editButton}
+          onPress={() => router.push('/screens/forms/editProfile')}
+        >
           <Text style={styles.editButtonText}>
             Edit Profile
           </Text>
@@ -295,6 +380,7 @@ export default function ProfileLayout() {
                   contentFit="cover"
                   style={styles.modalImage}
                   source={{ uri: userProfile.userImage }}
+                  onError={() => {}}
                 />
               ) : (
                 <View style={[styles.modalImage, { backgroundColor: "#E5E7EB" }]} />

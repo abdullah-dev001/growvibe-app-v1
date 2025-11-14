@@ -116,29 +116,29 @@ const addNote = () => {
           },
         ]);
       } else {
-        await createNote({
-          note_Title: values.note_Title,
-          note_Description: values.note_Description,
-          expire_Date: values.expire_Date,
-          created_By: user?.id,
-          created_By_Name: user?.email || user?.name || "Unknown",
-          created_By_Role: user?.role,
-          is_For_Entire_Branch: values.is_For_Entire_Branch,
-          specific_Class: values.is_For_Entire_Branch ? null : values.specific_Class,
+      await createNote({
+        note_Title: values.note_Title,
+        note_Description: values.note_Description,
+        expire_Date: values.expire_Date,
+        created_By: user?.id,
+        created_By_Name: user?.email || user?.name || "Unknown",
+        created_By_Role: user?.role,
+        is_For_Entire_Branch: values.is_For_Entire_Branch,
+        specific_Class: values.is_For_Entire_Branch ? null : values.specific_Class,
           class_Name: values.is_For_Entire_Branch ? null : values.class_Name,
-          branch_Id: branchId,
-          school_Id: schoolId,
-        }).unwrap();
+        branch_Id: branchId,
+        school_Id: schoolId,
+      }).unwrap();
 
-        Alert.alert("Success", "Note added successfully!", [
-          {
-            text: "OK",
-            onPress: () => {
-              resetForm();
-              router.back();
-            },
+      Alert.alert("Success", "Note added successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            resetForm();
+            router.back();
           },
-        ]);
+        },
+      ]);
       }
     } catch (error) {
       const actualError = error?.data?.data || error?.data || error;
@@ -417,30 +417,30 @@ const addNote = () => {
                                 const isSelected = values.specific_Class === classId;
                                 
                                 return (
-                                  <TouchableOpacity
+                                <TouchableOpacity
                                     key={classId}
                                     onPress={() => {
                                       setFieldValue("specific_Class", classId);
                                       setFieldValue("class_Name", displayName);
                                     }}
-                                    style={[
-                                      styles.classButton,
+                                  style={[
+                                    styles.classButton,
                                       isSelected
-                                        ? styles.classButtonActive
-                                        : styles.classButtonInactive
+                                      ? styles.classButtonActive
+                                      : styles.classButtonInactive
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.classButtonText,
+                                      {
+                                          color: isSelected ? "#8B5CF6" : "#6B7280",
+                                      }
                                     ]}
                                   >
-                                    <Text
-                                      style={[
-                                        styles.classButtonText,
-                                        {
-                                          color: isSelected ? "#8B5CF6" : "#6B7280",
-                                        }
-                                      ]}
-                                    >
                                       {displayName}
-                                    </Text>
-                                  </TouchableOpacity>
+                                  </Text>
+                                </TouchableOpacity>
                                 );
                               })}
                             </View>
