@@ -60,7 +60,29 @@ export const sessionApi = createApi({
                 if (error) throw error;
                 return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Sessions"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs.branchId}-${queryArgs.offset}-${queryArgs.limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Sessions", id: "LIST" },
+                ...(result?.items?.map((item) => ({ type: "Sessions", id: item.id })) || []),
+            ],
+        }),
+        getSessionById: builder.query({
+            async queryFn(sessionId) {
+                const { data, error } = await supabase
+                    .from("session")
+                    .select("*")
+                    .eq("id", sessionId)
+                    .single();
+
+                if (error) throw error;
+                return { data };
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
+            providesTags: (result, error, arg) => [{ type: "Sessions", id: arg }],
         }),
         updateSession: builder.mutation({
             async queryFn(session) {
@@ -79,7 +101,10 @@ export const sessionApi = createApi({
                 if (error) throw error;
                 return { data };
             },
-            invalidatesTags: ["Sessions"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Sessions", id: "LIST" },
+                { type: "Sessions", id: arg.id },
+            ],
         }),
         deleteSession: builder.mutation({
             async queryFn(sessionId) {
@@ -121,6 +146,7 @@ export const {
     useGetSessionsByBranchIdQuery,
     useGetSessionsByBranchIdPaginatedQuery,
     useLazyGetSessionsByBranchIdPaginatedQuery,
+    useGetSessionByIdQuery,
     useUpdateSessionMutation,
     useDeleteSessionMutation,
     useGetActiveSessionByBranchIdQuery,

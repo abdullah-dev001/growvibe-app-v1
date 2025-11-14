@@ -1,5 +1,5 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React, { useState } from "react";
 import {
@@ -18,10 +18,10 @@ import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
-import { useCreateSessionMutation } from "../../../redux/api/sessionApi";
+import { useCreateSessionMutation, useGetSessionByIdQuery, useUpdateSessionMutation } from "../../../redux/api/sessionApi";
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
+// Validation Schema Factory
+const getValidationSchema = () => Yup.object().shape({
   session_Name: Yup.string().required("Session name is required"),
   session_Start_Date: Yup.string().required("Start date is required"),
   session_End_Date: Yup.string()
@@ -32,7 +32,10 @@ const validationSchema = Yup.object().shape({
       function (value) {
         const { session_Start_Date } = this.parent;
         if (!value || !session_Start_Date) return true;
-        return new Date(value) > new Date(session_Start_Date);
+        const startDate = new Date(session_Start_Date);
+        const endDate = new Date(value);
+        // End date must be after start date (not equal)
+        return endDate > startDate;
       }
     ),
   session_Status: Yup.boolean().required("Session status is required"),
@@ -40,33 +43,78 @@ const validationSchema = Yup.object().shape({
 
 const addSession = () => {
   const router = useRouter();
+  const { sessionId } = useLocalSearchParams();
+  const isEditMode = !!sessionId;
   const { branchId } = useSelector((state) => state.auth);
-  const [createSession] = useCreateSessionMutation();
+  const [createSession, { isLoading: isCreating }] = useCreateSessionMutation();
+  const [updateSession, { isLoading: isUpdating }] = useUpdateSessionMutation();
+  const { data: sessionData, isLoading: isLoadingSession } = useGetSessionByIdQuery(sessionId, { 
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
+  
   // Date picker states
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [tempStartDate, setTempStartDate] = useState(new Date());
-  const [tempEndDate, setTempEndDate] = useState(new Date());
+  const [tempStartDate, setTempStartDate] = useState(
+    sessionData?.session_Start ? new Date(sessionData.session_Start) : new Date()
+  );
+  const [tempEndDate, setTempEndDate] = useState(
+    sessionData?.session_End ? new Date(sessionData.session_End) : new Date()
+  );
+
+  // Update temp dates when session data loads
+  React.useEffect(() => {
+    if (sessionData) {
+      if (sessionData.session_Start) {
+        setTempStartDate(new Date(sessionData.session_Start));
+      }
+      if (sessionData.session_End) {
+        setTempEndDate(new Date(sessionData.session_End));
+      }
+    }
+  }, [sessionData]);
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
-      await createSession({
-        session_Name: values.session_Name,
-        session_Start: values.session_Start_Date,
-        session_End: values.session_End_Date,
-        session_Status: values.session_Status,
-        branch_Id: branchId,
-      }).unwrap();
+      if (isEditMode) {
+        await updateSession({
+          id: sessionId,
+          session_Name: values.session_Name,
+          session_Start: values.session_Start_Date,
+          session_End: values.session_End_Date,
+          session_Status: values.session_Status,
+          branch_Id: branchId,
+        }).unwrap();
 
-      Alert.alert("Success", "Session added successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            resetForm();
-            router.back();
+        Alert.alert("Success", "Session updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.back();
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        await createSession({
+          session_Name: values.session_Name,
+          session_Start: values.session_Start_Date,
+          session_End: values.session_End_Date,
+          session_Status: values.session_Status,
+          branch_Id: branchId,
+        }).unwrap();
+
+        Alert.alert("Success", "Session added successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              resetForm();
+              router.back();
+            },
+          },
+        ]);
+      }
     } catch (error) {
       // Extract the actual error from RTK Query error structure
       const actualError = error?.data?.data || error?.data || error;
@@ -83,7 +131,7 @@ const addSession = () => {
           [{ text: "OK" }]
         );
       } else {
-        Alert.alert("Error", actualError.message || error.message || "Failed to add session");
+        Alert.alert("Error", actualError.message || error.message || `Failed to ${isEditMode ? 'update' : 'add'} session`);
       }
     } finally {
       setSubmitting(false);
@@ -157,21 +205,27 @@ const addSession = () => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>
-                Add New Session
+                {isEditMode ? 'Edit Session' : 'Add New Session'}
               </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to add a new academic session
+                {isEditMode ? 'Update the session details' : 'Fill in the details to add a new academic session'}
               </Text>
             </View>
 
+            {isLoadingSession ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading session data...</Text>
+              </View>
+            ) : (
             <Formik
               initialValues={{
-                session_Name: "",
-                session_Start_Date: "",
-                session_End_Date: "",
-                session_Status: true,
+                session_Name: sessionData?.session_Name || "",
+                session_Start_Date: sessionData?.session_Start ? formatDateForInput(new Date(sessionData.session_Start)) : "",
+                session_End_Date: sessionData?.session_End ? formatDateForInput(new Date(sessionData.session_End)) : "",
+                session_Status: sessionData?.session_Status ?? true,
               }}
-              validationSchema={validationSchema}
+              enableReinitialize
+              validationSchema={getValidationSchema()}
               onSubmit={handleSubmit}
             >
               {({
@@ -466,18 +520,19 @@ const addSession = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                     <Button
-                      title="Add Session"
+                      title={isEditMode ? "Update Session" : "Add Session"}
                       onPress={formikSubmit}
                       bgColor="#10B981"
                       textColor="#FFFFFF"
                       className="flex-1"
-                      loading={isSubmitting}
+                      loading={isSubmitting || isLoading}
                     />
                     </View>
                   </View>
                 </>
               )}
             </Formik>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -601,5 +656,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
   },
 });
