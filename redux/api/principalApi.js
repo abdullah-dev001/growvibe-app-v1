@@ -34,8 +34,33 @@ export const principalApi = createApi({
               if (error) throw error;
               return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Principals"],
+            serializeQueryArgs: ({ endpointName }) => {
+                return `${endpointName}`;
+            },
+            providesTags: (result) => [
+                { type: "Principals", id: "LIST" },
+                ...(result?.items || []).map((principal) => ({ type: "Principals", id: principal.auth_User_Id })),
+            ],
           }),
+        getPrincipalById: builder.query({
+            async queryFn(authId) {
+                if (!authId) return { data: null };
+                const { data, error } = await supabase
+                    .from("principals_with_branch")
+                    .select("*")
+                    .eq("auth_User_Id", authId)
+                    .maybeSingle();
+
+                if (error) throw error;
+                return { data };
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs || 'null'})`;
+            },
+            providesTags: (result, error, authId) => [
+                { type: "Principals", id: authId },
+            ],
+        }),
           
     }),
 });
@@ -43,5 +68,6 @@ export const principalApi = createApi({
 export const {
     useGetPrincipalsByBranchQuery,
     useGetPrincipalsByBranchPaginatedQuery,
-    useLazyGetPrincipalsByBranchPaginatedQuery
+    useLazyGetPrincipalsByBranchPaginatedQuery,
+    useGetPrincipalByIdQuery,
 } = principalApi;

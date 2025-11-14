@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React, { useEffect } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,16 +18,22 @@ import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
-import { useCreateAuthMutation } from "../../../redux/api/createAuthApi";
+import { useCreateAuthMutation, useUpdateAuthMutation } from "../../../redux/api/createAuthApi";
+import { useGetPrincipalByIdQuery } from "../../../redux/api/principalApi";
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
+// Validation Schema Factory
+const getValidationSchema = (isEditMode) => Yup.object().shape({
   email: Yup.string()
     .email("Please enter a valid email address")
     .required("Email is required"),
-  password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .required("Password is required"),
+  password: isEditMode
+    ? Yup.string()
+        .min(6, "Password must be at least 6 characters")
+        .nullable()
+        .transform((value) => (value === "" ? null : value))
+    : Yup.string()
+        .min(6, "Password must be at least 6 characters")
+        .required("Password is required"),
   principal_Status: Yup.boolean().required("Principal status is required"),
   name: Yup.string().required("Principal name is required"),
 });
@@ -34,38 +41,71 @@ const validationSchema = Yup.object().shape({
 const addPrincipal = () => {
   const router = useRouter();
   const { user, schoolId, branchId } = useSelector((state) => state.auth);
-  const { principalLength } = useLocalSearchParams();
-  const [createAuth] = useCreateAuthMutation();
+  const { principalId, principalLength } = useLocalSearchParams();
+  const isEditMode = !!principalId;
+  const [createAuth, { isLoading: isCreating }] = useCreateAuthMutation();
+  const [updateAuth, { isLoading: isUpdating }] = useUpdateAuthMutation();
+  const { data: principalData, isLoading: isLoadingPrincipal } = useGetPrincipalByIdQuery(principalId, {
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
+
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
-      await createAuth({
-        email: values.email,
-        password: values.password,
-        status: values.principal_Status,
-        role: "principal",
-        school_Id: schoolId,
-        branch_Id: branchId,
-        fullName: values.name,
-      }).unwrap();
-      
-      Alert.alert("Success", "Principal added successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            resetForm();
-            router.back();
+      if (isEditMode) {
+        const authId = principalData?.auth_User_Id || principalId;
+        if (!authId) {
+          Alert.alert("Error", "Principal auth ID not available");
+          return;
+        }
+        await updateAuth({
+          user_Id: authId,
+          email: values.email,
+          password: values.password || undefined,
+          status: values.principal_Status,
+          role: "principal",
+          school_Id: schoolId,
+          branch_Id: branchId,
+          fullName: values.name,
+        }).unwrap();
+
+        Alert.alert("Success", "Principal updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
           },
-        },
-      ]);
+        ]);
+      } else {
+        await createAuth({
+          email: values.email,
+          password: values.password,
+          status: values.principal_Status,
+          role: "principal",
+          school_Id: schoolId,
+          branch_Id: branchId,
+          fullName: values.name,
+        }).unwrap();
+        
+        Alert.alert("Success", "Principal added successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              resetForm();
+              router.back();
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to add principal");
+      Alert.alert("Error", error?.message || error?.data?.message || "Failed to save principal");
     } finally {
       setSubmitting(false);
     }
   };
 
   useEffect(() => {
-    if(principalLength > 0) {
+    if (!isEditMode && principalLength > 0) {
       Alert.alert("Error", "Principal already exists!", [
         {
           text: "OK",
@@ -75,7 +115,19 @@ const addPrincipal = () => {
         },
       ]);
     }
-  },[principalLength])
+  }, [principalLength, isEditMode]);
+
+  // Show loading state while fetching principal data
+  if (isEditMode && isLoadingPrincipal) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#7C3AED" />
+          <Text style={styles.loadingText}>Loading principal data...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper>
@@ -94,22 +146,26 @@ const addPrincipal = () => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>
-                Add New Principal
+                {isEditMode ? "Edit Principal" : "Add New Principal"}
               </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to add a new principal
+                {isEditMode
+                  ? "Update the principal details"
+                  : "Fill in the details to add a new principal"}
               </Text>
             </View>
 
             <Formik
+              key={principalData?.auth_User_Id || "new"}
               initialValues={{
-                email: "",
+                email: principalData?.email || "",
                 password: "",
-                principal_Status: true,
-                name: '',
+                principal_Status: principalData?.profile_Status !== undefined ? principalData.profile_Status : true,
+                name: principalData?.full_Name || '',
               }}
-              validationSchema={validationSchema}
+              validationSchema={getValidationSchema(isEditMode)}
               onSubmit={handleSubmit}
+              enableReinitialize
             >
               {({
                 values,
@@ -146,10 +202,10 @@ const addPrincipal = () => {
                     {/* Password */}
                     <View style={styles.fieldContainer}>
                       <Text style={styles.fieldLabel}>
-                        Password *
+                        Password {isEditMode ? "(leave blank to keep current)" : "*"}
                       </Text>
                       <Input
-                        placeholder="Enter password"
+                        placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
                         value={values.password}
                         onChangeText={handleChange("password")}
                         onBlur={handleBlur("password")}
@@ -241,12 +297,12 @@ const addPrincipal = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Principal"
+                        title={isEditMode ? "Update Principal" : "Add Principal"}
                         onPress={formikSubmit}
                         bgColor="#7C3AED"
                         textColor="#FFFFFF"
                         className="flex-1"
-                        loading={isSubmitting}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
@@ -337,5 +393,17 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: hp(1.6),
+    fontFamily: "Poppins-Medium",
+    color: "#6B7280",
   },
 });

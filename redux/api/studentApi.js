@@ -36,13 +36,39 @@ export const studentApi = createApi({
               if (error) throw error;
               return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Students"],
+            serializeQueryArgs: ({ endpointName }) => {
+                return `${endpointName}`;
+            },
+            providesTags: (result) => [
+                { type: "Students", id: "LIST" },
+                ...(result?.items || []).map((student) => ({ type: "Students", id: student.auth_User_Id })),
+            ],
           }),
+        getStudentById: builder.query({
+            async queryFn(authId) {
+                if (!authId) return { data: null };
+                const { data, error } = await supabase
+                    .from("students_with_branch_and_class")
+                    .select("*")
+                    .eq("auth_User_Id", authId)
+                    .maybeSingle();
+
+                if (error) throw error;
+                return { data };
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs || 'null'})`;
+            },
+            providesTags: (result, error, authId) => [
+                { type: "Students", id: authId },
+            ],
+        }),
     }),
 });
 
 export const {
     useGetStudentsByBranchAndClassQuery,
     useGetStudentsByBranchAndClassPaginatedQuery,
-    useLazyGetStudentsByBranchAndClassPaginatedQuery
+    useLazyGetStudentsByBranchAndClassPaginatedQuery,
+    useGetStudentByIdQuery,
 } = studentApi;

@@ -34,7 +34,13 @@ export const teacherApi = createApi({
               if (error) throw error;
               return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Teachers"],
+            serializeQueryArgs: ({ endpointName }) => {
+                return `${endpointName}`;
+            },
+            providesTags: (result) => [
+                { type: "Teachers", id: "LIST" },
+                ...(result?.items || []).map((teacher) => ({ type: "Teachers", id: teacher.auth_User_Id })),
+            ],
           }),
           getTeachersWithoutClass: builder.query({
             async queryFn() {
@@ -46,6 +52,25 @@ export const teacherApi = createApi({
             },
             providesTags: ["Teachers"],
         }),
+        getTeacherById: builder.query({
+            async queryFn(authId) {
+                if (!authId) return { data: null };
+                const { data, error } = await supabase
+                    .from("teachers_with_branch")
+                    .select("*")
+                    .eq("auth_User_Id", authId)
+                    .maybeSingle();
+
+                if (error) throw error;
+                return { data };
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs || 'null'})`;
+            },
+            providesTags: (result, error, authId) => [
+                { type: "Teachers", id: authId },
+            ],
+        }),
     }),
 });
 
@@ -54,4 +79,5 @@ export const {
     useGetTeachersByBranchPaginatedQuery,
     useLazyGetTeachersByBranchPaginatedQuery,
     useGetTeachersWithoutClassQuery,
+    useGetTeacherByIdQuery,
 } = teacherApi;

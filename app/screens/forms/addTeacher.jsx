@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React from "react";
 import {
@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { useSelector } from "react-redux";
 import * as Yup from "yup";
@@ -17,24 +18,39 @@ import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
-import { useCreateAuthMutation } from "../../../redux/api/createAuthApi";
+import { useCreateAuthMutation, useUpdateAuthMutation } from "../../../redux/api/createAuthApi";
+import { useGetTeacherByIdQuery } from "../../../redux/api/teacherApi";
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
+// Validation Schema Factory
+const getValidationSchema = (isEditMode) => Yup.object().shape({
   email: Yup.string()
     .email("Please enter a valid email address")
     .required("Email is required"),
-  password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .required("Password is required"),
+  password: isEditMode
+    ? Yup.string()
+        .min(6, "Password must be at least 6 characters")
+        .nullable()
+        .transform((value) => (value === "" ? null : value))
+    : Yup.string()
+        .min(6, "Password must be at least 6 characters")
+        .required("Password is required"),
   salary: Yup.string().required("Salary is required"),
   teacher_Status: Yup.boolean().required("Teacher status is required"),
+  name: Yup.string().required("Teacher name is required"),
 });
 
 const addTeacher = () => {
   const router = useRouter();
   const { user, schoolId, branchId } = useSelector((state) => state.auth);
-  const [createAuth] = useCreateAuthMutation();
+  const { teacherId } = useLocalSearchParams();
+  const isEditMode = !!teacherId;
+  const [createAuth, { isLoading: isCreating }] = useCreateAuthMutation();
+  const [updateAuth, { isLoading: isUpdating }] = useUpdateAuthMutation();
+  const { data: teacherData, isLoading: isLoadingTeacher } = useGetTeacherByIdQuery(teacherId, {
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
 
   // const handleSubmit = async (values, { setSubmitting }) => {
   //   try {
@@ -66,32 +82,70 @@ const addTeacher = () => {
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
-      await createAuth({
-        email: values.email,
-        password: values.password,
-        status: values.teacher_Status,
-        salary: values.salary,
-        fullName: values.name,
-        role: "teacher",
-        school_Id: schoolId,
-        branch_Id: branchId,
-      }).unwrap();
+      if (isEditMode) {
+        const authId = teacherData?.auth_User_Id || teacherId;
+        if (!authId) {
+          Alert.alert("Error", "Teacher auth ID not available");
+          return;
+        }
+        await updateAuth({
+          user_Id: authId,
+          email: values.email,
+          password: values.password || undefined,
+          status: values.teacher_Status,
+          role: "teacher",
+          school_Id: schoolId,
+          branch_Id: branchId,
+          fullName: values.name,
+          salary: values.salary,
+        }).unwrap();
 
-      Alert.alert("Success", "Teacher added successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            resetForm();
-            router.back();
+        Alert.alert("Success", "Teacher updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
           },
-        },
-      ]);
+        ]);
+      } else {
+        await createAuth({
+          email: values.email,
+          password: values.password,
+          status: values.teacher_Status,
+          salary: values.salary,
+          fullName: values.name,
+          role: "teacher",
+          school_Id: schoolId,
+          branch_Id: branchId,
+        }).unwrap();
+
+        Alert.alert("Success", "Teacher added successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              resetForm();
+              router.back();
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to add teacher");
+      Alert.alert("Error", error?.message || error?.data?.message || "Failed to save teacher");
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Show loading state while fetching teacher data
+  if (isEditMode && isLoadingTeacher) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F97316" />
+          <Text style={styles.loadingText}>Loading teacher data...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
@@ -109,23 +163,27 @@ const addTeacher = () => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>
-                Add New Teacher
+                {isEditMode ? "Edit Teacher" : "Add New Teacher"}
               </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to add a new teacher
+                {isEditMode
+                  ? "Update the teacher details"
+                  : "Fill in the details to add a new teacher"}
               </Text>
             </View>
 
             <Formik
+              key={teacherData?.auth_User_Id || "new"}
               initialValues={{
-                email: "",
+                email: teacherData?.email || "",
                 password: "",
-                salary: "",
-                name: "",
-                teacher_Status: true,
+                salary: teacherData?.salary || "",
+                name: teacherData?.full_Name || "",
+                teacher_Status: teacherData?.profile_Status !== undefined ? teacherData.profile_Status : true,
               }}
-              validationSchema={validationSchema}
+              validationSchema={getValidationSchema(isEditMode)}
               onSubmit={handleSubmit}
+              enableReinitialize
             >
               {({
                 values,
@@ -162,10 +220,10 @@ const addTeacher = () => {
                     {/* Password */}
                     <View style={styles.fieldContainer}>
                       <Text style={styles.fieldLabel}>
-                        Password *
+                        Password {isEditMode ? "(leave blank to keep current)" : "*"}
                       </Text>
                       <Input
-                        placeholder="Enter password"
+                        placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
                         value={values.password}
                         onChangeText={handleChange("password")}
                         onBlur={handleBlur("password")}
@@ -271,12 +329,12 @@ const addTeacher = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Teacher"
+                        title={isEditMode ? "Update Teacher" : "Add Teacher"}
                         onPress={formikSubmit}
                         bgColor="#F97316"
                         textColor="#FFFFFF"
                         className="flex-1"
-                        loading={isSubmitting}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
@@ -367,5 +425,17 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: hp(1.6),
+    fontFamily: "Poppins-Medium",
+    color: "#6B7280",
   },
 });

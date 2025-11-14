@@ -38,15 +38,36 @@ export const coordinatorApi = createApi({
                 const { branchId, offset = 0, limit = 5 } = queryArgs;
                 return `${endpointName}(${branchId},${offset},${limit})`;
             },
-            providesTags: (result, error, arg) => [
-                { type: "Coordinators", id: arg.branchId },
+            providesTags: (result) => [
+                { type: "Coordinators", id: "LIST" },
+                ...(result?.items || []).map((coordinator) => ({ type: "Coordinators", id: coordinator.auth_User_Id })),
             ],
           }),
+        getCoordinatorById: builder.query({
+            async queryFn(authId) {
+                if (!authId) return { data: null };
+                const { data, error } = await supabase
+                    .from("coordinators_with_branch")
+                    .select("*")
+                    .eq("auth_User_Id", authId)
+                    .maybeSingle();
+
+                if (error) throw error;
+                return { data };
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs || 'null'})`;
+            },
+            providesTags: (result, error, authId) => [
+                { type: "Coordinators", id: authId },
+            ],
+        }),
     }),
 });
 
 export const {
     useGetCoordinatorsByBranchQuery,
     useGetCoordinatorsByBranchPaginatedQuery,
-    useLazyGetCoordinatorsByBranchPaginatedQuery
+    useLazyGetCoordinatorsByBranchPaginatedQuery,
+    useGetCoordinatorByIdQuery,
 } = coordinatorApi;

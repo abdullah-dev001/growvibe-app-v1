@@ -4,7 +4,6 @@ import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react
 import { useSelector } from "react-redux";
 import Pen from "../../assets/icons/Pen";
 import Plus from "../../assets/icons/Plus";
-import Trash from "../../assets/icons/Trash";
 import Button from "../../components/Button";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
@@ -78,6 +77,15 @@ const principals = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId]);
 
+  // Sync local state when cache is invalidated
+  useEffect(() => {
+    if (initialData?.items) {
+      setPrincipalsList(initialData.items);
+      setOffset(initialData.items.length);
+      setHasMore(initialData.items.length === PAGE_SIZE);
+    }
+  }, [initialData]);
+
   const handleRefresh = async () => {
     if (isRefreshing || !branchId) return;
     setIsRefreshing(true);
@@ -104,24 +112,15 @@ const principals = () => {
   };
 
   const handleEdit = (principal) => {
-    // Navigate to edit screen or open modal
-  };
-
-  const handleDelete = (principal) => {
-    Alert.alert(
-      "Delete Principal",
-      `Are you sure you want to delete "${principal.full_Name}"? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            // Handle delete logic
-          },
-        },
-      ]
-    );
+    const authId = principal.auth_User_Id;
+    if (!authId) {
+      Alert.alert('Error', 'Principal auth ID not available');
+      return;
+    }
+    router.push({
+      pathname: '/screens/forms/addPrincipal',
+      params: { principalId: authId },
+    });
   };
 
   const handleAddPrincipal = () => {
@@ -252,17 +251,6 @@ const principals = () => {
                         <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
                         <Text style={styles.editButtonText}>
                           Edit
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => handleDelete(principal)}
-                        style={[styles.deleteButton, { marginLeft: 8 }]}
-                        activeOpacity={0.7}
-                      >
-                        <Trash size={hp(1.6)} color="#EF4444" strokeWidth={2} />
-                        <Text style={styles.deleteButtonText}>
-                          Delete
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -475,20 +463,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: "Poppins-Medium",
     color: "#1CACF3",
-    marginLeft: hp(0.5),
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#FEF2F2",
-    borderRadius: 8,
-  },
-  deleteButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: "Poppins-Medium",
-    color: "#EF4444",
     marginLeft: hp(0.5),
   },
   emptyState: {

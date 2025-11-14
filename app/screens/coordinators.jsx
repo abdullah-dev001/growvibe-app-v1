@@ -4,7 +4,6 @@ import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react
 import { useSelector } from "react-redux";
 import Pen from "../../assets/icons/Pen";
 import Plus from "../../assets/icons/Plus";
-import Trash from "../../assets/icons/Trash";
 import Button from "../../components/Button";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
@@ -83,6 +82,15 @@ const coordinators = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId]);
 
+  // Sync local state when cache is invalidated
+  useEffect(() => {
+    if (initialData?.items) {
+      setCoordinatorsList(initialData.items);
+      setOffset(initialData.items.length);
+      setHasMore(initialData.items.length === PAGE_SIZE);
+    }
+  }, [initialData]);
+
   const handleRefresh = async () => {
     if (isRefreshing || !branchId) return;
     setIsRefreshing(true);
@@ -109,24 +117,15 @@ const coordinators = () => {
   };
 
   const handleEdit = (coordinator) => {
-    // Navigate to edit screen or open modal
-  };
-
-  const handleDelete = (coordinator) => {
-    Alert.alert(
-      "Delete Coordinator",
-      `Are you sure you want to delete "${coordinator.full_Name}"? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            // Handle delete logic
-          },
-        },
-      ]
-    );
+    const authId = coordinator.auth_User_Id;
+    if (!authId) {
+      Alert.alert('Error', 'Coordinator auth ID not available');
+      return;
+    }
+    router.push({
+      pathname: '/screens/forms/addCoordinator',
+      params: { coordinatorId: authId },
+    });
   };
 
   const handleAddCoordinator = () => {
@@ -230,6 +229,15 @@ const coordinators = () => {
                         {coordinator.phone || "Not assigned yet..."}
                       </Text>
                     </View>
+                    
+                    <View style={styles.detailItem}>
+                      <Text style={styles.cardLabel}>
+                        Salary
+                      </Text>
+                      <Text style={styles.salaryValue}>
+                        {coordinator.salary || 'Not assigned yet...'}
+                      </Text>
+                    </View>
                   </View>
 
                   {/* Created Date */}
@@ -253,17 +261,6 @@ const coordinators = () => {
                         <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
                         <Text style={styles.editButtonText}>
                           Edit
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => handleDelete(coordinator)}
-                        style={[styles.deleteButton, { marginLeft: 8 }]}
-                        activeOpacity={0.7}
-                      >
-                        <Trash size={hp(1.6)} color="#EF4444" strokeWidth={2} />
-                        <Text style={styles.deleteButtonText}>
-                          Delete
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -425,6 +422,11 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
     color: "#111827",
   },
+  salaryValue: {
+    fontSize: hp(1.4),
+    fontFamily: "Poppins-Bold",
+    color: "#10B981",
+  },
   cardDateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -459,20 +461,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: "Poppins-Medium",
     color: "#1CACF3",
-    marginLeft: hp(0.5),
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#FEF2F2",
-    borderRadius: 8,
-  },
-  deleteButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: "Poppins-Medium",
-    color: "#EF4444",
     marginLeft: hp(0.5),
   },
   emptyState: {

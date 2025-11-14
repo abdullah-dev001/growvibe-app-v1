@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React from "react";
 import {
@@ -10,68 +10,106 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import * as Yup from "yup";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
-import { useCreateAuthMutation } from "../../../redux/api/createAuthApi";
+import { useCreateAuthMutation, useUpdateAuthMutation } from "../../../redux/api/createAuthApi";
+import { useGetOwnerByIdQuery } from "../../../redux/api/ownerApi";
 
-const validationSchema = Yup.object().shape({
+// Validation Schema Factory
+const getValidationSchema = (isEditMode) => Yup.object().shape({
   email: Yup.string()
     .email("Please enter a valid email address")
     .required("Email is required"),
-  password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .required("Password is required"),
+  password: isEditMode
+    ? Yup.string()
+        .min(6, "Password must be at least 6 characters")
+        .nullable()
+        .transform((value) => (value === "" ? null : value))
+    : Yup.string()
+        .min(6, "Password must be at least 6 characters")
+        .required("Password is required"),
   name: Yup.string().required("Owner Name is required"),
   owner_Status: Yup.boolean().required("Status is required"),
 });
 
 const addOwner = () => {
   const router = useRouter();
-  const [createAuth] = useCreateAuthMutation();
-
-  // const handleSubmit = async (values, { setSubmitting, resetForm }) => {
-  //   try {
-  //     // Simulate success
-  //     await new Promise((r) => setTimeout(r, 600));
-  //     Alert.alert('Success', 'Owner added successfully!', [
-  //       { text: 'OK', onPress: () => { resetForm(); router.back(); } },
-  //     ]);
-  //   } catch (e) {
-  //     Alert.alert('Error', 'Failed to add owner');
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
+  const { ownerId } = useLocalSearchParams();
+  const isEditMode = !!ownerId;
+  const [createAuth, { isLoading: isCreating }] = useCreateAuthMutation();
+  const [updateAuth, { isLoading: isUpdating }] = useUpdateAuthMutation();
+  const { data: ownerData, isLoading: isLoadingOwner } = useGetOwnerByIdQuery(ownerId, {
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
-      await createAuth({
-        email: values.email,
-        password: values.password,
-        status: values.owner_Status,
-        fullName: values.name,
-        role: "owner",
-      }).unwrap();
+      if (isEditMode) {
+        // Use auth_User_Id (UUID) for update-auth, not owner_id
+        const authId = ownerData?.auth_User_Id || ownerId;
+        if (!authId) {
+          Alert.alert("Error", "Owner auth ID not available");
+          return;
+        }
+        await updateAuth({
+          user_Id: authId,
+          email: values.email,
+          password: values.password || undefined, // Only send password if provided
+          status: values.owner_Status,
+          fullName: values.name,
+          role: "owner",
+        }).unwrap();
 
-      Alert.alert("Success", "Owner added successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            resetForm();
-            router.back();
+        Alert.alert("Success", "Owner updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
           },
-        },
-      ]);
+        ]);
+      } else {
+        await createAuth({
+          email: values.email,
+          password: values.password,
+          status: values.owner_Status,
+          fullName: values.name,
+          role: "owner",
+        }).unwrap();
+
+        Alert.alert("Success", "Owner added successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              resetForm();
+              router.back();
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to add owner");
+      Alert.alert("Error", error?.message || error?.data?.message || "Failed to save owner");
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Show loading state while fetching owner data
+  if (isEditMode && isLoadingOwner) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#10B981" />
+          <Text style={styles.loadingText}>Loading owner data...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
@@ -89,17 +127,26 @@ const addOwner = () => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>
-                Add New Owner
+                {isEditMode ? "Edit Owner" : "Add New Owner"}
               </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to add a new owner
+                {isEditMode
+                  ? "Update the owner details"
+                  : "Fill in the details to add a new owner"}
               </Text>
             </View>
 
             <Formik
-              initialValues={{ email: "", password: "", owner_Status: true }}
-              validationSchema={validationSchema}
+              key={ownerData?.auth_User_Id || "new"}
+              initialValues={{
+                email: ownerData?.email || "",
+                password: "",
+                name: ownerData?.full_Name || "",
+                owner_Status: ownerData?.profile_Status !== undefined ? ownerData.profile_Status : true,
+              }}
+              validationSchema={getValidationSchema(isEditMode)}
               onSubmit={handleSubmit}
+              enableReinitialize
             >
               {({
                 values,
@@ -135,10 +182,10 @@ const addOwner = () => {
                     {/* Password */}
                     <View style={styles.fieldContainer}>
                       <Text style={styles.fieldLabel}>
-                        Password *
+                        Password {isEditMode ? "(leave blank to keep current)" : "*"}
                       </Text>
                       <Input
-                        placeholder="Enter password"
+                        placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
                         value={values.password}
                         onChangeText={handleChange("password")}
                         onBlur={handleBlur("password")}
@@ -226,12 +273,12 @@ const addOwner = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Owner"
+                        title={isEditMode ? "Update Owner" : "Add Owner"}
                         onPress={formikSubmit}
                         bgColor="#10B981"
                         textColor="#FFFFFF"
                         className="flex-1"
-                        loading={isSubmitting}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
@@ -322,5 +369,17 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: hp(1.6),
+    fontFamily: "Poppins-Medium",
+    color: "#6B7280",
   },
 });

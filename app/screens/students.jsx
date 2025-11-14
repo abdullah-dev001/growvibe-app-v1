@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
+import Pen from '../../assets/icons/Pen';
 import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -90,6 +91,15 @@ const students = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId, classId]);
 
+  // Sync local state when cache is invalidated
+  useEffect(() => {
+    if (initialData?.items) {
+      setStudentsList(initialData.items);
+      setOffset(initialData.items.length);
+      setHasMore(initialData.items.length === PAGE_SIZE);
+    }
+  }, [initialData]);
+
   const handleRefresh = async () => {
     if (isRefreshing || !branchId || !classId) return;
     setIsRefreshing(true);
@@ -136,6 +146,24 @@ const students = () => {
   const handleAddStudent = () => {
     router.push('/screens/forms/addStudent');
   };
+
+  const handleEdit = (student) => {
+    const authId = student.auth_User_Id;
+    if (!authId) {
+      Alert.alert('Error', 'Student auth ID not available');
+      return;
+    }
+    router.push({
+      pathname: '/screens/forms/addStudent',
+      params: { 
+        studentId: authId,
+        classId: classId,
+      },
+    });
+  };
+
+  // Check if user can edit students (owner, principal, coordinator only)
+  const canEditStudent = user?.role === 'owner' || user?.role === 'principal' || user?.role === 'coordinator';
 
   const getStatusColor = (status) => {
     return status ? '#10B981' : '#EF4444';
@@ -261,6 +289,18 @@ const students = () => {
                     >
                       <Text style={[styles.resultButtonText, styles.feeButtonText]}>
                         Fee
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {canEditStudent && (
+                    <TouchableOpacity
+                      onPress={() => handleEdit(student)}
+                      style={[styles.resultButton, styles.editButton]}
+                      activeOpacity={0.7}
+                    >
+                      <Pen size={hp(1.4)} color="#1CACF3" strokeWidth={2} />
+                      <Text style={[styles.resultButtonText, styles.editButtonText]}>
+                        Edit
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -429,6 +469,17 @@ const styles = StyleSheet.create({
   },
   feeButtonText: {
     color: '#F59E0B',
+  },
+  editButton: {
+    marginLeft: 8,
+    backgroundColor: '#EFF6FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButtonText: {
+    color: '#1CACF3',
+    marginLeft: 4,
   },
   emptyState: {
     alignItems: 'center',

@@ -44,8 +44,34 @@ export const ownerApi = createApi({
 
                 return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Owners"],
+            serializeQueryArgs: ({ endpointName }) => {
+                return `${endpointName}`;
+            },
+            providesTags: (result) => [
+                { type: "Owners", id: "LIST" },
+                ...(result?.items || []).map((owner) => ({ type: "Owners", id: owner.owner_id || owner.auth_User_Id })),
+            ],
+        }),
+        getOwnerById: builder.query({
+            async queryFn(authId) {
+                if (!authId) return { data: null };
+                // authId should be a UUID (auth_User_Id), not owner_id
+                const { data, error } = await supabase
+                    .from("owner_with_additional_info")
+                    .select("*")
+                    .eq("auth_User_Id", authId)
+                    .maybeSingle();
+
+                if (error) throw error;
+                return { data };
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs || 'null'})`;
+            },
+            providesTags: (result, error, authId) => [
+                { type: "Owners", id: authId },
+            ],
         }),
     }),
 });
-export const { useGetOwnersWithoutSchoolIdQuery, useGetOwnersQuery, useGetOwnersPaginatedQuery, useLazyGetOwnersPaginatedQuery } = ownerApi;
+export const { useGetOwnersWithoutSchoolIdQuery, useGetOwnersQuery, useGetOwnersPaginatedQuery, useLazyGetOwnersPaginatedQuery, useGetOwnerByIdQuery } = ownerApi;
