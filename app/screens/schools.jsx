@@ -70,6 +70,20 @@ const school = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial]);
 
+  // Sync local state with updated cache data when cache is invalidated (e.g., after edit)
+  useEffect(() => {
+    if (initialData?.items && !isFetchingInitial) {
+      // Always sync if we're on the first page (offset <= PAGE_SIZE)
+      // This ensures updates are reflected when coming back from edit
+      if (offset <= PAGE_SIZE) {
+        setSchoolsList(initialData.items);
+        setOffset(initialData.items.length);
+        setHasMore(initialData.items.length === PAGE_SIZE);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial]);
+
   const handleRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);

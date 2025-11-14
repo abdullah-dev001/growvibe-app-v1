@@ -1,7 +1,6 @@
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Pen from '../assets/icons/Pen';
-import Trash from '../assets/icons/Trash';
 import { hp } from '../helpers/common';
 
 const BranchCard = ({
@@ -12,7 +11,6 @@ const BranchCard = ({
   branch_Subscription_Fee,
   created_at,
   onEdit,
-  onDelete,
   className = '',
 }) => {
   const getStatusColor = (status) => {
@@ -35,24 +33,6 @@ const BranchCard = ({
 
   const statusColor = getStatusColor(branch_Status);
   const statusBgColor = getStatusBgColor(branch_Status);
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Branch',
-      `Are you sure you want to delete "${branch_Name}"? This action cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: onDelete,
-        },
-      ]
-    );
-  };
 
   return (
     <View style={styles.card}>
@@ -111,15 +91,6 @@ const BranchCard = ({
         >
           <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
           <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleDelete}
-          style={styles.deleteButton}
-          activeOpacity={0.7}
-        >
-          <Trash size={hp(1.6)} color="#EF4444" strokeWidth={2} />
-          <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -230,21 +201,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
-    marginLeft: hp(0.5),
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  deleteButtonText: {
-    fontSize: hp(1.3),
-    fontFamily: 'Poppins-Medium',
-    color: '#EF4444',
     marginLeft: hp(0.5),
   },
 });

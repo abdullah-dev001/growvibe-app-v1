@@ -85,6 +85,20 @@ const Branches = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, numericSchoolId, sessionRestored]);
 
+  // Sync local state with updated cache data when cache is invalidated (e.g., after edit)
+  useEffect(() => {
+    if (initialData?.items && !isFetchingInitial) {
+      // Always sync if we're on the first page (offset <= PAGE_SIZE)
+      // This ensures updates are reflected when coming back from edit
+      if (offset <= PAGE_SIZE) {
+        setBranchesList(initialData.items);
+        setOffset(initialData.items.length);
+        setHasMore(initialData.items.length === PAGE_SIZE);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial]);
+
   const handleRefresh = async () => {
     if (isRefreshing || !numericSchoolId) return;
     setIsRefreshing(true);
@@ -111,11 +125,14 @@ const Branches = () => {
   };
 
   const handleEdit = (branch) => {
-    // Navigate to edit screen or open modal
-  };
-
-  const handleDelete = (branch) => {
-    // Handle delete logic
+    router.push({
+      pathname: '/screens/forms/addBranch',
+      params: {
+        branchId: branch.id,
+        schoolId,
+        schoolName,
+      },
+    });
   };
 
   const handleAddBranch = () => {
@@ -166,7 +183,6 @@ const Branches = () => {
                   branch_Subscription_Fee={branch.branch_Subscription_Fee}
                   created_at={branch.created_at}
                   onEdit={() => handleEdit(branch)}
-                  onDelete={() => handleDelete(branch)}
                 />
           )}
           contentContainerStyle={styles.scrollContent}

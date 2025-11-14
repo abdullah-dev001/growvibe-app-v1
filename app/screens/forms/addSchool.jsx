@@ -41,7 +41,10 @@ const addSchool = () => {
   const [createSchool, { isLoading: isCreating }] = useCreateSchoolMutation();
   const [updateSchool, { isLoading: isUpdating }] = useUpdateSchoolMutation();
   const { data: owners } = useGetOwnersWithoutSchoolIdQuery(undefined, { skip: isEditMode });
-  const { data: schoolData, isLoading: isLoadingSchool } = useGetSchoolByIdQuery(schoolId, { skip: !isEditMode });
+  const { data: schoolData, isLoading: isLoadingSchool } = useGetSchoolByIdQuery(schoolId, { 
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState(null);
   const isLoading = isCreating || isUpdating;

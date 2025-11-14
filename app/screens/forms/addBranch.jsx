@@ -8,10 +8,10 @@ import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
-import { useCreateBranchMutation } from '../../../redux/api/branchApi';
+import { useCreateBranchMutation, useGetBranchByIdQuery, useUpdateBranchMutation } from '../../../redux/api/branchApi';
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
+// Validation Schema Factory
+const getValidationSchema = () => Yup.object().shape({
   branch_Name: Yup.string()
     .required('Branch name is required')
     .min(2, 'Branch name must be at least 2 characters')
@@ -27,45 +27,68 @@ const validationSchema = Yup.object().shape({
       'Please enter a valid phone number or email'
     ),
   branch_Status: Yup.boolean().required('Branch status is required'),
-  branch_Subscription_Fee: Yup.string()
-    .required('Subscription fee is required')
-    .matches(
-      /^\$?[0-9]+(\.[0-9]{2})?$/,
-      'Please enter a valid amount (e.g., $500 or 500.00)'
-    ),
 });
 
 const addBranch = () => {
   const router = useRouter();
-  const { schoolId, schoolName } = useLocalSearchParams();
+  const { branchId, schoolId, schoolName } = useLocalSearchParams();
+  const isEditMode = !!branchId;
   const { user } = useSelector((state) => state.auth);
-  const [createBranch, { isLoading }] = useCreateBranchMutation();
+  const [createBranch, { isLoading: isCreating }] = useCreateBranchMutation();
+  const [updateBranch, { isLoading: isUpdating }] = useUpdateBranchMutation();
+  const { data: branchData, isLoading: isLoadingBranch } = useGetBranchByIdQuery(branchId, { 
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const branchData = {
-        branch_Name: values.branch_Name,
-        branch_Address: values.branch_Address,
-        branch_Contact: values.branch_Contact,
-        branch_Status: values.branch_Status,
-        branch_Subscription_Fee: values.branch_Subscription_Fee,
-        school_Id: schoolId,
-      };
+      if (isEditMode) {
+        const updateData = {
+          id: branchId,
+          branch_Name: values.branch_Name,
+          branch_Address: values.branch_Address,
+          branch_Contact: values.branch_Contact,
+          branch_Status: values.branch_Status,
+        };
 
-      await createBranch(branchData).unwrap();
-      
-      Alert.alert(
-        'Success',
-        'Branch added successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
-      );
+        await updateBranch(updateData).unwrap();
+        
+        Alert.alert(
+          'Success',
+          'Branch updated successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        const branchData = {
+          branch_Name: values.branch_Name,
+          branch_Address: values.branch_Address,
+          branch_Contact: values.branch_Contact,
+          branch_Status: values.branch_Status,
+          school_Id: schoolId,
+        };
+
+        await createBranch(branchData).unwrap();
+        
+        Alert.alert(
+          'Success',
+          'Branch added successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to add branch');
+      Alert.alert('Error', error.message || `Failed to ${isEditMode ? 'update' : 'add'} branch`);
     } finally {
       setSubmitting(false);
     }
@@ -88,22 +111,27 @@ const addBranch = () => {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>
-              Add New Branch
+              {isEditMode ? 'Edit Branch' : 'Add New Branch'}
             </Text>
             <Text style={styles.headerSubtitle}>
-              Add a new branch for {schoolName}
+              {isEditMode ? 'Update the branch details' : `Add a new branch for ${schoolName}`}
             </Text>
           </View>
 
+          {isLoadingBranch ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading branch data...</Text>
+            </View>
+          ) : (
           <Formik
             initialValues={{
-              branch_Name: '',
-              branch_Address: '',
-              branch_Contact: '',
-              branch_Status: true,
-              branch_Subscription_Fee: '',
+              branch_Name: branchData?.branch_Name || '',
+              branch_Address: branchData?.branch_Address || '',
+              branch_Contact: branchData?.branch_Contact || '',
+              branch_Status: branchData?.branch_Status ?? true,
             }}
-            validationSchema={validationSchema}
+            enableReinitialize
+            validationSchema={getValidationSchema()}
             onSubmit={handleSubmit}
           >
             {({ 
@@ -221,24 +249,6 @@ const addBranch = () => {
                     </View>
                   </View>
 
-                  {/* Subscription Fee */}
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>
-                      Subscription Fee *
-                    </Text>
-                    <Input
-                      placeholder="Enter subscription fee (e.g., $500 or 500.00)"
-                      value={values.branch_Subscription_Fee}
-                      onChangeText={handleChange('branch_Subscription_Fee')}
-                      onBlur={handleBlur('branch_Subscription_Fee')}
-                      type="text"
-                    />
-                    {touched.branch_Subscription_Fee && errors.branch_Subscription_Fee && (
-                      <Text style={styles.errorText}>
-                        {errors.branch_Subscription_Fee}
-                      </Text>
-                    )}
-                  </View>
                 </View>
 
                 {/* Action Buttons */}
@@ -254,7 +264,7 @@ const addBranch = () => {
                   </View>
                   <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                     <Button
-                      title="Add Branch"
+                      title={isEditMode ? "Update Branch" : "Add Branch"}
                       onPress={formikSubmit}
                       bgColor="#1CACF3"
                       textColor="#FFFFFF"
@@ -266,6 +276,7 @@ const addBranch = () => {
               </>
             )}
           </Formik>
+          )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -350,5 +361,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
   },
 });

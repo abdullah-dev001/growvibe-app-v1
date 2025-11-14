@@ -18,7 +18,6 @@ export const branchApi = createApi({
                             branch_Address: branch.branch_Address,
                             branch_Contact: branch.branch_Contact,
                             branch_Status: branch.branch_Status,
-                            branch_Subscription_Fee: branch.branch_Subscription_Fee,
                         },
                     ])
 
@@ -83,7 +82,13 @@ export const branchApi = createApi({
                 
                 return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Branches"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs.schoolId}-${queryArgs.offset}-${queryArgs.limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Branches", id: "LIST" },
+                ...(result?.items?.map((item) => ({ type: "Branches", id: item.id })) || []),
+            ],
         }),
         getBranchesBySchools: builder.query({
             async queryFn(schoolIds) {
@@ -101,6 +106,22 @@ export const branchApi = createApi({
             },
             providesTags: ["Branches"],
         }),
+        getBranchById: builder.query({
+            async queryFn(branchId) {
+                const { data, error } = await supabase
+                    .from("branch")
+                    .select("*")
+                    .eq("id", branchId)
+                    .single();
+
+                if (error) throw error;
+                return { data };
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
+            providesTags: (result, error, arg) => [{ type: "Branches", id: arg }],
+        }),
         updateBranch: builder.mutation({
             async queryFn(branch) {
                 const { data, error } = await supabase
@@ -110,7 +131,6 @@ export const branchApi = createApi({
                         branch_Address: branch.branch_Address,
                         branch_Contact: branch.branch_Contact,
                         branch_Status: branch.branch_Status,
-                        branch_Due: branch.branch_Due,
                     })
                     .eq("id", branch.id)
                     .select();
@@ -118,7 +138,10 @@ export const branchApi = createApi({
                 if (error) throw error;
                 return { data };
             },
-            invalidatesTags: ["Branches"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Branches", id: "LIST" },
+                { type: "Branches", id: arg.id },
+            ],
         }),
         deleteBranch: builder.mutation({
             async queryFn(branchId) {
@@ -142,6 +165,7 @@ export const {
     useGetBranchesBySchoolPaginatedQuery,
     useLazyGetBranchesBySchoolPaginatedQuery,
     useGetBranchesBySchoolsQuery,
+    useGetBranchByIdQuery,
     useUpdateBranchMutation,
     useDeleteBranchMutation 
 } = branchApi;

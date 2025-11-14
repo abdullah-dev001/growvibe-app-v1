@@ -79,7 +79,13 @@ export const schoolApi = createApi({
                 
                 return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Schools"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs.offset}-${queryArgs.limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Schools", id: "LIST" },
+                ...(result?.items?.map((item) => ({ type: "Schools", id: item.id })) || []),
+            ],
         }),
         getSchoolsByOwner: builder.query({
             async queryFn(ownerId) {
@@ -104,6 +110,9 @@ export const schoolApi = createApi({
                 if (error) throw error;
                 return { data };
             },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
             providesTags: (result, error, arg) => [{ type: "Schools", id: arg }],
         }),
         updateSchool: builder.mutation({
@@ -122,7 +131,10 @@ export const schoolApi = createApi({
                 if (error) throw error;
                 return { data };
             },
-            invalidatesTags: ["Schools"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Schools", id: "LIST" },
+                { type: "Schools", id: arg.id },
+            ],
         }),
     }),
 });
