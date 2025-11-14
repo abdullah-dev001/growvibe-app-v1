@@ -161,9 +161,7 @@ const Dashboard = () => {
       )}
 
       <View style={styles.content}>
-        {user?.role === "admin" || (user?.role === "owner" && !branchId) ? (
-          <TaskSection />
-        ) : (
+        {user?.role === "admin" ? null : (
           (user?.role === "owner" || user?.role === "principal" || user?.role === "coordinator") &&
           branchId && (
             <View style={styles.optionsContainer}>
@@ -229,6 +227,11 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Bold",
     color: "#111827",
     marginBottom: hp(1.5),
+  },
+  subTitle: {
+    fontSize: hp(1.5),
+    fontFamily: "Poppins-Regular",
+    color: "#6B7280",
   },
   optionsList: {
     // gap handled by marginBottom in optionCard
