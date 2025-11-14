@@ -9,6 +9,7 @@ import { coordinatorApi } from './api/coordinator';
 import { createAuthApi } from './api/createAuthApi';
 import { datesheetApi } from './api/datesheetApi';
 import { diaryApi } from './api/diaryApi';
+import { feeApi } from './api/feeApi';
 import { leaderboardApi } from './api/leaderboardApi';
 import { noteApi } from './api/noteApi';
 import { ownerApi } from './api/ownerApi';
@@ -49,6 +50,7 @@ const rootReducer = combineReducers({
   [paymentApi.reducerPath]: paymentApi.reducer,
   [applicationApi.reducerPath]: applicationApi.reducer,
   [taskApi.reducerPath]: taskApi.reducer,
+  [feeApi.reducerPath]: feeApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -86,6 +88,7 @@ export const store = configureStore({
         paymentApi.middleware,
         applicationApi.middleware,
         taskApi.middleware,
+        feeApi.middleware,
       ),
 });
 

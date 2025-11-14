@@ -13,7 +13,7 @@ import { useGetStudentsByBranchAndClassPaginatedQuery, useLazyGetStudentsByBranc
 const students = () => {
   const router = useRouter();
   const { classId: classIdFromParams } = useLocalSearchParams();
-  const { branchId, classId: classIdFromRedux, user } = useSelector((state) => state.auth);
+  const { branchId, classId: classIdFromRedux, schoolId, user } = useSelector((state) => state.auth);
   // For teachers, use classId from Redux store only. For other roles, use params if available.
   const isTeacher = user?.role === 'teacher';
   const classId = isTeacher ? classIdFromRedux : (classIdFromParams || classIdFromRedux);
@@ -236,6 +236,34 @@ const students = () => {
                       Result
                     </Text>
                   </TouchableOpacity>
+                  {!isStudent && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const studentId = student.auth_User_Id;
+                        const studentName = student.full_Name || 'Student';
+                        if (!studentId) {
+                          Alert.alert('Error', 'Student ID not available');
+                          return;
+                        }
+                        router.push({
+                          pathname: '/screens/fees',
+                          params: {
+                            studentId: studentId,
+                            studentName: studentName,
+                            branchId: branchId,
+                            schoolId: schoolId,
+                            classId: classId,
+                          },
+                        });
+                      }}
+                      style={[styles.resultButton, styles.feeButton]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.resultButtonText, styles.feeButtonText]}>
+                        Fee
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             );
@@ -394,6 +422,13 @@ const styles = StyleSheet.create({
     fontSize: hp(1.4),
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
+  },
+  feeButton: {
+    marginLeft: 8,
+    backgroundColor: '#FEF3C7',
+  },
+  feeButtonText: {
+    color: '#F59E0B',
   },
   emptyState: {
     alignItems: 'center',

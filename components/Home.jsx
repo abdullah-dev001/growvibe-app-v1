@@ -129,6 +129,15 @@ const STUDENT_OPTIONS = {
     borderColor: "border-cyan-100",
     textColor: "text-cyan-500",
   },
+  fees: {
+    id: "fees",
+    title: "My Fees",
+    description: "View your fee records and payment history",
+    link: "/screens/studentFees",
+    bgColor: "bg-amber-50",
+    borderColor: "border-amber-100",
+    textColor: "text-amber-500",
+  },
 };
 
 const getBgColor = (bgClass) => {
@@ -143,6 +152,7 @@ const getBgColor = (bgClass) => {
     "bg-orange-50": "#FFEDD5",
     "bg-blue-50": "#DBEAFE",
     "bg-emerald-50": "#D1FAE5",
+    "bg-amber-50": "#FEF3C7",
   };
   return colorMap[bgClass] || "#F9FAFB";
 };
@@ -159,6 +169,7 @@ const getBorderColor = (borderClass) => {
     "border-orange-100": "#FED7AA",
     "border-blue-100": "#BFDBFE",
     "border-emerald-100": "#A7F3D0",
+    "border-amber-100": "#FDE68A",
   };
   return colorMap[borderClass] || "#E5E7EB";
 };
@@ -175,6 +186,7 @@ const getTextColor = (textClass) => {
     "text-orange-500": "#F97316",
     "text-blue-500": "#3B82F6",
     "text-emerald-500": "#10B981",
+    "text-amber-500": "#F59E0B",
   };
   return colorMap[textClass] || "#6B7280";
 };
