@@ -110,7 +110,13 @@ export const classApi = createApi({
               if (error) throw error;
               return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            providesTags: ["Classes"],
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs.branchId}-${queryArgs.sessionId}-${queryArgs.offset}-${queryArgs.limit})`;
+            },
+            providesTags: (result, error, arg) => [
+                { type: "Classes", id: "LIST" },
+                ...(result?.items?.map((item) => ({ type: "Classes", id: item.class_id })) || []),
+            ],
           }),          
         getClassesByBranch: builder.query({
             async queryFn(branchId) {
@@ -129,7 +135,7 @@ export const classApi = createApi({
                 try {
                     const { data, error } = await supabase
                         .from("class")
-                        .select("class_Name, section")
+                        .select("*")
                         .eq("id", classId)
                         .single();
 
@@ -146,6 +152,9 @@ export const classApi = createApi({
                     return { error: { status: 'CUSTOM_ERROR', data: err } };
                 }
             },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
             providesTags: (result, error, arg) => [
                 { type: "Classes", id: arg },
             ],
@@ -160,7 +169,7 @@ export const classApi = createApi({
                         section: classData.section,
                         session_Id: classData.session_Id,
                         class_Status: classData.class_Status,
-                        incharge_Id: classData.incharge_Id,
+                        incharge_Id: classData.incharge_Id || null,
                     })
                     .eq("id", classData.id)
                     .select();
@@ -168,7 +177,11 @@ export const classApi = createApi({
                 if (error) throw error;
                 return { data };
             },
-            invalidatesTags: ["Classes"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Classes", id: "LIST" },
+                { type: "Classes", id: arg.id },
+                "Teachers",
+            ],
         }),
         deleteClass: builder.mutation({
             async queryFn(classId) {

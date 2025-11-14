@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Formik } from 'formik';
 import React from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -8,61 +8,93 @@ import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
-import { useCreateClassMutation } from '../../../redux/api/classApi';
+import { useCreateClassMutation, useGetClassByIdQuery, useUpdateClassMutation } from '../../../redux/api/classApi';
 import { useGetTeachersWithoutClassQuery } from '../../../redux/api/teacherApi';
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
+// Validation Schema Factory
+const getValidationSchema = () => Yup.object().shape({
   class_Name: Yup.string().required("Class name is required"),
   class_Section: Yup.string().required("Class section is required"),
   class_Status: Yup.boolean().required("Class status is required"),
-  class_Incharge: Yup.string().required("Class incharge is required"),
+  class_Incharge: Yup.string().nullable(), // Made optional to allow changing teachers
 });
 
 const addClass = () => {
   const router = useRouter();
+  const { classId } = useLocalSearchParams();
+  const isEditMode = !!classId;
   const { branchId, sessionId, schoolId } = useSelector((state) => state.auth);
-  const [createClass] = useCreateClassMutation();
+  const [createClass, { isLoading: isCreating }] = useCreateClassMutation();
+  const [updateClass, { isLoading: isUpdating }] = useUpdateClassMutation();
+  const { data: classData, isLoading: isLoadingClass } = useGetClassByIdQuery(classId, { 
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
 
-  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
-    try {
-      await createClass({
-        branch_Id: branchId,
-        class_Name: values.class_Name,
-        school_Id: schoolId,
-        section: values.class_Section,
-        session_Id: sessionId,
-        class_Status: values.class_Status,
-        incharge_Id: values.class_Incharge,
-      }).unwrap();
-
-      // Refetch teachers list to update the available teachers
-      await refetchTeachersWithoutClass();
-
-      Alert.alert("Success", "Class added successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            resetForm();
-            router.back();
-          },
-        },
-      ]);
-    } catch (error) {
-      Alert.alert("Error", error.message || "Failed to add class");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+  // Always fetch teachers without class (available teachers) - same view used in add and edit mode
   const {
     data: teachersWithoutClassData,
     isLoading: teachersWithoutClassLoading,
-    error: teachersWithoutClassError,
     refetch: refetchTeachersWithoutClass,
   } = useGetTeachersWithoutClassQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
+
+  // Use available teachers list (current incharge will be pre-selected in form, even if not in this list)
+  const teachersData = teachersWithoutClassData || [];
+
+  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+    try {
+      if (isEditMode) {
+        await updateClass({
+          id: classId,
+          class_Name: values.class_Name,
+          school_Id: schoolId,
+          section: values.class_Section,
+          session_Id: sessionId,
+          class_Status: values.class_Status,
+          incharge_Id: values.class_Incharge || null,
+        }).unwrap();
+
+        Alert.alert("Success", "Class updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.back();
+            },
+          },
+        ]);
+      } else {
+        await createClass({
+          branch_Id: branchId,
+          class_Name: values.class_Name,
+          school_Id: schoolId,
+          section: values.class_Section,
+          session_Id: sessionId,
+          class_Status: values.class_Status,
+          incharge_Id: values.class_Incharge || null,
+        }).unwrap();
+
+        // Refetch teachers list to update the available teachers
+        await refetchTeachersWithoutClass();
+
+        Alert.alert("Success", "Class added successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              resetForm();
+              router.back();
+            },
+          },
+        ]);
+      }
+    } catch (error) {
+      Alert.alert("Error", error.message || `Failed to ${isEditMode ? 'update' : 'add'} class`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <ScreenWrapper>
@@ -81,21 +113,27 @@ const addClass = () => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>
-                Add New Class
+                {isEditMode ? 'Edit Class' : 'Add New Class'}
               </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to add a new class
+                {isEditMode ? 'Update the class details' : 'Fill in the details to add a new class'}
               </Text>
             </View>
 
+            {isLoadingClass ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading class data...</Text>
+              </View>
+            ) : (
             <Formik
               initialValues={{
-                class_Name: "",
-                class_Section: "",
-                class_Status: true,
-                class_Incharge: "",
+                class_Name: classData?.class_Name || "",
+                class_Section: classData?.section || "",
+                class_Status: classData?.class_Status ?? true,
+                class_Incharge: classData?.incharge_Id || "",
               }}
-              validationSchema={validationSchema}
+              enableReinitialize
+              validationSchema={getValidationSchema()}
               onSubmit={handleSubmit}
             >
               {({
@@ -152,7 +190,7 @@ const addClass = () => {
                     {/* Class Incharge */}
                     <View style={styles.fieldContainer}>
                       <Text style={styles.fieldLabel}>
-                        Class Incharge *
+                        Class Incharge {!isEditMode && '*'}
                       </Text>
                       <View style={styles.teacherSelector}>
                         <ScrollView
@@ -161,8 +199,29 @@ const addClass = () => {
                           style={styles.teacherScrollView}
                         >
                           <View style={styles.teacherRow}>
-                            {teachersWithoutClassData?.length > 0 ? (
-                              teachersWithoutClassData?.map((teacher) => {
+                            {/* In edit mode, show "Not assigned yet" option first */}
+                            {isEditMode && (
+                              <TouchableOpacity
+                                onPress={() => setFieldValue("class_Incharge", "")}
+                                style={[
+                                  styles.teacherButton,
+                                  !values.class_Incharge
+                                    ? styles.teacherButtonActive
+                                    : styles.teacherButtonInactive,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.teacherButtonText,
+                                    { color: !values.class_Incharge ? "#10B981" : "#6B7280" },
+                                  ]}
+                                >
+                                  Not assigned yet
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                            {teachersData?.length > 0 ? (
+                              teachersData?.map((teacher) => {
                                 const teacherAuthId =
                                   teacher?.auth_User_Id ||
                                   teacher?.auth_user_id ||
@@ -200,7 +259,9 @@ const addClass = () => {
                                 );
                               })
                             ) : (
-                              <Text style={{ fontSize: hp(1.4), fontFamily: "Poppins-Medium", color: "#6B7280" }}>No teachers available</Text>
+                              <Text style={{ fontSize: hp(1.4), fontFamily: "Poppins-Medium", color: "#6B7280" }}>
+                                {isEditMode ? "No teachers available" : "No teachers available"}
+                              </Text>
                             )}
                           </View>
                         </ScrollView>
@@ -269,18 +330,19 @@ const addClass = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Class"
+                        title={isEditMode ? "Update Class" : "Add Class"}
                         onPress={formikSubmit}
                         bgColor="#1CACF3"
                         textColor="#FFFFFF"
                         className="flex-1"
-                        loading={isSubmitting}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
                 </>
               )}
             </Formik>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -397,5 +459,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
   },
 });

@@ -77,6 +77,20 @@ const classes = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId, sessionId]);
 
+  // Sync local state with updated cache data when cache is invalidated (e.g., after edit)
+  useEffect(() => {
+    if (initialData?.items && !isFetchingInitial) {
+      // Always sync if we're on the first page (offset <= PAGE_SIZE)
+      // This ensures updates are reflected when coming back from edit
+      if (offset <= PAGE_SIZE) {
+        setClassesList(initialData.items);
+        setOffset(initialData.items.length);
+        setHasMore(initialData.items.length === PAGE_SIZE);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial]);
+
   const handleRefresh = async () => {
     if (isRefreshing || !branchId || !sessionId) return;
     setIsRefreshing(true);
@@ -103,7 +117,12 @@ const classes = () => {
   };
 
   const handleEdit = (classItem) => {
-    // Navigate to edit screen or open modal
+    router.push({
+      pathname: '/screens/forms/addClass',
+      params: {
+        classId: classItem.class_id,
+      },
+    });
   };
 
   const handleDelete = (classItem) => {
