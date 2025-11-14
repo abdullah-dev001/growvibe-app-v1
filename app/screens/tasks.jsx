@@ -460,6 +460,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#F3F4F6",
     borderRadius: 10,
+    marginTop: 14,
     padding: 4,
   },
   tabButton: {

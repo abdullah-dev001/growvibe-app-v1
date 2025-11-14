@@ -22,6 +22,7 @@ export const noteApi = createApi({
                                 created_By_Role: noteData.created_By_Role,
                                 is_For_Entire_Branch: noteData.is_For_Entire_Branch,
                                 specific_Class: noteData.specific_Class,
+                                class_Name: noteData.class_Name,
                                 branch_Id: noteData.branch_Id,
                                 school_Id: noteData.school_Id,
                             },
@@ -81,6 +82,31 @@ export const noteApi = createApi({
             },
             providesTags: (result, error, arg) => [
                 { type: "Notes", id: arg.branchId },
+            ],
+        }),
+        getNoteById: builder.query({
+            async queryFn(noteId) {
+                try {
+                    const { data, error } = await supabase
+                        .from("note")
+                        .select("*")
+                        .eq("id", noteId)
+                        .single();
+
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+                    return { data: data || null };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}(${queryArgs})`;
+            },
+            providesTags: (result, error, noteId) => [
+                { type: "Notes", id: noteId },
+                { type: "Notes", id: "LIST" },
             ],
         }),
         getLatestNotesByBranchAndClass: builder.query({
@@ -175,6 +201,7 @@ export const noteApi = createApi({
                             expire_Date: noteData.expire_Date,
                             is_For_Entire_Branch: noteData.is_For_Entire_Branch,
                             specific_Class: noteData.specific_Class,
+                            class_Name: noteData.class_Name,
                         })
                         .eq("id", noteData.id)
                         .select();
@@ -187,10 +214,13 @@ export const noteApi = createApi({
                     return { error: { status: 'CUSTOM_ERROR', data: err } };
                 }
             },
-            invalidatesTags: ["Notes"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Notes", id: arg.branch_Id },
+                { type: "Notes", id: arg.id },
+            ],
         }),
         deleteNote: builder.mutation({
-            async queryFn(noteId) {
+            async queryFn({ noteId, branchId }) {
                 try {
                     const { data, error } = await supabase
                         .from("note")
@@ -206,7 +236,9 @@ export const noteApi = createApi({
                     return { error: { status: 'CUSTOM_ERROR', data: err } };
                 }
             },
-            invalidatesTags: ["Notes"],
+            invalidatesTags: (result, error, arg) => [
+                { type: "Notes", id: arg.branchId },
+            ],
         }),
     }),
 });
@@ -217,6 +249,7 @@ export const {
     useGetNotesByBranchIdPaginatedQuery,
     useGetNotesByBranchAndClassPaginatedQuery,
     useGetLatestNotesByBranchAndClassQuery,
+    useGetNoteByIdQuery,
     useUpdateNoteMutation,
     useDeleteNoteMutation
 } = noteApi;

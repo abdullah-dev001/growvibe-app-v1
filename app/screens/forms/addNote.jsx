@@ -1,5 +1,5 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React, { useState } from "react";
 import {
@@ -19,7 +19,7 @@ import Input from "../../../components/Input";
 import ScreenWrapper from "../../../components/ScreenWrapper";
 import { hp } from "../../../helpers/common";
 import { useGetClassesByBranchQuery } from "../../../redux/api/classApi";
-import { useCreateNoteMutation } from "../../../redux/api/noteApi";
+import { useCreateNoteMutation, useGetNoteByIdQuery, useUpdateNoteMutation } from "../../../redux/api/noteApi";
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
@@ -44,8 +44,16 @@ const validationSchema = Yup.object().shape({
 
 const addNote = () => {
   const router = useRouter();
+  const { noteId } = useLocalSearchParams();
+  const isEditMode = !!noteId;
   const { branchId, user, schoolId } = useSelector((state) => state.auth);
-  const [createNote] = useCreateNoteMutation();
+  const [createNote, { isLoading: isCreating }] = useCreateNoteMutation();
+  const [updateNote, { isLoading: isUpdating }] = useUpdateNoteMutation();
+  const { data: noteData, isLoading: isLoadingNote } = useGetNoteByIdQuery(noteId, {
+    skip: !isEditMode,
+    refetchOnMountOrArgChange: true,
+  });
+  const isLoading = isCreating || isUpdating;
   const [showExpireDatePicker, setShowExpireDatePicker] = useState(false);
   const [tempExpireDate, setTempExpireDate] = useState(new Date());
 
@@ -87,31 +95,54 @@ const addNote = () => {
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
-      await createNote({
-        note_Title: values.note_Title,
-        note_Description: values.note_Description,
-        expire_Date: values.expire_Date,
-        created_By: user?.id,
-        created_By_Name: user?.email || user?.name || "Unknown",
-        created_By_Role: user?.role,
-        is_For_Entire_Branch: values.is_For_Entire_Branch,
-        specific_Class: values.is_For_Entire_Branch ? null : values.specific_Class,
-        branch_Id: branchId,
-        school_Id: schoolId,
-      }).unwrap();
+      if (isEditMode) {
+        await updateNote({
+          id: noteId,
+          note_Title: values.note_Title,
+          note_Description: values.note_Description,
+          expire_Date: values.expire_Date,
+          is_For_Entire_Branch: values.is_For_Entire_Branch,
+          specific_Class: values.is_For_Entire_Branch ? null : values.specific_Class,
+          class_Name: values.is_For_Entire_Branch ? null : values.class_Name,
+          branch_Id: branchId,
+        }).unwrap();
 
-      Alert.alert("Success", "Note added successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            resetForm();
-            router.back();
+        Alert.alert("Success", "Note updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.back();
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        await createNote({
+          note_Title: values.note_Title,
+          note_Description: values.note_Description,
+          expire_Date: values.expire_Date,
+          created_By: user?.id,
+          created_By_Name: user?.email || user?.name || "Unknown",
+          created_By_Role: user?.role,
+          is_For_Entire_Branch: values.is_For_Entire_Branch,
+          specific_Class: values.is_For_Entire_Branch ? null : values.specific_Class,
+          class_Name: values.is_For_Entire_Branch ? null : values.class_Name,
+          branch_Id: branchId,
+          school_Id: schoolId,
+        }).unwrap();
+
+        Alert.alert("Success", "Note added successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              resetForm();
+              router.back();
+            },
+          },
+        ]);
+      }
     } catch (error) {
       const actualError = error?.data?.data || error?.data || error;
-      Alert.alert("Error", actualError.message || error.message || "Failed to add note");
+      Alert.alert("Error", actualError.message || error.message || `Failed to ${isEditMode ? 'update' : 'add'} note`);
     } finally {
       setSubmitting(false);
     }
@@ -134,21 +165,30 @@ const addNote = () => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>
-                Add New Note
+                {isEditMode ? "Edit Note" : "Add New Note"}
               </Text>
               <Text style={styles.headerSubtitle}>
-                Fill in the details to create a new note or announcement
+                {isEditMode 
+                  ? "Update the note details below"
+                  : "Fill in the details to create a new note or announcement"}
               </Text>
             </View>
 
+            {isLoadingNote ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading note data...</Text>
+              </View>
+            ) : (
             <Formik
               initialValues={{
-                note_Title: "",
-                note_Description: "",
-                expire_Date: "",
-                is_For_Entire_Branch: true,
-                specific_Class: "",
+                note_Title: noteData?.note_Title || "",
+                note_Description: noteData?.note_Description || "",
+                expire_Date: noteData?.expire_Date || "",
+                is_For_Entire_Branch: noteData?.is_For_Entire_Branch ?? true,
+                specific_Class: noteData?.specific_Class || "",
+                class_Name: noteData?.class_Name || "",
               }}
+              enableReinitialize
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
             >
@@ -214,6 +254,8 @@ const addNote = () => {
                         onPress={() => {
                           if (values.expire_Date) {
                             setTempExpireDate(new Date(values.expire_Date));
+                          } else {
+                            setTempExpireDate(new Date());
                           }
                           setShowExpireDatePicker(true);
                         }}
@@ -291,6 +333,7 @@ const addNote = () => {
                           onPress={() => {
                             setFieldValue("is_For_Entire_Branch", true);
                             setFieldValue("specific_Class", "");
+                            setFieldValue("class_Name", "");
                           }}
                           style={[
                             styles.targetAudienceButton,
@@ -366,45 +409,40 @@ const addNote = () => {
                             style={styles.classScrollView}
                           >
                             <View style={styles.classRow}>
-                              {classesData.map((classItem) => (
-                                <TouchableOpacity
-                                  key={classItem.class_id || classItem.id}
-                                  onPress={() =>
-                                    setFieldValue(
-                                      "specific_Class",
-                                      classItem.class_id || classItem.id
-                                    )
-                                  }
-                                  style={[
-                                    styles.classButton,
-                                    values.specific_Class ===
-                                    (classItem.class_id || classItem.id)
-                                      ? styles.classButtonActive
-                                      : styles.classButtonInactive
-                                  ]}
-                                >
-                                  <Text
+                              {classesData.map((classItem) => {
+                                const classId = classItem.class_id || classItem.id;
+                                const className = classItem.class_Name || `Class ${classId}`;
+                                const section = classItem.section || classItem.class_Section || "";
+                                const displayName = section ? `${className} - Section ${section}` : className;
+                                const isSelected = values.specific_Class === classId;
+                                
+                                return (
+                                  <TouchableOpacity
+                                    key={classId}
+                                    onPress={() => {
+                                      setFieldValue("specific_Class", classId);
+                                      setFieldValue("class_Name", displayName);
+                                    }}
                                     style={[
-                                      styles.classButtonText,
-                                      {
-                                        color:
-                                          values.specific_Class ===
-                                          (classItem.class_id || classItem.id)
-                                            ? "#8B5CF6"
-                                            : "#6B7280",
-                                      }
+                                      styles.classButton,
+                                      isSelected
+                                        ? styles.classButtonActive
+                                        : styles.classButtonInactive
                                     ]}
                                   >
-                                    {classItem.class_Name
-                                      ? `${classItem.class_Name}${
-                                          classItem.section
-                                            ? ` - ${classItem.section}`
-                                            : ""
-                                        }`
-                                      : `Class ${classItem.class_id || classItem.id}`}
-                                  </Text>
-                                </TouchableOpacity>
-                              ))}
+                                    <Text
+                                      style={[
+                                        styles.classButtonText,
+                                        {
+                                          color: isSelected ? "#8B5CF6" : "#6B7280",
+                                        }
+                                      ]}
+                                    >
+                                      {displayName}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
                             </View>
                           </ScrollView>
                         ) : (
@@ -436,18 +474,19 @@ const addNote = () => {
                     </View>
                     <View style={[styles.buttonContainer, { marginLeft: 12 }]}>
                       <Button
-                        title="Add Note"
+                        title={isEditMode ? "Update Note" : "Add Note"}
                         onPress={formikSubmit}
                         bgColor="#8B5CF6"
                         textColor="#FFFFFF"
                         className="flex-1"
-                        loading={isSubmitting}
+                        loading={isSubmitting || isLoading}
                       />
                     </View>
                   </View>
                 </>
               )}
             </Formik>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

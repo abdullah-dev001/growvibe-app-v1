@@ -86,6 +86,20 @@ const notes = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId]);
 
+  // Sync local state with updated cache data when cache is invalidated (e.g., after edit)
+  useEffect(() => {
+    if (initialData?.items && !isFetchingInitial) {
+      // Always sync if we're on the first page (offset <= PAGE_SIZE)
+      // This ensures updates are reflected when coming back from edit
+      if (offset <= PAGE_SIZE) {
+        setNotesList(initialData.items);
+        setOffset(initialData.items.length);
+        setHasMore(initialData.items.length === PAGE_SIZE);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isFetchingInitial]);
+
   const handleRefresh = async () => {
     if (isRefreshing || !branchId) return;
     setIsRefreshing(true);
@@ -112,19 +126,40 @@ const notes = () => {
   };
 
   const handleEdit = (note) => {
-    // Navigate to edit screen or open modal
+    router.push({
+      pathname: '/screens/forms/addNote',
+      params: {
+        noteId: note.id,
+      },
+    });
   };
 
   const handleDelete = async (note) => {
-    try {
-      await deleteNote(note.id).unwrap();
-      // Remove from list immediately
-      setNotesList((prev) => prev.filter((n) => n.id !== note.id));
-      Alert.alert("Success", "Note deleted successfully!");
-    } catch (error) {
-      const actualError = error?.data?.data || error?.data || error;
-      Alert.alert("Error", actualError.message || "Failed to delete note");
-    }
+    Alert.alert(
+      'Delete Note',
+      `Are you sure you want to delete "${note.note_Title}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteNote({ noteId: note.id, branchId }).unwrap();
+              // Remove from list immediately
+              setNotesList((prev) => prev.filter((n) => n.id !== note.id));
+              Alert.alert("Success", "Note deleted successfully!");
+            } catch (error) {
+              const actualError = error?.data?.data || error?.data || error;
+              Alert.alert("Error", actualError.message || "Failed to delete note");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleAddNote = () => {
@@ -179,6 +214,7 @@ const notes = () => {
               created_By_Role={note.created_By_Role}
               is_For_Entire_Branch={note.is_For_Entire_Branch}
               specific_Class={note.specific_Class}
+              class_Name={note.class_Name}
               created_at={note.created_at}
               onEdit={() => handleEdit(note)}
               onDelete={() => handleDelete(note)}

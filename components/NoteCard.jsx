@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Pen from '../assets/icons/Pen';
 import Trash from '../assets/icons/Trash';
 import { hp } from '../helpers/common';
@@ -11,6 +11,7 @@ const NoteCard = ({
   created_By,
   is_For_Entire_Branch,
   specific_Class,
+  class_Name,
   created_at,
   created_By_Name,
   onEdit,
@@ -34,23 +35,6 @@ const NoteCard = ({
     return expire < today;
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Note',
-      `Are you sure you want to delete "${note_Title}"? This action cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: onDelete,
-        },
-      ]
-    );
-  };
 
   const expired = isExpired(expire_Date);
   const expireColor = expired ? '#EF4444' : '#10B981';
@@ -90,6 +74,8 @@ const NoteCard = ({
           <Text style={styles.detailValue}>
             {is_For_Entire_Branch
               ? 'Entire Branch'
+              : class_Name
+              ? class_Name
               : specific_Class
               ? `Class: ${specific_Class}`
               : 'Not specified'}
@@ -139,7 +125,7 @@ const NoteCard = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={handleDelete}
+            onPress={onDelete}
             style={styles.deleteButton}
             activeOpacity={0.7}
           >
