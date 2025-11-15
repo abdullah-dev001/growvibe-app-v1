@@ -15,8 +15,10 @@ export const profileApi = createApi({
                     // Map role to table name
                     switch (role) {
                         case 'admin':
-                        case 'owner':
                             tableName = 'admin_profile';
+                            break;
+                        case 'owner':
+                            tableName = 'owner_profile';
                             break;
                         case 'coordinator':
                             tableName = 'coordinator_profile';
@@ -66,8 +68,10 @@ export const profileApi = createApi({
                     // Map role to table name
                     switch (role) {
                         case 'admin':
-                        case 'owner':
                             tableName = 'admin_profile';
+                            break;
+                        case 'owner':
+                            tableName = 'owner_profile';
                             break;
                         case 'coordinator':
                             tableName = 'coordinator_profile';
