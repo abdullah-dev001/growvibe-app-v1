@@ -79,6 +79,15 @@ const DASHBOARD_OPTIONS = {
     borderColor: "border-cyan-100",
     textColor: "text-cyan-500",
   },
+  notes: {
+    id: "notes",
+    title: "Notes Management",
+    description: "Manage and create notes",
+    link: "/screens/notes",
+    bgColor: "bg-indigo-50",
+    borderColor: "border-indigo-100",
+    textColor: "text-indigo-500",
+  },
 };
 
 // Role-based options mapping
@@ -92,6 +101,7 @@ const ROLE_OPTIONS = {
     "attendance",
     "applications",
     "tasks",
+    "notes",
   ],
   principal: [
     "class",
@@ -99,6 +109,7 @@ const ROLE_OPTIONS = {
     "coordinator",
     "applications",
     "tasks",
+    "notes",
   ],
   coordinator: [
     "class",
@@ -117,6 +128,7 @@ const getBgColor = (bgClass) => {
     "bg-pink-50": "#FCE7F3",
     "bg-yellow-50": "#FEF9C3",
     "bg-cyan-50": "#CFFAFE",
+    "bg-indigo-50": "#EEF2FF",
   };
   return colorMap[bgClass] || "#F9FAFB";
 };
@@ -130,6 +142,7 @@ const getBorderColor = (borderClass) => {
     "border-pink-100": "#FBCFE8",
     "border-yellow-100": "#FDE68A",
     "border-cyan-100": "#A5F3FC",
+    "border-indigo-100": "#E0E7FF",
   };
   return colorMap[borderClass] || "#E5E7EB";
 };
@@ -143,6 +156,7 @@ const getTextColor = (textClass) => {
     "text-pink-500": "#EC4899",
     "text-yellow-500": "#F59E0B",
     "text-cyan-500": "#06B6D4",
+    "text-indigo-500": "#6366F1",
   };
   return colorMap[textClass] || "#6B7280";
 };

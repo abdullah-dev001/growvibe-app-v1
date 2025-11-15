@@ -2,13 +2,14 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import { useSelector } from "react-redux";
-import Plus from "../../../assets/icons/Plus";
-import Button from "../../../components/Button";
-import NoteCard from "../../../components/NoteCard";
-import SearchBar from "../../../components/SearchBar";
-import NoteCardSkeleton from "../../../components/skeletons/NoteCardSkeleton";
-import { hp } from "../../../helpers/common";
-import { useDeleteNoteMutation, useGetNotesByBranchIdPaginatedQuery, useLazyGetNotesByBranchIdPaginatedQuery } from "../../../redux/api/noteApi";
+import Plus from "../../assets/icons/Plus";
+import Button from "../../components/Button";
+import NoteCard from "../../components/NoteCard";
+import ScreenWrapper from "../../components/ScreenWrapper";
+import SearchBar from "../../components/SearchBar";
+import NoteCardSkeleton from "../../components/skeletons/NoteCardSkeleton";
+import { hp } from "../../helpers/common";
+import { useDeleteNoteMutation, useGetNotesByBranchIdPaginatedQuery, useLazyGetNotesByBranchIdPaginatedQuery } from "../../redux/api/noteApi";
 
 const PAGE_SIZE = 5;
 
@@ -167,7 +168,7 @@ const notes = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <ScreenWrapper>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -258,7 +259,7 @@ const notes = () => {
           windowSize={PAGE_SIZE * 2}
         />
       </View>
-    </View>
+    </ScreenWrapper>
   );
 };
 
@@ -324,3 +325,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+

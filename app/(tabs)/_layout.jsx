@@ -9,9 +9,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
-import Diary from "../../assets/icons/Diary";
+import Chat from "../../assets/icons/Chat";
 import Home from "../../assets/icons/Home";
-import Notes from "../../assets/icons/Notes";
 import Profile from "../../assets/icons/Profile";
 import Support from "../../assets/icons/Support";
 import ScreenWrapper from "../../components/ScreenWrapper";
@@ -67,10 +66,7 @@ export default function TabLayout() {
           />
 
           <Tabs.Screen
-            name="(common)/tasks"
-            redirect={
-              !user || (user.role !== "admin" && user.role !== "coordinator")
-            }
+            name="(common)/chat"
             options={{
               tabBarItemStyle: { marginRight: hp(7.5) },
               tabBarLabel: ({ color }) => (
@@ -82,67 +78,11 @@ export default function TabLayout() {
                     letterSpacing: -0.4,
                   }}
                 >
-                  Tasks
+                  Chat
                 </Text>
               ),
               tabBarIcon: ({ color }) => (
-                <Notes color={color} size={hp(2.9)} strokeWidth={1.6} />
-              ),
-              tabBarButton: (props) => (
-                <TouchableOpacity {...props} activeOpacity={1} />
-              ),
-            }}
-          />
-
-          <Tabs.Screen
-            name="(common)/notes"
-            redirect={
-              !user || (user.role !== "owner" && user.role !== "principal")
-            }
-            options={{
-              tabBarItemStyle: { marginRight: hp(7.5) },
-              tabBarLabel: ({ color }) => (
-                <Text
-                  style={{
-                    color,
-                    fontSize: hp(1.3),
-                    fontWeight: "500",
-                    letterSpacing: -0.4,
-                  }}
-                >
-                  Notes
-                </Text>
-              ),
-              tabBarIcon: ({ color }) => (
-                <Notes color={color} size={hp(2.9)} strokeWidth={1.6} />
-              ),
-              tabBarButton: (props) => (
-                <TouchableOpacity {...props} activeOpacity={1} />
-              ),
-            }}
-          />
-
-          <Tabs.Screen
-            name="(common)/diary"
-            redirect={
-              !user || (user.role !== "teacher" && user.role !== "student")
-            }
-            options={{
-              tabBarItemStyle: { marginRight: hp(7.5) },
-              tabBarLabel: ({ color }) => (
-                <Text
-                  style={{
-                    color,
-                    fontSize: hp(1.3),
-                    fontWeight: "500",
-                    letterSpacing: -0.4,
-                  }}
-                >
-                  Diary
-                </Text>
-              ),
-              tabBarIcon: ({ color }) => (
-                <Diary color={color} size={hp(2.9)} strokeWidth={1.6} />
+                <Chat color={color} size={hp(2.9)} strokeWidth={1.6} />
               ),
               tabBarButton: (props) => (
                 <TouchableOpacity {...props} activeOpacity={1} />
