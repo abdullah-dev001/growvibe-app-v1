@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { hp } from '../helpers/common';
 import { useGetLatestNotesByBranchAndClassQuery } from '../redux/api/noteApi';
 
-const ImportantNotes = () => {
+const ImportantNotes = ({ renderEmptyState }) => {
   const { branchId, classId } = useSelector((state) => state.auth);
 
   const { data: notes, isFetching, error } = useGetLatestNotesByBranchAndClassQuery(
@@ -25,6 +25,9 @@ const ImportantNotes = () => {
   }
 
   if (error || !notes || notes.length === 0) {
+    if (renderEmptyState) {
+      return renderEmptyState();
+    }
     return null;
   }
 

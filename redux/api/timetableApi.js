@@ -109,6 +109,36 @@ export const timetableApi = createApi({
                 { type: "Timetables", id: `ITEM-${arg.timetable_id}` },
             ],
         }),
+        getTeacherPeriods: builder.query({
+            async queryFn({ teacherId, weekNumber, day, schoolId }) {
+                try {
+                    if (!teacherId || !weekNumber || !day || !schoolId) {
+                        return { data: [] };
+                    }
+
+                    const { data, error } = await supabase.rpc('get_teacher_periods', {
+                        p_teacher_id: teacherId,
+                        p_week_number: String(weekNumber),
+                        p_day: day,
+                        p_school_id: schoolId,
+                    });
+
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+
+                    return { data: data || [] };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
+            },
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                const teacherId = queryArgs?.teacherId || 'null';
+                const weekNumber = queryArgs?.weekNumber || 'null';
+                const day = queryArgs?.day || 'null';
+                return `${endpointName}(${teacherId}-${weekNumber}-${day})`;
+            },
+        }),
     }),
 });
 
@@ -117,6 +147,7 @@ export const {
     useLazyGetTimetablesByClassQuery,
     useGetTimetableByIdQuery,
     useCreateTimetableMutation,
-    useUpdateTimetableMutation
+    useUpdateTimetableMutation,
+    useGetTeacherPeriodsQuery,
 } = timetableApi;
 

@@ -72,6 +72,15 @@ const TEACHER_OPTIONS = {
     borderColor: "border-cyan-100",
     textColor: "text-cyan-500",
   },
+  timetableToday: {
+    id: "timetableToday",
+    title: "Today's Timetable",
+    description: "See your classes for today",
+    link: "/screens/teacherTimetable",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-100",
+    textColor: "text-blue-500",
+  },
 };
 
 // Student options configuration
@@ -138,6 +147,15 @@ const STUDENT_OPTIONS = {
     bgColor: "bg-amber-50",
     borderColor: "border-amber-100",
     textColor: "text-amber-500",
+  },
+  timetable: {
+    id: "timetable",
+    title: "Timetable",
+    description: "Check your weekly schedule",
+    link: "/screens/studentTimetable",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-100",
+    textColor: "text-blue-500",
   },
 };
 
@@ -267,7 +285,16 @@ const Home = () => {
             </Text>
           </Pressable>
         </View>
-        <ImportantNotes />
+        <ImportantNotes
+          renderEmptyState={() => (
+            <View style={styles.emptyNotesContainer}>
+              <Text style={styles.emptyNotesTitle}>No important notes yet</Text>
+              <Text style={styles.emptyNotesSubtitle}>
+                Stay tuned! Notes shared by your school will appear here.
+              </Text>
+            </View>
+          )}
+        />
       </View>
       
       <View style={styles.optionsSection}>
@@ -423,6 +450,26 @@ const styles = StyleSheet.create({
   notesSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  emptyNotesContainer: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  emptyNotesTitle: {
+    fontSize: hp(1.8),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  emptyNotesSubtitle: {
+    fontSize: hp(1.4),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
+    lineHeight: hp(2),
   },
   notesHeader: {
     flexDirection: 'row',
