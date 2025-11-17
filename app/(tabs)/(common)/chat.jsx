@@ -189,10 +189,9 @@ const chat = () => {
     }
   };
 
+  // Component to render group avatar with image or placeholder
   const GroupAvatar = ({ groupImage, groupName }) => {
-    // Check cache synchronously first
-    const cachedUrl = groupImage ? groupImageCacheRef.current[groupImage] : null;
-    const [imageUrl, setImageUrl] = useState(cachedUrl || null);
+    const [imageUrl, setImageUrl] = useState(null);
 
     useEffect(() => {
       if (groupImage) {
@@ -241,6 +240,7 @@ const chat = () => {
     const lastMessage = item.last_message || '';
     const lastMessageTime = item.last_message_time || '';
     const unreadCount = item.unread_count || 0;
+    const memberCount = item.group_member_count || 0;
     
     const formattedLastMessage = formatLastMessage(lastMessage);
 
@@ -257,6 +257,7 @@ const chat = () => {
               chatImage: groupImage || '',
               chatType: 'group',
               classId: item.class_Id || '',
+              memberCount: memberCount,
             },
           });
         }}
@@ -273,6 +274,11 @@ const chat = () => {
               <Text style={styles.personName} numberOfLines={1}>
                 {groupName}
               </Text>
+              {/* {memberCount > 0 && (
+                <Text style={styles.memberCount}>
+                  {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                </Text>
+              )} */}
             </View>
             <Text style={styles.lastMessageTime}>
               {lastMessageTime ? new Date(lastMessageTime).toLocaleTimeString('en-US', {
@@ -467,6 +473,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#111827',
     marginBottom: 2,
+  },
+  memberCount: {
+    fontSize: hp(1.2),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
   },
   lastMessageTime: {
     fontSize: hp(1.2),
