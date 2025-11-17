@@ -23,17 +23,21 @@ import { useGetProfileByRoleQuery } from "../redux/api/profileApi";
 import { logout } from "../redux/slices/authSlice";
 import { supabase } from "../supabaseClient";
 
-export default function ProfileLayout() {
+export default function ProfileLayout({ profileUserId = null, profileRole = null, readOnly = false }) {
   const [showImagePopup, setShowImagePopup] = useState(false);
   const dispatch = useDispatch();
   const router = useRouter();
 
   const { user } = useSelector((state) => state.auth);
+  const effectiveUserId = profileUserId || user?.id;
+  const effectiveRole = profileRole || user?.role;
+  const isOwnProfile = !profileUserId || profileUserId === user?.id;
+  const canEditProfile = isOwnProfile && !readOnly;
   
   // Fetch profile using RTK Query (cached, not persisted in Redux)
   const { data: profile, isLoading: isLoadingProfile } = useGetProfileByRoleQuery(
-    { userId: user?.id, role: user?.role },
-    { skip: !user?.id || !user?.role }
+    { userId: effectiveUserId, role: effectiveRole },
+    { skip: !effectiveUserId || !effectiveRole }
   );
 
   // State for signed URLs
@@ -121,10 +125,12 @@ export default function ProfileLayout() {
   }, [profile]);
 
   // Process profile data
+  const emailSource = profile?.contact_Email || profile?.email || user?.email || null;
+  const derivedUsername = profile?.username || (emailSource ? emailSource.split("@")[0] : "user");
   const userProfile = profile ? {
     fullName: profile.full_Name || "N/A",
-    username: user?.email?.split("@")[0] || "user",
-    role: user?.role || "user",
+    username: derivedUsername,
+    role: profile.role || effectiveRole || "user",
     about: profile.about || "No description available.",
     bannerImage: bannerImageSignedUrl || defaultBannerImage,
     userImage: userImageSignedUrl || null,
@@ -138,8 +144,8 @@ export default function ProfileLayout() {
     interest: profile.interest ? profile.interest.split(",").map(i => i.trim()) : [],
   } : {
     fullName: isLoadingProfile ? "Loading..." : "N/A",
-    username: user?.email?.split("@")[0] || "user",
-    role: user?.role || "user",
+    username: derivedUsername || "user",
+    role: effectiveRole || "user",
     about: isLoadingProfile ? "Loading profile..." : "No description available.",
     bannerImage: defaultBannerImage,
     userImage: null,
@@ -217,9 +223,6 @@ export default function ProfileLayout() {
                 <View style={[styles.avatarImage, { backgroundColor: "#E5E7EB" }]} />
               )}
             </Pressable>
-            <Text style={styles.usernameBadge}>
-              @{userProfile.username}
-            </Text>
           </View>
         </View>
       </View>
@@ -228,13 +231,15 @@ export default function ProfileLayout() {
       <View style={[styles.profileInfo, { marginTop: hp(7) }]}>
         <View style={styles.nameRow}>
           <Text style={styles.fullName}>{userProfile.fullName}</Text>
-          <View style={styles.verifiedIcon}>
+          {userProfile?.role === "admin" && (
+            <View style={styles.verifiedIcon}>
             <Verified size={18} color="#1CACF3" strokeWidth={1.5} />
           </View>
+          )}
         </View>
-        {userProfile.role && (
+        {userProfile?.role === "admin" && (
           <Text style={styles.roleText}>
-            {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
+            Founder Of Growvibe
           </Text>
         )}
 
@@ -260,15 +265,22 @@ export default function ProfileLayout() {
 
       {/* Buttons */}
       <View style={styles.buttonsRow}>
-        <Pressable 
-          style={styles.editButton}
-          onPress={() => router.push('/screens/forms/editProfile')}
-        >
-          <Text style={styles.editButtonText}>
-            Edit Profile
-          </Text>
-        </Pressable>
-
+        {canEditProfile ? (
+          <Pressable 
+            style={styles.editButton}
+            onPress={() => router.push('/screens/forms/editProfile')}
+          >
+            <Text style={styles.editButtonText}>
+              Edit Profile
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>
+              {userProfile.role ? userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1) : 'Member'}
+            </Text>
+          </View>
+        )}
         <View style={styles.socialButtons}>
           <Pressable
             onPress={() => userProfile.instaUrl && Linking.openURL(userProfile.instaUrl)}
@@ -351,13 +363,15 @@ export default function ProfileLayout() {
         )}
 
         {/* Logout */}
-        <Pressable
-          onPress={handleLogout}
-          style={styles.logoutButton}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-          <Logout size={22} color="#ef4444" strokeWidth={2} />
-        </Pressable>
+        {canEditProfile && (
+          <Pressable
+            onPress={handleLogout}
+            style={styles.logoutButton}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+            <Logout size={22} color="#ef4444" strokeWidth={2} />
+          </Pressable>
+        )}
       </View>
 
       {/* Profile Image Popup Modal */}
@@ -485,6 +499,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 20,
     flexDirection: 'row',
+  },
+  roleBadge: {
+    flex: 1,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  roleBadgeText: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#374151',
   },
   editButton: {
     flex: 1,

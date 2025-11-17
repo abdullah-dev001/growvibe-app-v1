@@ -1067,6 +1067,9 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     fontSize: hp(1.4),
     fontFamily: "Poppins-Regular",
+    width: "90%",
+    marginHorizontal: "auto",
+    textAlign: "center",
     color: "#9CA3AF",
   },
   removeImageButton: {

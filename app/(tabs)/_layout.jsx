@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import {
   Platform,
   Pressable,
@@ -20,6 +20,7 @@ import { hp } from "../../helpers/common";
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const router = useRouter();
   
 
   return (
@@ -139,7 +140,10 @@ export default function TabLayout() {
           />
         </Tabs>
 
-        <Pressable onPress={() => {}} style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 }}>
+        <Pressable
+          onPress={() => router.push('/screens/adminProfile')}
+          style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 }}
+        >
           <View
             style={{
               position: "absolute",

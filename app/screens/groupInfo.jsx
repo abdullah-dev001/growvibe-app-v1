@@ -729,7 +729,7 @@ const groupInfo = () => {
   // Component for rendering member with signed URL
   const MemberItem = React.memo(({ item: memberItem }) => {
     const userName = memberItem.full_Name || `User ${memberItem.user_Id?.substring(0, 8)}`;
-    const memberRole = memberItem.role || 'member';
+    const memberRole = (memberItem.role || 'member').toLowerCase();
     
     // Check cache first synchronously
     const cache = memberImageCacheRef.current;
@@ -761,8 +761,19 @@ const groupInfo = () => {
       }
     }, [memberItem.user_Image]);
 
+    const handleMemberPress = () => {
+      if (!memberItem.user_Id || !memberRole) return;
+      router.push({
+        pathname: '/screens/viewProfile',
+        params: {
+          userId: memberItem.user_Id,
+          role: memberRole,
+        },
+      });
+    };
+
     return (
-      <View style={styles.memberItem}>
+      <TouchableOpacity style={styles.memberItem} activeOpacity={0.7} onPress={handleMemberPress}>
         <View style={styles.memberAvatar}>
           {userImageUrl ? (
             <Image source={{ uri: userImageUrl }} style={styles.memberAvatarImage} cachePolicy="disk" />
@@ -774,9 +785,9 @@ const groupInfo = () => {
         </View>
         <View style={styles.memberInfo}>
           <Text style={styles.memberName}>{userName}</Text>
-          <Text style={styles.memberRole}>{memberRole}</Text>
+          <Text style={styles.memberRole}>{memberRole.charAt(0).toUpperCase() + memberRole.slice(1)}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   });
 
