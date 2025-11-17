@@ -4,6 +4,7 @@ import { persistReducer, persistStore } from 'redux-persist';
 import { applicationApi } from './api/applicationApi';
 import { authApi } from './api/authApi';
 import { branchApi } from './api/branchApi';
+import { chatApi } from './api/chatApi';
 import { classApi } from './api/classApi';
 import { coordinatorApi } from './api/coordinator';
 import { createAuthApi } from './api/createAuthApi';
@@ -31,6 +32,7 @@ const rootReducer = combineReducers({
   auth: authReducer,
   [schoolApi.reducerPath]: schoolApi.reducer,
   [branchApi.reducerPath]: branchApi.reducer,
+  [chatApi.reducerPath]: chatApi.reducer,
   [createAuthApi.reducerPath]: createAuthApi.reducer,
   [teacherApi.reducerPath]: teacherApi.reducer,
   [sessionApi.reducerPath]: sessionApi.reducer,
@@ -69,6 +71,7 @@ export const store = configureStore({
         authApi.middleware,
         schoolApi.middleware,
         branchApi.middleware,
+        chatApi.middleware,
         createAuthApi.middleware,
         teacherApi.middleware,
         sessionApi.middleware,

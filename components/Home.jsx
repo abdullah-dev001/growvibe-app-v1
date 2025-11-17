@@ -3,6 +3,7 @@ import React from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSelector } from 'react-redux'
 import { hp } from '../helpers/common'
+import { useGetProfileByRoleQuery } from '../redux/api/profileApi'
 import ImportantNotes from './ImportantNotes'
 import Topbar from './Topbar'
 
@@ -193,15 +194,19 @@ const getTextColor = (textClass) => {
 
 const Home = () => {
   const router = useRouter();
-  const { user, profile, className, section } = useSelector((state) => state.auth);
-  
+  const { user, className, section } = useSelector((state) => state.auth);
+
+  const { data: profile } = useGetProfileByRoleQuery(
+    { userId: user?.id, role: user?.role },
+    { skip: !user?.id || !user?.role }
+  );
 
   return (
     <ScrollView style={styles.container}>
       <Topbar />
       <View style={styles.header}>
         <Text style={styles.greeting}>
-          Hello {profile?.full_Name}
+          Hello {profile?.full_Name || 'Student'}
         </Text>
         <Text style={styles.subtitle}>
           {user?.role === 'student' ? 'Student of' : 'Teacher of'} {className} {section}

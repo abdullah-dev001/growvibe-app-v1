@@ -1,8 +1,84 @@
 import { Image } from "expo-image";
-import { Pressable, StyleSheet, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSelector } from "react-redux";
 import { hp } from "../helpers/common";
+import { useGetProfileByRoleQuery } from "../redux/api/profileApi";
+import { supabase } from "../supabaseClient";
 
 export default function Topbar() {
+  const { user } = useSelector((state) => state.auth);
+  
+  // Fetch profile using RTK Query
+  const { data: profile } = useGetProfileByRoleQuery(
+    { userId: user?.id, role: user?.role },
+    { skip: !user?.id || !user?.role }
+  );
+
+  const [userImageSignedUrl, setUserImageSignedUrl] = useState(null);
+
+  // Extract file path from Supabase storage URL
+  const extractFilePath = (url) => {
+    if (!url) return null;
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      
+      // Handle Supabase storage URLs
+      const publicIndex = pathParts.findIndex(part => part === 'storage');
+      if (publicIndex !== -1) {
+        const profileIndex = pathParts.findIndex(part => part === 'profile-attachments');
+        if (profileIndex !== -1 && profileIndex < pathParts.length - 1) {
+          return pathParts.slice(profileIndex + 1).join('/');
+        }
+      }
+      
+      // Try direct pattern
+      const bucketIndex = pathParts.findIndex(part => part === 'profile-attachments');
+      if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+        return pathParts.slice(bucketIndex + 1).join('/');
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Generate signed URL for user image
+  useEffect(() => {
+    const generateSignedUrl = async () => {
+      if (!profile?.user_Image) {
+        setUserImageSignedUrl(null);
+        return;
+      }
+
+      const userImagePath = extractFilePath(profile.user_Image);
+      if (userImagePath) {
+        try {
+          const { data, error } = await supabase.storage
+            .from("profile-attachments")
+            .createSignedUrl(userImagePath, 3600);
+          if (!error && data?.signedUrl) {
+            setUserImageSignedUrl(data.signedUrl);
+          } else {
+            setUserImageSignedUrl(null);
+          }
+        } catch (e) {
+          setUserImageSignedUrl(null);
+        }
+      } else {
+        // If we can't extract path, try using the URL directly
+        setUserImageSignedUrl(profile.user_Image);
+      }
+    };
+
+    generateSignedUrl();
+  }, [profile?.user_Image]);
+
+  const displayImage = userImageSignedUrl || profile?.user_Image;
+  const userName = profile?.full_Name || user?.email?.split('@')[0] || 'U';
+
   return (
     <View style={styles.container}>
       <Image
@@ -14,15 +90,21 @@ export default function Topbar() {
       />
 
       <Pressable style={styles.avatarContainer}>
-        <Image
-          transition={500}
-          cachePolicy={"disk"}
-          contentFit="cover"
-          style={styles.avatar}
-          source={{
-            uri: "https://images.unsplash.com/photo-1639149888905-fb39731f2e6c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=928",
-          }}
-        />
+        {displayImage ? (
+          <Image
+            transition={500}
+            cachePolicy={"disk"}
+            contentFit="cover"
+            style={styles.avatar}
+            source={{ uri: displayImage }}
+          />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarPlaceholderText}>
+              {userName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
       </Pressable>
     </View>
   );
@@ -50,5 +132,18 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
     borderRadius: 100,
+  },
+  avatarPlaceholder: {
+    height: '100%',
+    width: '100%',
+    borderRadius: 100,
+    backgroundColor: '#1CACF3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPlaceholderText: {
+    fontSize: hp(1.8),
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
   },
 });

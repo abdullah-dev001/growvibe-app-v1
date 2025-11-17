@@ -23,7 +23,7 @@ const addClass = () => {
   const router = useRouter();
   const { classId } = useLocalSearchParams();
   const isEditMode = !!classId;
-  const { branchId, sessionId, schoolId } = useSelector((state) => state.auth);
+  const { branchId, sessionId, schoolId, user } = useSelector((state) => state.auth);
   const [createClass, { isLoading: isCreating }] = useCreateClassMutation();
   const [updateClass, { isLoading: isUpdating }] = useUpdateClassMutation();
   const { data: classData, isLoading: isLoadingClass } = useGetClassByIdQuery(classId, { 
@@ -74,6 +74,7 @@ const addClass = () => {
           session_Id: sessionId,
           class_Status: values.class_Status,
           incharge_Id: values.class_Incharge || null,
+          created_By: user?.id || null,
         }).unwrap();
 
         // Refetch teachers list to update the available teachers

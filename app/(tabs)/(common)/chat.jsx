@@ -1,218 +1,249 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSelector } from 'react-redux';
+import Attachment from '../../../assets/icons/Attachment';
+import ImageIcon from '../../../assets/icons/Image';
+import Microphone from '../../../assets/icons/Microphone';
 import { hp } from '../../../helpers/common';
-
-// Mock data for personal chats - will be replaced with actual API data later
-const MOCK_PERSONAL_CHATS = [
-  {
-    id: '1',
-    personName: 'John Doe',
-    personImage: null,
-    lastMessage: 'Hey, how are you doing?',
-    lastMessageTime: '2:30 PM',
-    unreadCount: 3,
-    type: 'personal',
-  },
-  {
-    id: '2',
-    personName: 'Jane Smith',
-    personImage: null,
-    lastMessage: 'Thanks for the update!',
-    lastMessageTime: '1:15 PM',
-    unreadCount: 0,
-    type: 'personal',
-  },
-  {
-    id: '3',
-    personName: 'Mike Johnson',
-    personImage: null,
-    lastMessage: 'See you tomorrow',
-    lastMessageTime: '12:00 PM',
-    unreadCount: 1,
-    type: 'personal',
-  },
-  {
-    id: '4',
-    personName: 'Sarah Williams',
-    personImage: null,
-    lastMessage: 'Can we schedule a meeting?',
-    lastMessageTime: 'Yesterday',
-    unreadCount: 0,
-    type: 'personal',
-  },
-];
-
-// Mock data for groups - will be replaced with actual API data later
-const MOCK_GROUPS = [
-  {
-    id: 'g1',
-    groupName: 'Class 10-A',
-    groupImage: null,
-    lastMessage: 'Assignment due tomorrow',
-    lastMessageTime: '3:45 PM',
-    unreadCount: 5,
-    type: 'group',
-    memberCount: 25,
-  },
-  {
-    id: 'g2',
-    groupName: 'Teachers Group',
-    groupImage: null,
-    lastMessage: 'Meeting at 4 PM',
-    lastMessageTime: '2:20 PM',
-    unreadCount: 0,
-    type: 'group',
-    memberCount: 12,
-  },
-  {
-    id: 'g3',
-    groupName: 'Science Club',
-    groupImage: null,
-    lastMessage: 'Lab session cancelled',
-    lastMessageTime: '11:30 AM',
-    unreadCount: 2,
-    type: 'group',
-    memberCount: 18,
-  },
-];
+import { useGetUserGroupChatsQuery, useLazyGetUserGroupChatsQuery } from '../../../redux/api/chatApi';
+import { supabase } from '../../../supabaseClient';
 
 const chat = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('personal');
-  const [personalChats] = useState(MOCK_PERSONAL_CHATS);
-  const [groups] = useState(MOCK_GROUPS);
+  const { user } = useSelector((state) => state.auth);
+  const [groupsList, setGroupsList] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const groupImageCacheRef = useRef({}); // Cache for group image signed URLs
 
-  const renderTabSwitcher = () => {
+  const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetUserGroupChatsQuery(
+    undefined,
+    { skip: !user?.id }
+  );
+
+  const [trigger, { isFetching }] = useLazyGetUserGroupChatsQuery();
+
+  // Sync local state with API data
+  useEffect(() => {
+    if (initialData !== undefined) {
+      setGroupsList(initialData || []);
+    }
+  }, [initialData]);
+
+  // Refetch when screen comes into focus (e.g., when returning from chat detail)
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        refetch();
+      }
+    }, [user?.id, refetch])
+  );
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !user?.id) return;
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Helper function to format last message and return icon and text
+  const formatLastMessage = (message) => {
+    if (!message) return { icon: null, text: 'No messages yet' };
+    
+    // Check if message is a URL
+    const isUrl = message.startsWith('http://') || message.startsWith('https://');
+    
+    if (isUrl) {
+      // Check if it's a voice note
+      if (message.includes('voice') || message.includes('.m4a') || message.includes('group-voice')) {
+        return { icon: 'microphone', text: 'Voice note' };
+      }
+      
+      // Check if it's an image
+      if (message.includes('image') || 
+          message.includes('.jpg') || 
+          message.includes('.jpeg') || 
+          message.includes('.png') || 
+          message.includes('.gif') ||
+          message.includes('group-attachments')) {
+        return { icon: 'image', text: 'Image' };
+      }
+      
+      // Check if it's an attachment
+      if (message.includes('attachment') || message.includes('group-attachments')) {
+        return { icon: 'attachment', text: 'Attachment' };
+      }
+      
+      // Default for any other URL
+      return { icon: 'attachment', text: 'Attachment' };
+    }
+    
+    // Try to parse as JSON (for attachment messages)
+    try {
+      const parsed = JSON.parse(message);
+      if (parsed.type) {
+        if (parsed.type.startsWith('image/')) {
+          return { icon: 'image', text: 'Image' };
+        }
+        if (parsed.type.startsWith('audio/') || parsed.type.includes('voice')) {
+          return { icon: 'microphone', text: 'Voice note' };
+        }
+        return { icon: 'attachment', text: 'Attachment' };
+      }
+    } catch (e) {
+      // Not JSON, continue with normal message
+    }
+    
+    return { icon: null, text: message };
+  };
+
+  // Helper function to get group image signed URL
+  const getGroupImageSignedUrl = async (groupImage) => {
+    if (!groupImage) return null;
+    
+    // Check cache first
+    if (groupImageCacheRef.current[groupImage]) {
+      return groupImageCacheRef.current[groupImage];
+    }
+
+    const extractGroupImagePath = (url) => {
+      if (!url) return null;
+      try {
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          return url;
+        }
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+        
+        // Handle Supabase storage URLs
+        const publicIndex = pathname.indexOf('/storage/v1/object/public/');
+        const signIndex = pathname.indexOf('/storage/v1/object/sign/');
+        
+        if (publicIndex !== -1) {
+          const afterPublic = pathname.substring(publicIndex + '/storage/v1/object/public/'.length);
+          return afterPublic.split('?')[0] || null;
+        }
+        
+        if (signIndex !== -1) {
+          const afterSign = pathname.substring(signIndex + '/storage/v1/object/sign/'.length);
+          return afterSign.split('?')[0] || null;
+        }
+        
+        // Try to find group-attachments pattern
+        const attachmentIndex = pathname.indexOf('group-attachments/');
+        if (attachmentIndex !== -1) {
+          const afterAttachment = pathname.substring(attachmentIndex + 'group-attachments/'.length);
+          return afterAttachment.split('?')[0] || null;
+        }
+        
+        return null;
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const filePath = extractGroupImagePath(groupImage);
+    if (!filePath) {
+      // If we can't extract path, use original URL (might already be a signed URL or public URL)
+      groupImageCacheRef.current[groupImage] = groupImage;
+      return groupImage;
+    }
+
+    // Extract bucket name from file path
+    let bucketName = 'group-attachments';
+    let actualFilePath = filePath;
+    
+    // Remove bucket name prefix if present
+    if (filePath.startsWith('group-attachments/')) {
+      actualFilePath = filePath.substring('group-attachments/'.length);
+    } else if (!filePath.includes('/')) {
+      // If path doesn't have bucket prefix, it might be the full path
+      // Check if it starts with school/class pattern
+      if (filePath.startsWith('school') && filePath.includes('class')) {
+        // This is the full path, use as is
+        actualFilePath = filePath;
+      }
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .createSignedUrl(actualFilePath, 3600);
+
+      if (!error && data?.signedUrl) {
+        groupImageCacheRef.current[groupImage] = data.signedUrl;
+        return data.signedUrl;
+      } else {
+        // Fallback to original URL
+        groupImageCacheRef.current[groupImage] = groupImage;
+        return groupImage;
+      }
+    } catch (e) {
+      // Fallback to original URL
+      groupImageCacheRef.current[groupImage] = groupImage;
+      return groupImage;
+    }
+  };
+
+  const GroupAvatar = ({ groupImage, groupName }) => {
+    // Check cache synchronously first
+    const cachedUrl = groupImage ? groupImageCacheRef.current[groupImage] : null;
+    const [imageUrl, setImageUrl] = useState(cachedUrl || null);
+
+    useEffect(() => {
+      if (groupImage) {
+        // Check cache first (synchronously)
+        if (groupImageCacheRef.current[groupImage]) {
+          setImageUrl(groupImageCacheRef.current[groupImage]);
+        } else {
+          // Fetch signed URL
+          getGroupImageSignedUrl(groupImage).then((url) => {
+            if (url) {
+              setImageUrl(url);
+            }
+          });
+        }
+      } else {
+        setImageUrl(null);
+      }
+    }, [groupImage]);
+
+    if (imageUrl) {
+      return (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.avatar}
+          cachePolicy="disk"
+          contentFit="cover"
+        />
+      );
+    }
+
     return (
-      <View style={styles.tabContainer}>
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            onPress={() => setActiveTab('personal')}
-            style={[
-              styles.tabButton,
-              activeTab === 'personal' ? styles.tabButtonActive : styles.tabButtonInactive,
-            ]}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.tabButtonText,
-                { color: activeTab === 'personal' ? '#1CACF3' : '#6B7280' },
-              ]}
-            >
-              Personal
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('group')}
-            style={[
-              styles.tabButton,
-              activeTab === 'group' ? styles.tabButtonActive : styles.tabButtonInactive,
-            ]}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.tabButtonText,
-                { color: activeTab === 'group' ? '#1CACF3' : '#6B7280' },
-              ]}
-            >
-              Group
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.avatarPlaceholder}>
+        <Text style={styles.avatarText}>
+          {groupName.charAt(0).toUpperCase()}
+        </Text>
       </View>
     );
   };
 
-  const renderPersonalChatItem = ({ item }) => {
-    return (
-      <TouchableOpacity
-        style={styles.chatItem}
-        activeOpacity={0.7}
-        onPress={() => {
-          router.push({
-            pathname: '/screens/chatDetail',
-            params: {
-              chatId: item.id,
-              chatName: item.personName,
-              chatImage: item.personImage || '',
-              chatType: item.type || 'personal',
-            },
-          });
-        }}
-      >
-        {/* Person Image */}
-        <View style={styles.avatarContainer}>
-          {item.personImage ? (
-            <Image
-              source={{ uri: item.personImage }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {item.personName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Chat Info */}
-        <View style={styles.chatInfo}>
-          <View style={styles.chatHeader}>
-            <Text style={styles.personName} numberOfLines={1}>
-              {item.personName}
-            </Text>
-            <Text style={styles.lastMessageTime}>
-              {item.lastMessageTime}
-            </Text>
-          </View>
-          <View style={styles.chatFooter}>
-            <Text style={styles.lastMessage} numberOfLines={1}>
-              {item.lastMessage}
-            </Text>
-            {item.unreadCount > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadCount}>
-                  {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderPersonalChatList = () => {
-    return (
-      <>
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Chats</Text>
-          <View style={styles.listDivider} />
-        </View>
-        <FlatList
-          data={personalChats}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPersonalChatItem}
-          contentContainerStyle={styles.scrollContent}
-          style={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                No chats yet. Start a conversation!
-              </Text>
-            </View>
-          }
-        />
-      </>
-    );
-  };
-
   const renderGroupItem = ({ item }) => {
+    // Map view fields to component props
+    const chatId = item.chat_id;
+    const groupName = item.group_name || 'Group';
+    // Try multiple possible field names for group image
+    const groupImage = item.group_Image || item.group_image || item.groupImage || '';
+    const lastMessage = item.last_message || '';
+    const lastMessageTime = item.last_message_time || '';
+    const unreadCount = item.unread_count || 0;
+    
+    const formattedLastMessage = formatLastMessage(lastMessage);
+
     return (
       <TouchableOpacity
         style={styles.chatItem}
@@ -221,49 +252,54 @@ const chat = () => {
           router.push({
             pathname: '/screens/chatDetail',
             params: {
-              chatId: item.id,
-              chatName: item.groupName,
-              chatImage: item.groupImage || '',
-              chatType: item.type || 'group',
-              memberCount: item.memberCount || 0,
+              chatId: chatId,
+              chatName: groupName,
+              chatImage: groupImage || '',
+              chatType: 'group',
+              classId: item.class_Id || '',
             },
           });
         }}
       >
         {/* Group Image */}
         <View style={styles.avatarContainer}>
-          {item.groupImage ? (
-            <Image
-              source={{ uri: item.groupImage }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {item.groupName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <GroupAvatar groupImage={groupImage} groupName={groupName} />
         </View>
 
         {/* Group Info */}
         <View style={styles.chatInfo}>
           <View style={styles.chatHeader}>
-            <Text style={styles.personName} numberOfLines={1}>
-              {item.groupName}
-            </Text>
+            <View style={styles.chatHeaderLeft}>
+              <Text style={styles.personName} numberOfLines={1}>
+                {groupName}
+              </Text>
+            </View>
             <Text style={styles.lastMessageTime}>
-              {item.lastMessageTime}
+              {lastMessageTime ? new Date(lastMessageTime).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }) : ''}
             </Text>
           </View>
           <View style={styles.chatFooter}>
-            <Text style={styles.lastMessage} numberOfLines={1}>
-              {item.lastMessage}
-            </Text>
-            {item.unreadCount > 0 && (
+            <View style={styles.lastMessageContainer}>
+              {formattedLastMessage.icon === 'microphone' && (
+                <Microphone size={hp(1.4)} color="#6B7280" strokeWidth={2} style={styles.messageIcon} />
+              )}
+              {formattedLastMessage.icon === 'image' && (
+                <ImageIcon size={hp(1.4)} color="#6B7280" strokeWidth={2} style={styles.messageIcon} />
+              )}
+              {formattedLastMessage.icon === 'attachment' && (
+                <Attachment size={hp(1.4)} color="#6B7280" strokeWidth={2} style={styles.messageIcon} />
+              )}
+              <Text style={styles.lastMessage} numberOfLines={1}>
+                {formattedLastMessage.text}
+              </Text>
+            </View>
+            {unreadCount > 0 && (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadCount}>
-                  {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </Text>
               </View>
             )}
@@ -274,6 +310,15 @@ const chat = () => {
   };
 
   const renderGroupChatList = () => {
+    if (isFetchingInitial && groupsList.length === 0) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1CACF3" />
+          <Text style={styles.loadingText}>Loading groups...</Text>
+        </View>
+      );
+    }
+
     return (
       <>
         <View style={styles.listHeader}>
@@ -281,12 +326,20 @@ const chat = () => {
           <View style={styles.listDivider} />
         </View>
         <FlatList
-          data={groups}
-          keyExtractor={(item) => item.id}
+          data={groupsList}
+          keyExtractor={(item) => String(item.chat_id || item.id)}
           renderItem={renderGroupItem}
           contentContainerStyle={styles.scrollContent}
           style={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              colors={['#1CACF3']}
+              tintColor="#1CACF3"
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
@@ -305,14 +358,11 @@ const chat = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Chat</Text>
-          <Text style={styles.headerSubtitle}>Messages and conversations</Text>
+          <Text style={styles.headerSubtitle}>Group conversations</Text>
         </View>
 
-        {/* Tab Switcher */}
-        {renderTabSwitcher()}
-
-        {/* Content based on active tab */}
-        {activeTab === 'personal' ? renderPersonalChatList() : renderGroupChatList()}
+        {/* Group Chat List */}
+        {renderGroupChatList()}
       </View>
     </View>
   );
@@ -342,42 +392,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.5),
     fontFamily: 'Poppins-Regular',
     color: '#6B7280',
-  },
-  tabContainer: {
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  tabRow: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    marginTop: hp(1),
-    padding: 4,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 2,
-  },
-  tabButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  tabButtonInactive: {
-    backgroundColor: 'transparent',
-  },
-  tabButtonText: {
-    fontSize: hp(1.5),
-    fontFamily: 'Poppins-SemiBold',
   },
   listHeader: {
     flexDirection: 'row',
@@ -441,14 +455,18 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 4,
+  },
+  chatHeaderLeft: {
+    flex: 1,
+    marginRight: 8,
   },
   personName: {
     fontSize: hp(1.7),
     fontFamily: 'Poppins-SemiBold',
     color: '#111827',
-    flex: 1,
+    marginBottom: 2,
   },
   lastMessageTime: {
     fontSize: hp(1.2),
@@ -461,12 +479,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  lastMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  messageIcon: {
+    marginRight: 4,
+  },
   lastMessage: {
     fontSize: hp(1.4),
     fontFamily: 'Poppins-Regular',
     color: '#6B7280',
     flex: 1,
-    marginRight: 8,
   },
   unreadBadge: {
     backgroundColor: '#1CACF3',
@@ -493,6 +519,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     color: '#6B7280',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 64,
+  },
+  loadingText: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
+    marginTop: 12,
   },
 });
 

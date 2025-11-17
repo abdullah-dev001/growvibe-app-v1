@@ -204,6 +204,7 @@ const leaderboard = () => {
                         <Image
                           source={{ uri: userImage }}
                           style={styles.studentAvatar}
+                          cachePolicy="disk"
                         />
                       ) : (
                         <View style={styles.studentAvatar} />

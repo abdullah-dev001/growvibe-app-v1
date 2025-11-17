@@ -590,7 +590,7 @@ const editProfile = () => {
                               style={styles.imagePreview}
                               contentFit="cover"
                               transition={200}
-                              cachePolicy="memory"
+                              cachePolicy="disk"
                             />
                           ) : bannerImageSignedUrl ? (
                             <Image
@@ -636,7 +636,7 @@ const editProfile = () => {
                               style={[styles.imagePreview, styles.userImagePreview]}
                               contentFit="cover"
                               transition={200}
-                              cachePolicy="memory"
+                              cachePolicy="disk"
                             />
                           ) : userImageSignedUrl ? (
                             <Image

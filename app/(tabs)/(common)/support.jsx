@@ -214,6 +214,7 @@ const support = () => {
               <Image
                 source={{ uri: ticket.created_by_image || ticket.created_By_image }}
                 style={styles.creatorAvatar}
+                cachePolicy="disk"
                 onError={() => {}}
               />
             ) : (
@@ -323,6 +324,7 @@ const support = () => {
                               <Image
                                 source={{ uri: reply.replied_By_image || reply.replied_by_image }}
                                 style={styles.replyAvatar}
+                                cachePolicy="disk"
                                 onError={() => {}}
                               />
                             ) : (

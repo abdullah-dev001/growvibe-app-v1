@@ -144,7 +144,12 @@ const students = () => {
   };
 
   const handleAddStudent = () => {
-    router.push('/screens/forms/addStudent');
+    router.push({
+      pathname: '/screens/forms/addStudent',
+      params: {
+        classId: classId,
+      },
+    });
   };
 
   const handleEdit = (student) => {
@@ -223,6 +228,7 @@ const students = () => {
                       <Image
                         source={{ uri: student.user_Image }}
                         style={styles.avatar}
+                        cachePolicy="disk"
                       />
                     ) : (
                       <View style={styles.avatar} />

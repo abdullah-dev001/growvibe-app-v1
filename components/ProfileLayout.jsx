@@ -195,7 +195,7 @@ export default function ProfileLayout() {
       <View style={[styles.bannerContainer, { height: hp(24) }]}>
         <Image
           transition={500}
-          cachePolicy={"disk"}
+          cachePolicy="disk"
           contentFit="cover"
           style={styles.bannerImage}
           source={{ uri: userProfile.bannerImage }}

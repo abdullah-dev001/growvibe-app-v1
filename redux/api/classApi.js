@@ -61,6 +61,25 @@ export const classApi = createApi({
     endpoints: (builder) => ({
         createClass: builder.mutation({
             async queryFn(classData) {
+                // First, get branch name for chat group
+                let branchName = '';
+                if (classData.branch_Id) {
+                    try {
+                        const { data: branchData, error: branchError } = await supabase
+                            .from("branch")
+                            .select("branch_Name")
+                            .eq("id", classData.branch_Id)
+                            .single();
+                        
+                        if (!branchError && branchData) {
+                            branchName = branchData.branch_Name || '';
+                        }
+                    } catch (err) {
+                        // Continue even if branch fetch fails
+                    }
+                }
+
+                // Create the class
                 const { data, error } = await supabase
                     .from("class")
                     .insert([
@@ -77,6 +96,46 @@ export const classApi = createApi({
                     .select();
 
                 if (error) throw error;
+
+                // Create chat group for the class
+                if (data && data.length > 0) {
+                    const createdClass = data[0];
+                    try {
+                        // Create chat group
+                        const branchNameShort = branchName?.length > 15 ? branchName.substring(0, 15) + '...' : branchName;
+                        const groupName = `${classData.class_Name} - ${classData.section} - ${branchNameShort || 'Branch'}`;
+
+                        const { data: chatData, error: chatError } = await supabase
+                            .from("chat")
+                            .insert([
+                                {
+                                    type: "group",
+                                    group_Name: groupName,
+                                    class_Id: createdClass.id,
+                                    created_By: classData.created_By || null,
+                                    school_Id: classData.school_Id,
+                                },
+                            ])
+                            .select()
+                            .single();
+
+                        // Add incharge as chat member if incharge exists
+                        if (!chatError && chatData?.id && classData.incharge_Id) {
+                            await supabase
+                                .from("chat_member")
+                                .insert([
+                                    {
+                                        chat_Id: chatData.id,
+                                        user_Id: classData.incharge_Id,
+                                        role: "teacher",
+                                    },
+                                ]);
+                        }
+                    } catch (chatErr) {
+                        // Error creating chat group - don't fail class creation
+                    }
+                }
+
                 return { data };
             },
             invalidatesTags: ["Classes", "Teachers"],

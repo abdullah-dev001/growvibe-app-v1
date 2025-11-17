@@ -405,6 +405,7 @@ const addApplication = () => {
                         <View style={styles.imagePreviewContainer}>
                           <Image
                             source={{ uri: attachment.uri }}
+                            cachePolicy="disk"
                             style={styles.imagePreview}
                             contentFit="cover"
                             transition={200}

@@ -9,6 +9,7 @@ import Input from '../../../components/Input';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
 import { useCreateAuthMutation, useUpdateAuthMutation } from '../../../redux/api/createAuthApi';
+import { useAddStudentToClassChatMutation } from '../../../redux/api/chatApi';
 import { useGetStudentByIdQuery } from '../../../redux/api/studentApi';
 
 // Validation Schema Factory
@@ -31,11 +32,13 @@ const getValidationSchema = (isEditMode) => Yup.object().shape({
 
 const addStudent = () => {
   const router = useRouter();
-  const { user, schoolId, branchId } = useSelector((state) => state.auth);
-  const { studentId, classId } = useLocalSearchParams();
+  const { user, schoolId, branchId, classId: classIdFromRedux } = useSelector((state) => state.auth);
+  const { studentId, classId: classIdFromParams } = useLocalSearchParams();
+  const classId = classIdFromParams || classIdFromRedux;
   const isEditMode = !!studentId;
   const [createAuth, { isLoading: isCreating }] = useCreateAuthMutation();
   const [updateAuth, { isLoading: isUpdating }] = useUpdateAuthMutation();
+  const [addStudentToClassChat] = useAddStudentToClassChatMutation();
   const { data: studentData, isLoading: isLoadingStudent } = useGetStudentByIdQuery(studentId, {
     skip: !isEditMode,
     refetchOnMountOrArgChange: true,
@@ -99,7 +102,7 @@ const addStudent = () => {
           },
         ]);
       } else {
-        await createAuth({
+        const result = await createAuth({
           email: values.email,
           password: values.password,
           status: values.student_Status,
@@ -110,6 +113,21 @@ const addStudent = () => {
           branch_Id: branchId,
           class_Id: classId,
         }).unwrap();
+        
+        // Get student ID from response (could be in different locations)
+        const studentAuthId = result?.data?.user?.id || result?.user?.id || result?.id;
+        
+        // Add student to class chat group if classId and studentId exist
+        if (classId && studentAuthId) {
+          try {
+            await addStudentToClassChat({
+              classId: classId,
+              studentId: studentAuthId,
+            }).unwrap();
+          } catch (chatError) {
+            // Error adding student to chat group - don't fail student creation
+          }
+        }
         
         Alert.alert("Success", "Student added successfully!", [
           {

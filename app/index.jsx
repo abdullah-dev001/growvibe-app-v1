@@ -31,6 +31,7 @@ export default function Index() {
             source={require("../assets/screens-assets/get-started-model.png")}
             contentFit="contain"
             style={{ height: hp(70), width: wp(100) }}
+            cachePolicy="disk"
           />
         </View>
 

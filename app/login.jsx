@@ -230,6 +230,7 @@ const Login = () => {
                 source={require("../assets/screens-assets/login-model.png")}
                 contentFit="contain"
                 style={{ height: hp(30), width: wp(100), zIndex: 1 }}
+                cachePolicy="disk"
               />
 
               <View

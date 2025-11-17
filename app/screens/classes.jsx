@@ -9,10 +9,11 @@ import SearchBar from '../../components/SearchBar';
 import ClassCardSkeleton from '../../components/skeletons/ClassCardSkeleton';
 import { hp } from '../../helpers/common';
 import { useGetClassesWithSummaryByBranchAndSessionPaginatedQuery, useLazyGetClassesWithSummaryByBranchAndSessionPaginatedQuery } from '../../redux/api/classApi';
+import { supabase } from '../../supabaseClient';
 
 const classes = () => {
   const router = useRouter();
-  const { branchId, sessionId } = useSelector((state) => state.auth);
+  const { branchId, sessionId, user, schoolId } = useSelector((state) => state.auth);
 
   const PAGE_SIZE = 5;
   const [classesList, setClassesList] = useState([]);
@@ -21,6 +22,7 @@ const classes = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+ // { chatId, chatName, chatImage }
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetClassesWithSummaryByBranchAndSessionPaginatedQuery(
     { branchId, sessionId, offset: 0, limit: PAGE_SIZE },
@@ -163,6 +165,40 @@ const classes = () => {
     });
   };
 
+  const handleGroupInfo = async (classItem) => {
+    try {
+      // Find the chat group for this class
+      const { data: chatData, error } = await supabase
+        .from("chat")
+        .select("id, group_Name, group_Image")
+        .eq("class_Id", classItem.class_id)
+        .eq("type", "group")
+        .maybeSingle();
+
+      if (error) {
+        Alert.alert('Error', 'Failed to load group information');
+        return;
+      }
+
+      if (!chatData?.id) {
+        Alert.alert('Info', 'No group chat found for this class');
+        return;
+      }
+
+      router.push({
+        pathname: '/screens/groupInfo',
+        params: {
+          chatId: chatData.id.toString(),
+          chatName: chatData.group_Name || `${classItem.class_Name} - Section ${classItem.section}`,
+          chatImage: chatData.group_Image || '',
+        },
+      });
+    } catch (err) {
+      console.error('Error fetching class chat:', err);
+      Alert.alert('Error', 'Failed to load group information');
+    }
+  };
+
   const handleAddClass = () => {
     router.push('/screens/forms/addClass');
   };
@@ -279,24 +315,20 @@ const classes = () => {
     
                     {/* Action Buttons */}
                     <View style={styles.cardActions}>
-                      {/* Primary Actions */}
-                      <View style={styles.primaryActions}>
+                      <View style={styles.actionButtonsContainer}>
                         <TouchableOpacity
                           onPress={() => handleEdit(classItem)}
-                          style={styles.actionButton}
+                          style={[styles.actionButton, styles.editButton]}
                           activeOpacity={0.7}
                         >
                           <Text style={styles.editButtonText}>
                             Edit
                           </Text>
                         </TouchableOpacity>
-                      </View>
     
-                      {/* Additional Action Buttons */}
-                      <View style={styles.secondaryActions}>
                         <TouchableOpacity
                           onPress={() => handleLeaderboard(classItem)}
-                          style={[styles.secondaryButton, styles.leaderboardButton]}
+                          style={[styles.actionButton, styles.leaderboardButton]}
                           activeOpacity={0.7}
                         >
                           <Text style={styles.leaderboardButtonText}>
@@ -306,7 +338,7 @@ const classes = () => {
     
                         <TouchableOpacity
                           onPress={() => handleAttendance(classItem)}
-                          style={[styles.secondaryButton, styles.attendanceButton, { marginLeft: 8 }]}
+                          style={[styles.actionButton, styles.attendanceButton]}
                           activeOpacity={0.7}
                         >
                           <Text style={styles.attendanceButtonText}>
@@ -316,7 +348,7 @@ const classes = () => {
     
                         <TouchableOpacity
                           onPress={() => handleStudents(classItem.class_id)}
-                          style={[styles.secondaryButton, styles.studentsButton, { marginLeft: 8 }]}
+                          style={[styles.actionButton, styles.studentsButton]}
                           activeOpacity={0.7}
                         >
                           <Text style={styles.studentsButtonText}>
@@ -326,11 +358,21 @@ const classes = () => {
 
                         <TouchableOpacity
                           onPress={() => handleTimetable(classItem)}
-                          style={[styles.secondaryButton, styles.timetableButton, { marginLeft: 8 }]}
+                          style={[styles.actionButton, styles.timetableButton]}
                           activeOpacity={0.7}
                         >
                           <Text style={styles.timetableButtonText}>
                             Timetable
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => handleGroupInfo(classItem)}
+                          style={[styles.actionButton, styles.groupButton]}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.groupButtonText}>
+                            Group
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -374,6 +416,7 @@ const classes = () => {
           initialNumToRender={PAGE_SIZE}
           windowSize={PAGE_SIZE * 2}
         />
+
     </View>
     </ScreenWrapper>
   );
@@ -510,40 +553,25 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   cardActions: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
+    marginTop: 8,
   },
-  primaryActions: {
+  actionButtonsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#EFF6FF',
     borderRadius: 8,
+  },
+  editButton: {
+    backgroundColor: '#EFF6FF',
   },
   editButtonText: {
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    paddingTop: 8,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    width: '100%',
-    justifyContent: 'flex-end',
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
   },
   leaderboardButton: {
     backgroundColor: '#F3E8FF',
@@ -576,6 +604,14 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     fontFamily: 'Poppins-Medium',
     color: '#F59E0B',
+  },
+  groupButton: {
+    backgroundColor: '#E0E7FF',
+  },
+  groupButtonText: {
+    fontSize: hp(1.3),
+    fontFamily: 'Poppins-Medium',
+    color: '#6366F1',
   },
   emptyState: {
     alignItems: 'center',
