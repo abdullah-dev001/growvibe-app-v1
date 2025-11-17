@@ -537,14 +537,14 @@ const styles = StyleSheet.create({
   },
   socialButtonInsta: {
     backgroundColor: '#FC1BA8',
-    flexShrink: 0,
+    flexShrink: 1,
     borderRadius: 9999,
     padding: 12,
     marginLeft: 8,
   },
   socialButtonFb: {
     backgroundColor: '#0077B5',
-    flexShrink: 0,
+    flexShrink: 1,
     borderRadius: 9999,
     padding: 12,
     marginLeft: 8,
