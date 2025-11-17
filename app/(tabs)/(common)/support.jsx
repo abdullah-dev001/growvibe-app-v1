@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Plus from '../../../assets/icons/Plus';
 import Button from '../../../components/Button';
 import SearchBar from '../../../components/SearchBar';
+import SignedAvatar from '../../../components/SignedAvatar';
 import TicketCardSkeleton from '../../../components/skeletons/TicketCardSkeleton';
 import { hp } from '../../../helpers/common';
 import { useCreateTicketReplyMutation, useGetTicketsQuery, useLazyGetTicketRepliesQuery, useUpdateTicketStatusMutation } from '../../../redux/api/ticketApi';
@@ -209,21 +210,12 @@ const support = () => {
 
         {/* Creator Info */}
         <View style={styles.creatorContainer}>
-          <View style={styles.creatorInfo}>
-            {ticket.created_by_image || ticket.created_By_image ? (
-              <Image
-                source={{ uri: ticket.created_by_image || ticket.created_By_image }}
-                style={styles.creatorAvatar}
-                cachePolicy="disk"
-                onError={() => {}}
-              />
-            ) : (
-              <View style={styles.creatorAvatarPlaceholder}>
-                <Text style={styles.creatorAvatarText}>
-                  {(ticket.created_by_name || ticket.created_By_name)?.charAt(0)?.toUpperCase() || 'U'}
-                </Text>
-              </View>
-            )}
+        <View style={styles.creatorInfo}>
+            <SignedAvatar
+              imageUrl={ticket.created_by_image || ticket.created_By_image}
+              style={styles.creatorAvatar}
+              placeholderLabel={ticket.created_by_name || ticket.created_By_name || 'User'}
+            />
             <View style={styles.creatorDetails}>
               <Text style={styles.creatorName}>
                 {ticket.created_by_name || ticket.created_By_name || 'Unknown User'}
@@ -320,20 +312,11 @@ const support = () => {
                       <View key={reply.id || index} style={styles.replyCard}>
                         <View style={styles.replyHeader}>
                           <View style={styles.replyCreatorInfo}>
-                            {reply.replied_By_image || reply.replied_by_image ? (
-                              <Image
-                                source={{ uri: reply.replied_By_image || reply.replied_by_image }}
-                                style={styles.replyAvatar}
-                                cachePolicy="disk"
-                                onError={() => {}}
-                              />
-                            ) : (
-                              <View style={styles.replyAvatarPlaceholder}>
-                                <Text style={styles.replyAvatarText}>
-                                  {(reply.replied_By_name || reply.replied_by_name)?.charAt(0)?.toUpperCase() || 'U'}
-                                </Text>
-                              </View>
-                            )}
+                            <SignedAvatar
+                              imageUrl={reply.replied_By_image || reply.replied_by_image}
+                              style={styles.replyAvatar}
+                              placeholderLabel={reply.replied_By_name || reply.replied_by_name || 'User'}
+                            />
                             <View style={styles.replyCreatorDetails}>
                               <Text style={styles.replyCreatorName}>
                                 {reply.replied_By_name || reply.replied_by_name || 'Unknown User'}

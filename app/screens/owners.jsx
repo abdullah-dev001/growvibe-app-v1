@@ -6,6 +6,7 @@ import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
+import SignedAvatar from '../../components/SignedAvatar';
 import OwnerCardSkeleton from '../../components/skeletons/OwnerCardSkeleton';
 import { hp } from '../../helpers/common';
 import { useGetOwnersPaginatedQuery, useLazyGetOwnersPaginatedQuery } from '../../redux/api/ownerApi';
@@ -169,9 +170,13 @@ const owners = () => {
           renderItem={({ item: owner }) => (
             <View style={styles.card}>
                   {/* Header with Image, Name and Status */}
-              <View style={styles.cardHeader}>
+                <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderRow}>
-                  <View style={styles.avatar} />
+                  <SignedAvatar
+                    imageUrl={owner.user_Image || owner.user_image}
+                    style={styles.avatar}
+                    placeholderLabel={owner.full_Name || owner.email || 'O'}
+                  />
                   <View style={styles.cardHeaderContent}>
                     <Text style={styles.cardTitle}>
                           {owner.full_Name || 'N/A'}

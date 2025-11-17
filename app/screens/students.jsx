@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Pen from '../../assets/icons/Pen';
 import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
+import SignedAvatar from '../../components/SignedAvatar';
 import StudentCardSkeleton from '../../components/skeletons/StudentCardSkeleton';
 import { hp } from '../../helpers/common';
 import { useGetStudentsByBranchAndClassPaginatedQuery, useLazyGetStudentsByBranchAndClassPaginatedQuery } from '../../redux/api/studentApi';
@@ -224,15 +225,11 @@ const students = () => {
                 <View style={styles.cardHeader}>
                   <View style={styles.cardHeaderRow}>
                     {/* Student Image */}
-                    {student.user_Image ? (
-                      <Image
-                        source={{ uri: student.user_Image }}
-                        style={styles.avatar}
-                        cachePolicy="disk"
-                      />
-                    ) : (
-                      <View style={styles.avatar} />
-                    )}
+                    <SignedAvatar
+                      imageUrl={student.user_Image}
+                      style={styles.avatar}
+                      placeholderLabel={student.full_Name || student.email || 'S'}
+                    />
                     <View style={styles.cardHeaderContent}>
                       <Text style={styles.cardTitle}>
                         {student.full_Name || 'N/A'}

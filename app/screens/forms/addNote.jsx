@@ -121,8 +121,6 @@ const addNote = () => {
         note_Description: values.note_Description,
         expire_Date: values.expire_Date,
         created_By: user?.id,
-        created_By_Name: user?.email || user?.name || "Unknown",
-        created_By_Role: user?.role,
         is_For_Entire_Branch: values.is_For_Entire_Branch,
         specific_Class: values.is_For_Entire_Branch ? null : values.specific_Class,
           class_Name: values.is_For_Entire_Branch ? null : values.class_Name,

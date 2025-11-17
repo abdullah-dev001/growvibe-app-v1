@@ -298,11 +298,11 @@ const tasks = () => {
                 <View style={styles.cardHeaderContent}>
                   <Text style={styles.cardTitle}>{task.title || "Untitled Task"}</Text>
                   <Text style={styles.cardSubtitle}>
-                    Created by: {task.created_By_Name || "Unknown creator"}
+                    Created by: {task.created_by_name || "Unknown creator"}
                   </Text>
-                  {task.created_By_Email && (
+                  {task.created_by_email && (
                     <Text style={styles.cardEmail}>
-                      {task.created_By_Email}
+                      {task.created_by_email}
                     </Text>
                   )}
                 </View>

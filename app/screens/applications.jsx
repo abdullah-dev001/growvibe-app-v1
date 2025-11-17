@@ -443,7 +443,7 @@ const applications = () => {
                 <View style={styles.cardHeaderContent}>
                   <Text style={styles.cardTitle}>{application.title || "Untitled Application"}</Text>
                   <Text style={styles.cardSubtitle}>
-                    {application.created_By_Name || "Unknown creator"}
+                    {application.created_by_name || "Unknown creator"}
                   </Text>
                 </View>
                 <View

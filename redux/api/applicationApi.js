@@ -96,7 +96,7 @@ export const applicationApi = createApi({
           const to = offset + limit - 1;
 
           let query = supabase
-            .from("application")
+            .from("application_view")
             .select("*", { count: "exact" })
             .order("created_at", { ascending: false })
             .range(from, to);
@@ -165,8 +165,6 @@ export const applicationApi = createApi({
                 description: applicationData.description,
                 assigned_To: applicationData.assigned_To,
                 status: applicationData.status,
-                created_By_Name: applicationData.created_By_Name,
-                created_By_Image: applicationData.created_By_Image,
                 attachment_Url: applicationData.attachment_Url || null,
               },
             ])

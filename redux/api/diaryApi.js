@@ -13,7 +13,7 @@ export const diaryApi = createApi({
                 const to = offset + limit - 1;
 
                 let query = supabase
-                    .from("diary_with_subjects")
+                    .from("diary_view")
                     .select("*", { count: "exact" })
                     .eq("branch_Id", branchId)
                     .order("created_at", { ascending: false });
@@ -41,7 +41,7 @@ export const diaryApi = createApi({
             async queryFn(diaryId) {
                 try {
                     const { data, error } = await supabase
-                        .from("diary_with_subjects")
+                        .from("diary_view")
                         .select("*")
                         .eq("diary_id", diaryId)
                         .single();

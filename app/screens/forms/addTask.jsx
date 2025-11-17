@@ -20,7 +20,6 @@ import { hp } from "../../../helpers/common";
 import { useGetClassesByBranchQuery } from "../../../redux/api/classApi";
 import { useGetCoordinatorsByBranchQuery } from "../../../redux/api/coordinator";
 import { useGetPrincipalsByBranchQuery } from "../../../redux/api/principalApi";
-import { useLazyGetProfileByRoleQuery } from "../../../redux/api/profileApi";
 import { useGetStudentsByBranchAndClassQuery } from "../../../redux/api/studentApi";
 import { useCreateTaskMutation } from "../../../redux/api/taskApi";
 import { useGetTeachersByBranchQuery } from "../../../redux/api/teacherApi";
@@ -41,7 +40,6 @@ const addTask = () => {
   const router = useRouter();
   const { user, schoolId, branchId } = useSelector((state) => state.auth);
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
-  const [getProfile] = useLazyGetProfileByRoleQuery();
 
   const role = user?.role;
   const authId = user?.id;
@@ -131,35 +129,6 @@ const addTask = () => {
         return;
       }
 
-      // Fetch user's profile to get full_Name
-      let createdByName = user?.email?.split("@")[0] || "Unknown User";
-
-      try {
-        const profileResult = await getProfile({ userId: authId, role }).unwrap();
-        if (profileResult?.full_Name) {
-          createdByName = profileResult.full_Name;
-        }
-      } catch (_err) {
-        // ignore and use fallback
-      }
-
-      // Fetch assignee's profile to get assigned_To_Name
-      let assignedToName = selectedAssignee.name || "Unknown User";
-      
-      // Determine assignee role for profile fetch
-      let assigneeRoleForProfile = assigneeRole;
-      try {
-        const assigneeProfileResult = await getProfile({ 
-          userId: selectedAssignee.authId, 
-          role: assigneeRoleForProfile 
-        }).unwrap();
-        if (assigneeProfileResult?.full_Name) {
-          assignedToName = assigneeProfileResult.full_Name;
-        }
-      } catch (_err) {
-        // ignore and use fallback (selectedAssignee.name)
-      }
-
       await createTask({
         school_Id: schoolId,
         branch_Id: branchId,
@@ -168,10 +137,7 @@ const addTask = () => {
         description: values.description,
         priority: values.priority,
         status: "pending",
-        created_By_Name: createdByName,
-        created_By_Email: user?.email || null,
         assigned_To: selectedAssignee.authId,
-        assigned_To_Name: assignedToName,
       }).unwrap();
 
       Alert.alert("Success", "Task created successfully!", [

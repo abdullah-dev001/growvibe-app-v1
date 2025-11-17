@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import Pen from '../../assets/icons/Pen';
 import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
+import SignedAvatar from '../../components/SignedAvatar';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
 import TeacherCardSkeleton from '../../components/skeletons/TeacherCardSkeleton';
@@ -187,7 +188,11 @@ const teachers = () => {
                 >
                   {/* Header with Image, Name and Status */}
                   <View style={styles.cardHeader}>
-                    <View style={styles.avatar} />
+                    <SignedAvatar
+                      imageUrl={teacher.user_Image || teacher.user_image}
+                      style={styles.avatar}
+                      placeholderLabel={teacher.full_Name || teacher.email || 'T'}
+                    />
                     <View style={styles.cardHeaderContent}>
                       <Text style={styles.cardTitle}>
                         {teacher.full_Name || 'N/A'}

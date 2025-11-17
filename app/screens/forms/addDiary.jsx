@@ -2,14 +2,14 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React, { useEffect } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSelector } from "react-redux";
 import * as Yup from "yup";
@@ -108,7 +108,6 @@ const addDiary = () => {
           date: formatDateForInput(new Date()), // Auto-set to today
           expire_Date: values.expire_Date,
           imp_Note: values.imp_Note,
-          created_By_Email: user?.email || "", // Auto-set from user
           subjects: values.subjects,
         };
 

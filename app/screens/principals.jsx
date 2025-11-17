@@ -7,6 +7,7 @@ import Plus from "../../assets/icons/Plus";
 import Button from "../../components/Button";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
+import SignedAvatar from "../../components/SignedAvatar";
 import { hp } from "../../helpers/common";
 import { useGetPrincipalsByBranchPaginatedQuery, useLazyGetPrincipalsByBranchPaginatedQuery } from "../../redux/api/principalApi";
 
@@ -192,7 +193,11 @@ const principals = () => {
                 >
                   {/* Header with Image, Name and Status */}
                   <View style={styles.cardHeader}>
-                    <View style={styles.avatar} />
+                    <SignedAvatar
+                      imageUrl={principal.user_Image || principal.user_image}
+                      style={styles.avatar}
+                      placeholderLabel={principal.full_Name || principal.email || 'P'}
+                    />
                     <View style={styles.cardHeaderContent}>
                       <Text style={styles.cardTitle}>
                         {principal.full_Name}

@@ -7,6 +7,7 @@ import Plus from "../../assets/icons/Plus";
 import Button from "../../components/Button";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
+import SignedAvatar from "../../components/SignedAvatar";
 import CoordinatorCardSkeleton from "../../components/skeletons/CoordinatorCardSkeleton";
 import { hp } from "../../helpers/common";
 import { useGetCoordinatorsByBranchPaginatedQuery, useLazyGetCoordinatorsByBranchPaginatedQuery } from "../../redux/api/coordinator";
@@ -193,7 +194,11 @@ const coordinators = () => {
                 >
                   {/* Header with Image, Name and Status */}
                   <View style={styles.cardHeader}>
-                    <View style={styles.avatar} />
+                    <SignedAvatar
+                      imageUrl={coordinator.user_Image || coordinator.user_image}
+                      style={styles.avatar}
+                      placeholderLabel={coordinator.full_Name || coordinator.email || 'C'}
+                    />
                     <View style={styles.cardHeaderContent}>
                       <Text style={styles.cardTitle}>
                         {coordinator.full_Name}

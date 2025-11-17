@@ -237,9 +237,13 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
           </View>
           )}
         </View>
-        {userProfile?.role === "admin" && (
+        {userProfile?.role === "admin" ? (
           <Text style={styles.roleText}>
             Founder Of Growvibe
+          </Text>
+        ) : (
+          <Text style={styles.roleText}>
+            {userProfile.role ? userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1) : 'Member'}
           </Text>
         )}
 

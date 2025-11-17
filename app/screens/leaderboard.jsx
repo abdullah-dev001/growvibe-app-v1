@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import SearchBar from '../../components/SearchBar';
+import SignedAvatar from '../../components/SignedAvatar';
 import LeaderboardCardSkeleton from '../../components/skeletons/LeaderboardCardSkeleton';
 import { hp } from '../../helpers/common';
 import { useGetLeaderboardsByBranchAndClassPaginatedQuery, useLazyGetLeaderboardsByBranchAndClassPaginatedQuery } from '../../redux/api/leaderboardApi';
@@ -200,15 +201,11 @@ const leaderboard = () => {
                       </View>
                     </View>
                     <View style={styles.studentInfo}>
-                      {userImage ? (
-                        <Image
-                          source={{ uri: userImage }}
-                          style={styles.studentAvatar}
-                          cachePolicy="disk"
-                        />
-                      ) : (
-                        <View style={styles.studentAvatar} />
-                      )}
+                      <SignedAvatar
+                        imageUrl={userImage}
+                        style={styles.studentAvatar}
+                        placeholderLabel={fullName || email || 'S'}
+                      />
                       <View style={styles.studentDetails}>
                         <Text style={styles.studentName}>{fullName || 'N/A'}</Text>
                         <Text style={styles.studentEmail}>{email || 'N/A'}</Text>

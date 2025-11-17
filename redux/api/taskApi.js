@@ -21,7 +21,7 @@ export const taskApi = createApi({
           const to = offset + limit - 1;
 
           let query = supabase
-            .from("task")
+            .from("task_view")
             .select("*", { count: "exact" })
             .order("created_at", { ascending: false })
             .range(from, to);
@@ -90,10 +90,7 @@ export const taskApi = createApi({
                 description: taskData.description,
                 priority: taskData.priority,
                 status: taskData.status,
-                created_By_Name: taskData.created_By_Name,
-                created_By_Email: taskData.created_By_Email,
                 assigned_To: taskData.assigned_To,
-                assigned_To_Name: taskData.assigned_To_Name,
               },
             ])
             .select();

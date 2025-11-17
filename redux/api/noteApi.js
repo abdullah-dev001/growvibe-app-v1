@@ -18,8 +18,6 @@ export const noteApi = createApi({
                                 note_Description: noteData.note_Description,
                                 expire_Date: noteData.expire_Date,
                                 created_By: noteData.created_By,
-                                created_By_Name: noteData.created_By_Name,
-                                created_By_Role: noteData.created_By_Role,
                                 is_For_Entire_Branch: noteData.is_For_Entire_Branch,
                                 specific_Class: noteData.specific_Class,
                                 class_Name: noteData.class_Name,
@@ -42,7 +40,7 @@ export const noteApi = createApi({
         getNotesByBranchId: builder.query({
             async queryFn(branchId) {
                 const { data, error } = await supabase
-                    .from("note")
+                    .from("note_view")
                     .select("*")
                     .eq("branch_Id", branchId)
                     .order("created_at", { ascending: false });
@@ -56,7 +54,7 @@ export const noteApi = createApi({
             async queryFn({ branchId, offset = 0, limit = 5 }) {
                 try {
                     const { data, error, count } = await supabase
-                        .from("note")
+                        .from("note_view")
                         .select("*", { count: "exact" })
                         .eq("branch_Id", branchId)
                         .order("created_at", { ascending: false })
@@ -88,7 +86,7 @@ export const noteApi = createApi({
             async queryFn(noteId) {
                 try {
                     const { data, error } = await supabase
-                        .from("note")
+                        .from("note_view")
                         .select("*")
                         .eq("id", noteId)
                         .single();
@@ -113,7 +111,7 @@ export const noteApi = createApi({
             async queryFn({ branchId, classId, limit = 3 }) {
                 try {
                     let query = supabase
-                        .from("note")
+                        .from("note_view")
                         .select("note_Title, note_Description, created_at, is_For_Entire_Branch, created_By_Role")
                         .eq("branch_Id", branchId)
                         .order("created_at", { ascending: false })
@@ -151,7 +149,7 @@ export const noteApi = createApi({
             async queryFn({ branchId, classId, offset = 0, limit = 5 }) {
                 try {
                     let query = supabase
-                        .from("note")
+                        .from("note_view")
                         .select("note_Title, note_Description, created_at, is_For_Entire_Branch, created_By_Role, id", { count: "exact" })
                         .eq("branch_Id", branchId)
                         .order("created_at", { ascending: false })

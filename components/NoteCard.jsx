@@ -14,6 +14,7 @@ const NoteCard = ({
   class_Name,
   created_at,
   created_By_Name,
+  created_By_Role,
   onEdit,
   onDelete,
   className = '',
@@ -86,7 +87,7 @@ const NoteCard = ({
         {created_By && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Created By:</Text>
-            <Text style={styles.detailValue}>{created_By_Name}</Text>
+              <Text style={styles.detailValue}>{created_By_Name} - {created_By_Role.charAt(0).toUpperCase() + created_By_Role.slice(1)}</Text>
           </View>
         )}
 
