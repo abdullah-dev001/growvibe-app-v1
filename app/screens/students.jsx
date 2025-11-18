@@ -89,25 +89,38 @@ const students = () => {
     }
   }, [initialData]);
 
+  // Reset state when classId or branchId changes
   useEffect(() => {
-    if (studentsList.length === 0 && initialData?.items) {
+    setStudentsList([]);
+    setOffset(0);
+    setHasMore(true);
+    setExpandedStudentId(null);
+  }, [classId, branchId]);
+
+  useEffect(() => {
+    // Only populate if we have data and the list is empty (fresh load or after reset)
+    if (studentsList.length === 0 && initialData?.items && branchId && classId) {
       const items = initialData.items;
       setStudentsList(items);
       setOffset(items.length);
       setHasMore(items.length === PAGE_SIZE);
     } else if (studentsList.length === 0 && !isFetchingInitial && !initialData && branchId && classId) {
+      // If no cached data, trigger a fetch
       loadPage(0, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, isFetchingInitial, branchId, classId]);
 
-  // Sync local state when cache is invalidated
+  // Sync local state when cache is invalidated (only for first page to avoid overwriting paginated data)
   useEffect(() => {
-    if (initialData?.items) {
+    if (initialData?.items && branchId && classId && offset <= PAGE_SIZE) {
+      // Only sync if we're on the first page to avoid overwriting paginated data
+      // This ensures updates are reflected when coming back from edit
       setStudentsList(initialData.items);
       setOffset(initialData.items.length);
       setHasMore(initialData.items.length === PAGE_SIZE);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   const handleRefresh = async () => {

@@ -36,11 +36,13 @@ export const studentApi = createApi({
               if (error) throw error;
               return { data: { items: data || [], total: typeof count === 'number' ? count : (data?.length || 0) } };
             },
-            serializeQueryArgs: ({ endpointName }) => {
-                return `${endpointName}`;
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                const { branchId, classId, offset = 0, limit = 5 } = queryArgs || {};
+                return `${endpointName}(${branchId || "null"},${classId || "null"},${offset},${limit})`;
             },
-            providesTags: (result) => [
+            providesTags: (result, error, arg) => [
                 { type: "Students", id: "LIST" },
+                { type: "Students", id: `${arg.branchId}-${arg.classId}` },
                 ...(result?.items || []).map((student) => ({ type: "Students", id: student.auth_User_Id })),
             ],
           }),
