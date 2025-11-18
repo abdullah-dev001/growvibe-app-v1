@@ -135,6 +135,21 @@ const Branches = () => {
     });
   };
 
+  const handleAttendanceSetting = (branch) => {
+    if (!branch?.id || !branch?.school_Id) {
+      Alert.alert('Missing data', 'Branch information is incomplete.');
+      return;
+    }
+    router.push({
+      pathname: '/screens/attendanceSetting',
+      params: {
+        branchId: branch.id,
+        branchName: branch.branch_Name,
+        schoolId: branch.school_Id,
+      },
+    });
+  };
+
   const handleAddBranch = () => {
     router.push({
       pathname: "/screens/forms/addBranch",
@@ -183,6 +198,7 @@ const Branches = () => {
                   branch_Subscription_Fee={branch.branch_Subscription_Fee}
                   created_at={branch.created_at}
                   onEdit={() => handleEdit(branch)}
+                  onAttendanceSetting={() => handleAttendanceSetting(branch)}
                 />
           )}
           contentContainerStyle={styles.scrollContent}

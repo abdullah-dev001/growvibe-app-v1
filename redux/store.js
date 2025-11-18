@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { persistReducer, persistStore } from 'redux-persist';
 import { applicationApi } from './api/applicationApi';
+import { attendanceApi } from './api/attendanceApi';
+import { attendanceSettingApi } from './api/attendanceSettingApi';
 import { authApi } from './api/authApi';
 import { branchApi } from './api/branchApi';
 import { chatApi } from './api/chatApi';
@@ -53,6 +55,8 @@ const rootReducer = combineReducers({
   [applicationApi.reducerPath]: applicationApi.reducer,
   [taskApi.reducerPath]: taskApi.reducer,
   [feeApi.reducerPath]: feeApi.reducer,
+  [attendanceApi.reducerPath]: attendanceApi.reducer,
+  [attendanceSettingApi.reducerPath]: attendanceSettingApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -92,6 +96,8 @@ export const store = configureStore({
         applicationApi.middleware,
         taskApi.middleware,
         feeApi.middleware,
+        attendanceApi.middleware,
+        attendanceSettingApi.middleware,
       ),
 });
 

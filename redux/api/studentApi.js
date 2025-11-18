@@ -11,7 +11,7 @@ export const studentApi = createApi({
             async queryFn({branchId, classId}) {
               const { data, error } = await supabase
                 .from("students_with_branch_and_class")
-                .select("auth_User_Id, full_Name, email")
+                .select("auth_User_Id, user_Image, full_Name, email")
                 .eq("branch_Id", branchId)
                 .eq("class_Id", classId);
           

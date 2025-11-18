@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
+import Calendar from '../../assets/icons/Calendar';
 import Pen from '../../assets/icons/Pen';
 import Plus from '../../assets/icons/Plus';
 import Button from '../../components/Button';
@@ -10,6 +11,7 @@ import SearchBar from '../../components/SearchBar';
 import SignedAvatar from '../../components/SignedAvatar';
 import StudentCardSkeleton from '../../components/skeletons/StudentCardSkeleton';
 import { hp } from '../../helpers/common';
+import { useGetStudentMonthlyAnalyticsQuery } from '../../redux/api/attendanceApi';
 import { useGetStudentsByBranchAndClassPaginatedQuery, useLazyGetStudentsByBranchAndClassPaginatedQuery } from '../../redux/api/studentApi';
 
 const students = () => {
@@ -28,6 +30,13 @@ const students = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
+  
+  // Month selector state for analytics
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [expandedStudentId, setExpandedStudentId] = useState(null);
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetStudentsByBranchAndClassPaginatedQuery(
     { branchId, classId, offset: 0, limit: PAGE_SIZE },
@@ -175,6 +184,209 @@ const students = () => {
     return status ? '#10B981' : '#EF4444';
   };
 
+  // Student Card Component with Analytics
+  const StudentCardWithAnalytics = ({
+    student,
+    classId,
+    selectedMonth,
+    selectedYear,
+    isExpanded,
+    onToggleExpand,
+    onShowMonthPicker,
+    getStatusColor,
+    handleResult,
+    handleEdit,
+    isStudent,
+    canEditStudent,
+    router,
+    branchId,
+    schoolId,
+  }) => {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const { data: monthlyAnalytics, isLoading: isLoadingAnalytics } = useGetStudentMonthlyAnalyticsQuery(
+      {
+        p_class_id: classId,
+        p_user_id: student.auth_User_Id,
+        p_role: 'student',
+        p_month: selectedMonth,
+        p_year: selectedYear,
+      },
+      { skip: !classId || !student.auth_User_Id || !isExpanded }
+    );
+
+    return (
+      <View style={styles.card}>
+          {/* Header with Student Name and Status */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderRow}>
+              {/* Student Image */}
+              <SignedAvatar
+                imageUrl={student.user_Image}
+                style={styles.avatar}
+                placeholderLabel={student.full_Name || student.email || 'S'}
+              />
+              <View style={styles.cardHeaderContent}>
+                <Text style={styles.cardTitle}>
+                  {student.full_Name || 'N/A'}
+                </Text>
+                <Text style={styles.cardSubtitle}>
+                  {student.email || 'No email'}
+                </Text>
+              </View>
+            </View>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: student.profile_Status ? '#D1FAE5' : '#FEE2E2' }
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: getStatusColor(student.profile_Status) }
+                ]}
+              >
+                {student.profile_Status ? 'Active' : 'Inactive'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Monthly Analytics Section */}
+          <View style={styles.analyticsSection}>
+            <TouchableOpacity
+              onPress={onToggleExpand}
+              style={styles.analyticsHeader}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.analyticsTitle}>Monthly Analytics</Text>
+              <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+            </TouchableOpacity>
+            
+            {isExpanded && (
+              <View style={styles.analyticsContent}>
+                {/* Month/Year Selector */}
+                <TouchableOpacity
+                  onPress={onShowMonthPicker}
+                  style={styles.monthSelector}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.monthSelectorText}>
+                    {monthNames[selectedMonth - 1]} {selectedYear}
+                  </Text>
+                  <Calendar size={hp(2)} color="#374151" strokeWidth={2} />
+                </TouchableOpacity>
+
+                {/* Analytics Display */}
+                {isLoadingAnalytics ? (
+                  <Text style={styles.loadingText}>Loading analytics...</Text>
+                ) : monthlyAnalytics ? (
+                  <View style={styles.analyticsStats}>
+                    <View style={styles.analyticsStatItem}>
+                      <View style={[styles.analyticsCircle, styles.analyticsCircleGreen]}>
+                        <Text style={styles.analyticsCircleText}>
+                          {monthlyAnalytics.present_percent?.toFixed(1) || 0}%
+                        </Text>
+                      </View>
+                      <Text style={styles.analyticsLabel}>Present</Text>
+                      <Text style={styles.analyticsCount}>
+                        {monthlyAnalytics.present || 0}/{monthlyAnalytics.total_days || 0}
+                      </Text>
+                    </View>
+                    <View style={styles.analyticsStatItem}>
+                      <View style={[styles.analyticsCircle, styles.analyticsCircleRed]}>
+                        <Text style={styles.analyticsCircleText}>
+                          {monthlyAnalytics.absent_percent?.toFixed(1) || 0}%
+                        </Text>
+                      </View>
+                      <Text style={styles.analyticsLabel}>Absent</Text>
+                      <Text style={styles.analyticsCount}>{monthlyAnalytics.absent || 0}</Text>
+                    </View>
+                    <View style={styles.analyticsStatItem}>
+                      <View style={[styles.analyticsCircle, styles.analyticsCircleOrange]}>
+                        <Text style={styles.analyticsCircleText}>
+                          {monthlyAnalytics.late_percent?.toFixed(1) || 0}%
+                        </Text>
+                      </View>
+                      <Text style={styles.analyticsLabel}>Late</Text>
+                      <Text style={styles.analyticsCount}>{monthlyAnalytics.late || 0}</Text>
+                    </View>
+                    <View style={styles.analyticsStatItem}>
+                      <View style={[styles.analyticsCircle, styles.analyticsCircleBlue]}>
+                        <Text style={styles.analyticsCircleText}>
+                          {monthlyAnalytics.leave_percent?.toFixed(1) || 0}%
+                        </Text>
+                      </View>
+                      <Text style={styles.analyticsLabel}>Leave</Text>
+                      <Text style={styles.analyticsCount}>{monthlyAnalytics.leave || 0}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.emptyText}>No analytics data available</Text>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              onPress={() => handleResult(student)}
+              style={styles.resultButton}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.resultButtonText}>
+                Result
+              </Text>
+            </TouchableOpacity>
+            {!isStudent && (
+              <TouchableOpacity
+                onPress={() => {
+                  const studentId = student.auth_User_Id;
+                  const studentName = student.full_Name || 'Student';
+                  if (!studentId) {
+                    Alert.alert('Error', 'Student ID not available');
+                    return;
+                  }
+                  router.push({
+                    pathname: '/screens/fees',
+                    params: {
+                      studentId: studentId,
+                      studentName: studentName,
+                      branchId: branchId,
+                      schoolId: schoolId,
+                      classId: classId,
+                    },
+                  });
+                }}
+                style={[styles.resultButton, styles.feeButton]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.resultButtonText, styles.feeButtonText]}>
+                  Fee
+                </Text>
+              </TouchableOpacity>
+            )}
+            {canEditStudent && (
+              <TouchableOpacity
+                onPress={() => handleEdit(student)}
+                style={[styles.resultButton, styles.editButton]}
+                activeOpacity={0.7}
+              >
+                <Pen size={hp(1.4)} color="#1CACF3" strokeWidth={2} />
+                <Text style={[styles.resultButtonText, styles.editButtonText]}>
+                  Edit
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+    );
+  };
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -216,99 +428,28 @@ const students = () => {
           data={studentsList}
           keyExtractor={(student, index) => getStudentKey(student, index)}
           renderItem={({ item: student }) => {
+            const isExpanded = expandedStudentId === student.auth_User_Id;
             return (
-              <View
+              <StudentCardWithAnalytics
                 key={getStudentKey(student, 0)}
-                style={styles.card}
-              >
-                {/* Header with Student Name and Status */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardHeaderRow}>
-                    {/* Student Image */}
-                    <SignedAvatar
-                      imageUrl={student.user_Image}
-                      style={styles.avatar}
-                      placeholderLabel={student.full_Name || student.email || 'S'}
-                    />
-                    <View style={styles.cardHeaderContent}>
-                      <Text style={styles.cardTitle}>
-                        {student.full_Name || 'N/A'}
-                      </Text>
-                      <Text style={styles.cardSubtitle}>
-                        {student.email || 'No email'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: student.profile_Status ? '#D1FAE5' : '#FEE2E2' }
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        { color: getStatusColor(student.profile_Status) }
-                      ]}
-                    >
-                      {student.profile_Status ? 'Active' : 'Inactive'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Action Buttons */}
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    onPress={() => handleResult(student)}
-                    style={styles.resultButton}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.resultButtonText}>
-                      Result
-                    </Text>
-                  </TouchableOpacity>
-                  {!isStudent && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        const studentId = student.auth_User_Id;
-                        const studentName = student.full_Name || 'Student';
-                        if (!studentId) {
-                          Alert.alert('Error', 'Student ID not available');
-                          return;
-                        }
-                        router.push({
-                          pathname: '/screens/fees',
-                          params: {
-                            studentId: studentId,
-                            studentName: studentName,
-                            branchId: branchId,
-                            schoolId: schoolId,
-                            classId: classId,
-                          },
-                        });
-                      }}
-                      style={[styles.resultButton, styles.feeButton]}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.resultButtonText, styles.feeButtonText]}>
-                        Fee
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {canEditStudent && (
-                    <TouchableOpacity
-                      onPress={() => handleEdit(student)}
-                      style={[styles.resultButton, styles.editButton]}
-                      activeOpacity={0.7}
-                    >
-                      <Pen size={hp(1.4)} color="#1CACF3" strokeWidth={2} />
-                      <Text style={[styles.resultButtonText, styles.editButtonText]}>
-                        Edit
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
+                student={student}
+                classId={classId}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                isExpanded={isExpanded}
+                onToggleExpand={() => {
+                  setExpandedStudentId(isExpanded ? null : student.auth_User_Id);
+                }}
+                onShowMonthPicker={() => setShowMonthPicker(true)}
+                getStatusColor={getStatusColor}
+                handleResult={handleResult}
+                handleEdit={handleEdit}
+                isStudent={isStudent}
+                canEditStudent={canEditStudent}
+                router={router}
+                branchId={branchId}
+                schoolId={schoolId}
+              />
             );
           }}
           contentContainerStyle={styles.scrollContent}
@@ -340,6 +481,88 @@ const students = () => {
           initialNumToRender={PAGE_SIZE}
           windowSize={PAGE_SIZE * 2}
         />
+
+        {/* Month/Year Picker Modal - Shared across all cards */}
+        <Modal
+          visible={showMonthPicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowMonthPicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Month & Year</Text>
+                <TouchableOpacity onPress={() => setShowMonthPicker(false)} style={styles.modalCloseButton}>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.pickerSection}>
+                  <Text style={styles.pickerSectionTitle}>Month</Text>
+                  <View style={styles.pickerGrid}>
+                    {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((month, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        onPress={() => {
+                          setSelectedMonth(index + 1);
+                          setShowMonthPicker(false);
+                        }}
+                        style={[
+                          styles.pickerItem,
+                          selectedMonth === index + 1 && styles.pickerItemSelected
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            selectedMonth === index + 1 && styles.pickerItemTextSelected
+                          ]}
+                        >
+                          {month}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.pickerSection}>
+                  <Text style={styles.pickerSectionTitle}>Year</Text>
+                  <View style={styles.pickerGrid}>
+                    {(() => {
+                      const years = [];
+                      const currentYear = currentDate.getFullYear();
+                      for (let i = 0; i < 3; i++) {
+                        years.push(currentYear - i);
+                      }
+                      return years;
+                    })().map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        onPress={() => {
+                          setSelectedYear(year);
+                          setShowMonthPicker(false);
+                        }}
+                        style={[
+                          styles.pickerItem,
+                          selectedYear === year && styles.pickerItemSelected
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            selectedYear === year && styles.pickerItemTextSelected
+                          ]}
+                        >
+                          {year}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ScreenWrapper>
   );
@@ -495,5 +718,174 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: hp(2),
     textAlign: 'center',
+  },
+  analyticsSection: {
+    marginTop: 12,
+    marginBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 12,
+  },
+  analyticsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  analyticsTitle: {
+    fontSize: hp(1.6),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#374151',
+  },
+  expandIcon: {
+    fontSize: hp(1.4),
+    color: '#6B7280',
+  },
+  analyticsContent: {
+    marginTop: 8,
+  },
+  monthSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  monthSelectorText: {
+    fontSize: hp(1.5),
+    fontFamily: 'Poppins-Medium',
+    color: '#374151',
+  },
+  monthSelectorIcon: {
+    fontSize: hp(1.8),
+  },
+  analyticsStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  analyticsStatItem: {
+    alignItems: 'center',
+    width: '22%',
+    marginBottom: 12,
+  },
+  analyticsCircle: {
+    borderRadius: 9999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: hp(5),
+    width: hp(5),
+    marginBottom: 6,
+  },
+  analyticsCircleGreen: {
+    backgroundColor: '#10B981',
+  },
+  analyticsCircleRed: {
+    backgroundColor: '#EF4444',
+  },
+  analyticsCircleOrange: {
+    backgroundColor: '#F59E0B',
+  },
+  analyticsCircleBlue: {
+    backgroundColor: '#3B82F6',
+  },
+  analyticsCircleText: {
+    color: '#FFFFFF',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: hp(1.3),
+  },
+  analyticsLabel: {
+    color: '#6B7280',
+    fontFamily: 'Poppins-Medium',
+    fontSize: hp(1.2),
+    marginTop: 4,
+  },
+  analyticsCount: {
+    color: '#9CA3AF',
+    fontFamily: 'Poppins-Regular',
+    fontSize: hp(1.1),
+    marginTop: 2,
+  },
+  loadingText: {
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+    fontSize: hp(1.4),
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: hp(2),
+    fontFamily: 'Poppins-Bold',
+    color: '#111827',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalCloseText: {
+    fontSize: hp(2.5),
+    color: '#6B7280',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  pickerSection: {
+    marginBottom: 24,
+  },
+  pickerSectionTitle: {
+    fontSize: hp(1.8),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  pickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  pickerItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    minWidth: '30%',
+    alignItems: 'center',
+  },
+  pickerItemSelected: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#1CACF3',
+  },
+  pickerItemText: {
+    fontSize: hp(1.5),
+    fontFamily: 'Poppins-Medium',
+    color: '#374151',
+  },
+  pickerItemTextSelected: {
+    color: '#1CACF3',
+    fontFamily: 'Poppins-SemiBold',
   },
 });

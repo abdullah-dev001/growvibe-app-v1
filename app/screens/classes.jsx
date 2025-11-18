@@ -139,8 +139,12 @@ const classes = () => {
   };
 
   const handleAttendance = (classItem) => {
-    // Navigate to attendance screen
-    // router.push(`/screens/attendance/${classItem.id}`);
+    router.push({
+      pathname: '/screens/attendance',
+      params: {
+        classId: classItem.class_id,
+      },
+    });
   };
 
 

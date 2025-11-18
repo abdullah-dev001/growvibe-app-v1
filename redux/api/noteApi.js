@@ -112,7 +112,7 @@ export const noteApi = createApi({
                 try {
                     let query = supabase
                         .from("note_view")
-                        .select("note_Title, note_Description, created_at, is_For_Entire_Branch, created_By_Role")
+                        .select("note_Title, note_Description, created_at, is_For_Entire_Branch, created_by_role")
                         .eq("branch_Id", branchId)
                         .order("created_at", { ascending: false })
                         .limit(limit);
@@ -150,7 +150,7 @@ export const noteApi = createApi({
                 try {
                     let query = supabase
                         .from("note_view")
-                        .select("note_Title, note_Description, created_at, is_For_Entire_Branch, created_By_Role, id", { count: "exact" })
+                        .select("note_Title, note_Description, created_at, is_For_Entire_Branch, created_by_role, id", { count: "exact" })
                         .eq("branch_Id", branchId)
                         .order("created_at", { ascending: false })
                         .range(offset, offset + limit - 1);

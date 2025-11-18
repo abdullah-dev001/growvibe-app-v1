@@ -82,6 +82,8 @@ const Button = ({
   const finalTextColor = getTextColor();
   const isDisabled = disabled || loading;
 
+  const { style, ...restProps } = props;
+
   return (
     <Pressable
       onPress={onPress}
@@ -95,9 +97,10 @@ const Button = ({
           opacity: isDisabled ? 0.6 : 1,
         },
         variantStyles,
+        style,
       ]}
       android_ripple={{ color: "#ccc" }}
-      {...props}
+      {...restProps}
     >
       {/* Left Icon */}
       {icon && iconPosition === "left" && !loading && (

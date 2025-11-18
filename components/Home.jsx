@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router'
 import React from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useSelector } from 'react-redux'
 import { hp } from '../helpers/common'
+import { useGetStudentMonthlyAnalyticsQuery, useGetTeacherMonthlyAnalyticsQuery, useGetTodayAttendanceByUserQuery, useMarkOwnAttendanceMutation } from '../redux/api/attendanceApi'
 import { useGetProfileByRoleQuery } from '../redux/api/profileApi'
 import ImportantNotes from './ImportantNotes'
 import Topbar from './Topbar'
@@ -22,7 +23,7 @@ const TEACHER_OPTIONS = {
     id: "attendance",
     title: "Mark Attendance",
     description: "Mark student attendance daily",
-    link: "/screens/mark-attendance",
+    link: "/screens/attendance",
     bgColor: "bg-green-50",
     borderColor: "border-green-100",
     textColor: "text-green-500",
@@ -210,14 +211,131 @@ const getTextColor = (textClass) => {
   return colorMap[textClass] || "#6B7280";
 };
 
+const formatDateForInput = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateForDisplay = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 const Home = () => {
   const router = useRouter();
-  const { user, className, section } = useSelector((state) => state.auth);
+  const { user, className, section, schoolId, branchId, classId } = useSelector((state) => state.auth);
 
   const { data: profile } = useGetProfileByRoleQuery(
     { userId: user?.id, role: user?.role },
     { skip: !user?.id || !user?.role }
   );
+
+  const today = formatDateForInput(new Date());
+  const todayDisplay = formatDateForDisplay(today);
+
+  const shouldSkipAttendanceQuery = !user?.id || !today || !schoolId || !branchId;
+
+  const {
+    data: todayAttendance,
+    isLoading: isLoadingAttendance,
+    refetch: refetchAttendance,
+  } = useGetTodayAttendanceByUserQuery(
+    { userId: user?.id, date: today, school_Id: schoolId, branch_Id: branchId },
+    { skip: shouldSkipAttendanceQuery }
+  );
+
+  const [markOwnAttendance, { isLoading: isMarkingAttendance }] = useMarkOwnAttendanceMutation();
+
+  // Get current month and year for monthly analytics
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11, so add 1
+  const currentYear = currentDate.getFullYear();
+
+  // Fetch monthly analytics for students
+  const shouldSkipStudentAnalytics = !user?.id || !classId || user?.role !== 'student';
+  const {
+    data: studentMonthlyAnalytics,
+    isLoading: isLoadingStudentAnalytics,
+  } = useGetStudentMonthlyAnalyticsQuery(
+    {
+      p_class_id: classId,
+      p_user_id: user?.id,
+      p_role: 'student',
+      p_month: currentMonth,
+      p_year: currentYear,
+    },
+    { skip: shouldSkipStudentAnalytics }
+  );
+
+  // Fetch monthly analytics for teachers
+  const shouldSkipTeacherAnalytics = !user?.id || user?.role !== 'teacher';
+  const {
+    data: teacherMonthlyAnalytics,
+    isLoading: isLoadingTeacherAnalytics,
+  } = useGetTeacherMonthlyAnalyticsQuery(
+    {
+      p_user_id: user?.id,
+      p_role: 'teacher',
+      p_month: currentMonth,
+      p_year: currentYear,
+    },
+    { skip: shouldSkipTeacherAnalytics }
+  );
+
+  // Use appropriate analytics based on role
+  const monthlyAnalytics = user?.role === 'student' ? studentMonthlyAnalytics : teacherMonthlyAnalytics;
+  const isLoadingMonthlyAnalytics = user?.role === 'student' ? isLoadingStudentAnalytics : isLoadingTeacherAnalytics;
+
+  const handleMarkAttendance = async (status) => {
+    try {
+      if (!user?.id || !schoolId || !branchId) {
+        Alert.alert('Error', 'Required information is missing');
+        return;
+      }
+
+      await markOwnAttendance({
+        date: today,
+        user_Id: user.id,
+        school_Id: schoolId,
+        branch_Id: branchId,
+        status: status,
+        role: user.role,
+        marked_By: user.id,
+      }).unwrap();
+
+      refetchAttendance();
+      Alert.alert('Success', `Attendance marked as ${status}`);
+    } catch (error) {
+      Alert.alert('Error', error?.data?.message || error?.message || 'Failed to mark attendance');
+    }
+  };
+
+  const getAttendanceStatus = () => {
+    if (!todayAttendance) return 'Not Marked';
+    return todayAttendance.status || 'Not Marked';
+  };
+
+  const getAttendanceBadgeStyle = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'present':
+        return { backgroundColor: '#10B981' };
+      case 'absent':
+        return { backgroundColor: '#EF4444' };
+      case 'late':
+        return { backgroundColor: '#F59E0B' };
+      default:
+        return { backgroundColor: '#6B7280' };
+    }
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -236,44 +354,121 @@ const Home = () => {
             Today's Attendance
           </Text>
           <Text style={styles.attendanceDate}>
-            Nov 02, 2025
+            {todayDisplay}
           </Text>
         </View>
-        <View style={styles.presentBadge}>
-          <Text style={styles.presentText}>
-            Present
-          </Text>
-        </View>
+        {user?.role === 'teacher' ? (
+          isLoadingAttendance ? (
+            <View style={[styles.attendanceBadge, styles.loadingBadge]}>
+              <Text style={styles.attendanceBadgeText}>Checking...</Text>
+            </View>
+          ) : todayAttendance ? (
+            <View style={[styles.attendanceBadge, getAttendanceBadgeStyle(todayAttendance.status)]}>
+              <Text style={styles.attendanceBadgeText}>
+                {todayAttendance.status?.toUpperCase() || 'NOT MARKED'}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.teacherAttendanceButtons}>
+              <TouchableOpacity
+                style={[styles.attendanceButton, styles.presentButton]}
+                onPress={() => handleMarkAttendance('present')}
+                disabled={isMarkingAttendance}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.attendanceButtonText}>Present</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.attendanceButton, styles.absentButton]}
+                onPress={() => handleMarkAttendance('absent')}
+                disabled={isMarkingAttendance}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.attendanceButtonText}>Absent</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        ) : (
+          <View style={[styles.attendanceBadge, getAttendanceBadgeStyle(getAttendanceStatus())]}>
+            <Text style={styles.attendanceBadgeText}>
+              {getAttendanceStatus().toUpperCase()}
+            </Text>
+          </View>
+        )}
       </View>
-      <View style={styles.monthlyAttendanceSection}>
-        <View>
-          <Text style={styles.monthlyTitle}>
-            Monthly Attendence
-          </Text>
-          <View style={styles.attendanceStats}>
-            <View style={styles.statItem}>
-              <View style={[styles.statCircle, styles.statCircleGreen]}>
-                <Text style={styles.statCircleText}>
-                  90%
-                </Text>
+      {(user?.role === 'student' || user?.role === 'teacher') && (
+        <View style={styles.monthlyAttendanceSection}>
+          <View>
+            <Text style={styles.monthlyTitle}>
+              Monthly Attendance
+            </Text>
+            {isLoadingMonthlyAnalytics ? (
+              <View style={styles.attendanceStats}>
+                <Text style={styles.loadingText}>Loading analytics...</Text>
               </View>
-              <Text style={styles.statLabel}>
-                Present
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <View style={[styles.statCircle, styles.statCircleRed]}>
-                <Text style={styles.statCircleText}>
-                  10%
-                </Text>
+            ) : monthlyAnalytics ? (
+              <View style={styles.attendanceStats}>
+                <View style={styles.statItem}>
+                  <View style={[styles.statCircle, styles.statCircleGreen]}>
+                    <Text style={styles.statCircleText}>
+                      {monthlyAnalytics.present_percent?.toFixed(1) || 0}%
+                    </Text>
+                  </View>
+                  <Text style={styles.statLabel}>
+                    Present
+                  </Text>
+                  <Text style={styles.statCount}>
+                    {monthlyAnalytics.present || 0}/{monthlyAnalytics.total_days || 0}
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <View style={[styles.statCircle, styles.statCircleRed]}>
+                    <Text style={styles.statCircleText}>
+                      {monthlyAnalytics.absent_percent?.toFixed(1) || 0}%
+                    </Text>
+                  </View>
+                  <Text style={styles.statLabel}>
+                    Absent
+                  </Text>
+                  <Text style={styles.statCount}>
+                    {monthlyAnalytics.absent || 0}
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <View style={[styles.statCircle, styles.statCircleOrange]}>
+                    <Text style={styles.statCircleText}>
+                      {monthlyAnalytics.late_percent?.toFixed(1) || 0}%
+                    </Text>
+                  </View>
+                  <Text style={styles.statLabel}>
+                    Late
+                  </Text>
+                  <Text style={styles.statCount}>
+                    {monthlyAnalytics.late || 0}
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <View style={[styles.statCircle, styles.statCircleBlue]}>
+                    <Text style={styles.statCircleText}>
+                      {monthlyAnalytics.leave_percent?.toFixed(1) || 0}%
+                    </Text>
+                  </View>
+                  <Text style={styles.statLabel}>
+                    Leave
+                  </Text>
+                  <Text style={styles.statCount}>
+                    {monthlyAnalytics.leave || 0}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.statLabel}>
-                Absent
-              </Text>
-            </View>
+            ) : (
+              <View style={styles.attendanceStats}>
+                <Text style={styles.emptyText}>No attendance data available</Text>
+              </View>
+            )}
           </View>
         </View>
-      </View>
+      )}
       <View style={styles.notesSection}>
         <View style={styles.notesHeader}>
           <Text style={styles.notesTitle}>
@@ -396,6 +591,41 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: hp(1.4),
   },
+  teacherAttendanceButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  attendanceButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  presentButton: {
+    backgroundColor: '#10B981',
+  },
+  absentButton: {
+    backgroundColor: '#EF4444',
+  },
+  attendanceButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: hp(1.4),
+  },
+  attendanceBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  attendanceBadgeText: {
+    color: '#FFFFFF',
+    fontFamily: 'Poppins-Regular',
+    fontSize: hp(1.4),
+  },
+  loadingBadge: {
+    backgroundColor: '#9CA3AF',
+  },
   monthlyAttendanceSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -433,6 +663,12 @@ const styles = StyleSheet.create({
   statCircleRed: {
     backgroundColor: '#EF4444',
   },
+  statCircleOrange: {
+    backgroundColor: '#F59E0B',
+  },
+  statCircleBlue: {
+    backgroundColor: '#3B82F6',
+  },
   statCircleText: {
     color: '#FFFFFF',
     fontFamily: 'Poppins-SemiBold',
@@ -446,6 +682,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
     fontSize: hp(1.5),
+  },
+  statCount: {
+    color: '#9CA3AF',
+    fontFamily: 'Poppins-Regular',
+    fontSize: hp(1.2),
+    marginTop: 2,
+  },
+  loadingText: {
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+    fontSize: hp(1.4),
+    marginTop: 8,
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+    fontSize: hp(1.4),
+    marginTop: 8,
   },
   notesSection: {
     paddingHorizontal: 16,

@@ -4,6 +4,13 @@ import Pen from '../assets/icons/Pen';
 import Trash from '../assets/icons/Trash';
 import { hp } from '../helpers/common';
 
+const ROLE_STYLES = {
+  owner: { color: '#7C3AED', label: 'Owner' },
+  principal: { color: '#F97316', label: 'Principal' },
+  coordinator: { color: '#10B981', label: 'Coordinator' },
+  teacher: { color: '#3B82F6', label: 'Teacher' },
+};
+
 const NoteCard = ({
   note_Title,
   note_Description,
@@ -14,7 +21,7 @@ const NoteCard = ({
   class_Name,
   created_at,
   created_By_Name,
-  created_By_Role,
+  created_by_role,
   onEdit,
   onDelete,
   className = '',
@@ -49,6 +56,23 @@ const NoteCard = ({
           <Text style={styles.title} numberOfLines={2}>
             {note_Title}
           </Text>
+          {created_by_role && (
+            <View
+              style={[
+                styles.roleBadge,
+                { backgroundColor: `${ROLE_STYLES[created_by_role]?.color || '#6B7280'}20` },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.roleText,
+                  { color: ROLE_STYLES[created_by_role]?.color || '#6B7280' },
+                ]}
+              >
+                {ROLE_STYLES[created_by_role]?.label || created_by_role}
+              </Text>
+            </View>
+          )}
         </View>
         {expire_Date && (
           <View style={[styles.statusBadge, { backgroundColor: expireBgColor }]}>
@@ -87,7 +111,10 @@ const NoteCard = ({
         {created_By && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Created By:</Text>
-              <Text style={styles.detailValue}>{created_By_Name} - {created_By_Role.charAt(0).toUpperCase() + created_By_Role.slice(1)}</Text>
+            <Text style={styles.detailValue}>
+              {created_By_Name || 'Unknown'}
+              {created_by_role ? ` - ${created_by_role.charAt(0).toUpperCase() + created_by_role.slice(1)}` : ''}
+            </Text>
           </View>
         )}
 
@@ -167,6 +194,18 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
     marginRight: 12,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    marginTop: 6,
+  },
+  roleText: {
+    fontSize: hp(1.1),
+    fontFamily: 'Poppins-SemiBold',
+    textTransform: 'capitalize',
   },
   title: {
     fontSize: hp(1.8),

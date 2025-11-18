@@ -170,7 +170,7 @@ const owners = () => {
           renderItem={({ item: owner }) => (
             <View style={styles.card}>
                   {/* Header with Image, Name and Status */}
-                <View style={styles.cardHeader}>
+              <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderRow}>
                   <SignedAvatar
                     imageUrl={owner.user_Image || owner.user_image}

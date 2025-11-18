@@ -203,9 +203,9 @@ const leaderboard = () => {
                     <View style={styles.studentInfo}>
                       <SignedAvatar
                         imageUrl={userImage}
-                        style={styles.studentAvatar}
+                          style={styles.studentAvatar}
                         placeholderLabel={fullName || email || 'S'}
-                      />
+                        />
                       <View style={styles.studentDetails}>
                         <Text style={styles.studentName}>{fullName || 'N/A'}</Text>
                         <Text style={styles.studentEmail}>{email || 'N/A'}</Text>

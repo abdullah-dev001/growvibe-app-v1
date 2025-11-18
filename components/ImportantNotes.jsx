@@ -38,7 +38,7 @@ const ImportantNotes = ({ renderEmptyState }) => {
           key={note.id || index}
           note_Title={note.note_Title}
           note_Description={note.note_Description}
-          created_By_Role={note.created_By_Role}
+          created_by_role={note.created_by_role}
           is_For_Entire_Branch={note.is_For_Entire_Branch}
           created_at={note.created_at}
         />
@@ -51,7 +51,7 @@ const ImportantNotes = ({ renderEmptyState }) => {
 const ImportantNoteCard = ({
   note_Title,
   note_Description,
-  created_By_Role,
+  created_by_role,
   is_For_Entire_Branch,
   created_at,
 }) => {
@@ -100,10 +100,10 @@ const ImportantNoteCard = ({
 
       {/* Footer with Role and Date */}
       <View style={styles.footer}>
-        {created_By_Role && (
+        {created_by_role && (
           <View style={styles.roleContainer}>
             <Text style={styles.roleLabel}>Created By:</Text>
-            <Text style={styles.roleValue}>{created_By_Role}</Text>
+            <Text style={styles.roleValue}>{created_by_role}</Text>
           </View>
         )}
         {created_at && (

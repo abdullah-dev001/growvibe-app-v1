@@ -11,6 +11,7 @@ const BranchCard = ({
   branch_Subscription_Fee,
   created_at,
   onEdit,
+  onAttendanceSetting,
   className = '',
 }) => {
   const getStatusColor = (status) => {
@@ -92,6 +93,15 @@ const BranchCard = ({
           <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
           <Text style={styles.editButtonText}>Edit</Text>
         </TouchableOpacity>
+        {onAttendanceSetting && (
+          <TouchableOpacity
+            onPress={onAttendanceSetting}
+            style={styles.attendanceButton}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.attendanceButtonText}>Attendance Setting</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -188,6 +198,7 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    gap: 8,
   },
   editButton: {
     flexDirection: 'row',
@@ -202,5 +213,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     color: '#1CACF3',
     marginLeft: hp(0.5),
+  },
+  attendanceButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#D1FAE5',
+  },
+  attendanceButtonText: {
+    fontSize: hp(1.3),
+    fontFamily: 'Poppins-Medium',
+    color: '#059669',
   },
 });

@@ -212,7 +212,7 @@ const notes = () => {
               expire_Date={note.expire_Date}
               created_By={note.created_By}
               created_By_Name={note.created_by_name}
-              created_By_Role={note.created_by_role}
+              created_by_role={note.created_by_role}
               is_For_Entire_Branch={note.is_For_Entire_Branch}
               specific_Class={note.specific_Class}
               class_Name={note.class_Name}
