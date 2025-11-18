@@ -1740,22 +1740,74 @@ const chatDetail = () => {
   }, [isRecording]);
 
 
-  const renderMessage = ({ item }) => {
+  // Format date for date separator
+  const formatDateSeparator = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset time to compare only dates
+    const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const yesterdayDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    if (messageDate.getTime() === todayDate.getTime()) {
+      return 'Today';
+    } else if (messageDate.getTime() === yesterdayDate.getTime()) {
+      return 'Yesterday';
+    } else {
+      // Format as "Jan 15, 2024"
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+  };
+
+  // Check if two dates are on different days
+  const isDifferentDay = (date1, date2) => {
+    if (!date1 || !date2) return true;
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
     return (
-      <MessageItem
-        item={item}
-        currentUserId={currentUserId}
-        chatType={chatType}
-        attachmentData={attachmentData}
-        voiceData={voiceData}
-        setVoiceData={setVoiceData}
-        downloadingAttachments={downloadingAttachments}
-        playingVoiceId={playingVoiceId}
-        voiceProgress={voiceProgress}
-        handleDownloadAttachment={handleDownloadAttachment}
-        handlePlayVoice={handlePlayVoice}
-        onImagePress={(url, name) => setImagePreview({ url, name })}
-      />
+      d1.getFullYear() !== d2.getFullYear() ||
+      d1.getMonth() !== d2.getMonth() ||
+      d1.getDate() !== d2.getDate()
+    );
+  };
+
+  const renderMessage = ({ item, index }) => {
+    const showDateSeparator = index === 0 || isDifferentDay(messages[index - 1]?.created_at, item.created_at);
+    
+    return (
+      <>
+        {showDateSeparator && (
+          <View style={styles.dateSeparatorContainer}>
+            <View style={styles.dateSeparatorLine} />
+            <Text style={styles.dateSeparatorText}>
+              {formatDateSeparator(item.created_at)}
+            </Text>
+            <View style={styles.dateSeparatorLine} />
+          </View>
+        )}
+        <MessageItem
+          item={item}
+          currentUserId={currentUserId}
+          chatType={chatType}
+          attachmentData={attachmentData}
+          voiceData={voiceData}
+          setVoiceData={setVoiceData}
+          downloadingAttachments={downloadingAttachments}
+          playingVoiceId={playingVoiceId}
+          voiceProgress={voiceProgress}
+          handleDownloadAttachment={handleDownloadAttachment}
+          handlePlayVoice={handlePlayVoice}
+          onImagePress={(url, name) => setImagePreview({ url, name })}
+        />
+      </>
     );
   };
 
@@ -2492,6 +2544,25 @@ const styles = StyleSheet.create({
     height: '80%',
     maxWidth: '100%',
     maxHeight: '80%',
+  },
+  dateSeparatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: hp(2),
+    paddingHorizontal: hp(2),
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dateSeparatorText: {
+    fontSize: hp(1.4),
+    fontFamily: 'Poppins-Medium',
+    color: '#6B7280',
+    marginHorizontal: hp(1.5),
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: hp(1),
   },
   imagePreviewName: {
     position: 'absolute',
