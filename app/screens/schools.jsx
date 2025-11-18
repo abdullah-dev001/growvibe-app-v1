@@ -19,6 +19,7 @@ const school = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetSchoolsPaginatedQuery({ offset: 0, limit: PAGE_SIZE });
   const [trigger, { isFetching, error }] = useLazyGetSchoolsPaginatedQuery();
 
@@ -128,6 +129,18 @@ const school = () => {
     });
   };
 
+  // Filter schools based on search query
+  const filteredSchoolsList = React.useMemo(() => {
+    if (!searchQuery.trim()) return schoolsList;
+    const query = searchQuery.toLowerCase().trim();
+    return schoolsList.filter((school) => {
+      const name = (school.school_Name || '').toLowerCase();
+      const address = (school.school_Address || '').toLowerCase();
+      const contact = (school.school_Contact || '').toLowerCase();
+      return name.includes(query) || address.includes(query) || contact.includes(query);
+    });
+  }, [schoolsList, searchQuery]);
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -149,7 +162,11 @@ const school = () => {
             icon={<Plus size={hp(2.4)} color={"#FFFFFF"} strokeWidth={2} />}
           />
         </View>
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search schools by name, address, or contact..."
+        />
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>
             School List
@@ -157,7 +174,7 @@ const school = () => {
           <View style={styles.listDivider} />
         </View>
         <FlatList
-          data={schoolsList}
+          data={filteredSchoolsList}
           keyExtractor={(school) => String(school.id)}
           renderItem={({ item: school }) => (
             <SchoolCard

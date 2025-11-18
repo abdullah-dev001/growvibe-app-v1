@@ -21,6 +21,7 @@ const owners = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetOwnersPaginatedQuery({ offset: 0, limit: PAGE_SIZE });
   const [trigger, { isFetching, error: ownersError } ] = useLazyGetOwnersPaginatedQuery();
 
@@ -142,6 +143,18 @@ const owners = () => {
     return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  // Filter owners based on search query
+  const filteredOwnersList = React.useMemo(() => {
+    if (!searchQuery.trim()) return ownersList;
+    const query = searchQuery.toLowerCase().trim();
+    return ownersList.filter((owner) => {
+      const name = (owner.full_Name || '').toLowerCase();
+      const email = (owner.email || '').toLowerCase();
+      const phone = (owner.phone || '').toLowerCase();
+      return name.includes(query) || email.includes(query) || phone.includes(query);
+    });
+  }, [ownersList, searchQuery]);
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -155,7 +168,11 @@ const owners = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search owners by name, email, or phone..."
+        />
 
         {/* Owners List Header */}
         <View style={styles.listHeader}>
@@ -165,7 +182,7 @@ const owners = () => {
 
         {/* Owners List */}
         <FlatList
-          data={ownersList}
+          data={filteredOwnersList}
           keyExtractor={(owner) => String(owner.owner_id || owner.auth_User_Id)}
           renderItem={({ item: owner }) => (
             <View style={styles.card}>

@@ -37,6 +37,7 @@ const students = () => {
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [expandedStudentId, setExpandedStudentId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetStudentsByBranchAndClassPaginatedQuery(
     { branchId, classId, offset: 0, limit: PAGE_SIZE },
@@ -196,6 +197,17 @@ const students = () => {
   const getStatusColor = (status) => {
     return status ? '#10B981' : '#EF4444';
   };
+
+  // Filter students based on search query
+  const filteredStudentsList = React.useMemo(() => {
+    if (!searchQuery.trim()) return studentsList;
+    const query = searchQuery.toLowerCase().trim();
+    return studentsList.filter((student) => {
+      const name = (student.full_Name || '').toLowerCase();
+      const email = (student.email || '').toLowerCase();
+      return name.includes(query) || email.includes(query);
+    });
+  }, [studentsList, searchQuery]);
 
   // Student Card Component with Analytics
   const StudentCardWithAnalytics = ({
@@ -426,7 +438,11 @@ const students = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search students by name or email..."
+        />
 
         {/* Student List Header */}
         <View style={styles.listHeader}>
@@ -438,7 +454,7 @@ const students = () => {
 
         {/* Student Cards */}
         <FlatList
-          data={studentsList}
+          data={filteredStudentsList}
           keyExtractor={(student, index) => getStudentKey(student, index)}
           renderItem={({ item: student }) => {
             const isExpanded = expandedStudentId === student.auth_User_Id;
@@ -483,10 +499,16 @@ const students = () => {
                   No students found.
                 </Text>
               </View>
+            ) : filteredStudentsList.length === 0 && searchQuery ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  No students found matching "{searchQuery}".
+                </Text>
+              </View>
             ) : null
           }
           ListFooterComponent={
-            studentsList.length > 0 && !isRefreshing && isLoadingMore ? (
+            studentsList.length > 0 && !isRefreshing && isLoadingMore && !searchQuery ? (
               <StudentCardSkeleton />
             ) : null
           }

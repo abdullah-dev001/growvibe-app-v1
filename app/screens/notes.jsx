@@ -23,6 +23,7 @@ const notes = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetNotesByBranchIdPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -167,6 +168,17 @@ const notes = () => {
     router.push("/screens/forms/addNote");
   };
 
+  // Filter notes based on search query
+  const filteredNotesList = React.useMemo(() => {
+    if (!searchQuery.trim()) return notesList;
+    const query = searchQuery.toLowerCase().trim();
+    return notesList.filter((note) => {
+      const title = (note.note_Title || '').toLowerCase();
+      const description = (note.note_Description || '').toLowerCase();
+      return title.includes(query) || description.includes(query);
+    });
+  }, [notesList, searchQuery]);
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -191,7 +203,11 @@ const notes = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search notes by title or description..."
+        />
 
         {/* Note List Header */}
         <View style={styles.listHeader}>
@@ -203,7 +219,7 @@ const notes = () => {
 
         {/* Note Cards */}
         <FlatList
-          data={notesList}
+          data={filteredNotesList}
           keyExtractor={(note) => getNoteKey(note)}
           renderItem={({ item: note }) => (
             <NoteCard

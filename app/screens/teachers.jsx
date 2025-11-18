@@ -32,6 +32,7 @@ const teachers = () => {
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [expandedTeacherId, setExpandedTeacherId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetTeachersByBranchPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -150,6 +151,18 @@ const teachers = () => {
   const getStatusColor = (status) => {
     return status ? '#10B981' : '#EF4444';
   };
+
+  // Filter teachers based on search query
+  const filteredTeachersList = React.useMemo(() => {
+    if (!searchQuery.trim()) return teachersList;
+    const query = searchQuery.toLowerCase().trim();
+    return teachersList.filter((teacher) => {
+      const name = (teacher.full_Name || '').toLowerCase();
+      const email = (teacher.email || '').toLowerCase();
+      const phone = (teacher.phone || '').toLowerCase();
+      return name.includes(query) || email.includes(query) || phone.includes(query);
+    });
+  }, [teachersList, searchQuery]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -371,7 +384,11 @@ const teachers = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search teachers by name, email, or phone..."
+        />
 
         {/* Manage Attendance Button */}
         <View style={styles.manageAttendanceContainer}>
@@ -394,7 +411,7 @@ const teachers = () => {
 
         {/* Teacher Cards */}
         <FlatList
-          data={teachersList}
+          data={filteredTeachersList}
           keyExtractor={(teacher) => String(teacher.auth_User_Id)}
           renderItem={({ item: teacher }) => {
             const isExpanded = expandedTeacherId === teacher.auth_User_Id;
@@ -439,6 +456,12 @@ const teachers = () => {
                   textColor="#FFFFFF"
                   icon={<Plus size={hp(2)} color={'#FFFFFF'} strokeWidth={2} />}
                 />
+              </View>
+            ) : filteredTeachersList.length === 0 && searchQuery ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  No teachers found matching "{searchQuery}".
+                </Text>
               </View>
             ) : null
           }

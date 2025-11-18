@@ -24,6 +24,7 @@ const diary = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const hasLoadedOnceRef = useRef(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetDiariesByBranchAndClassPaginatedQuery(
     { branchId, classId: classId || null, offset: 0, limit: PAGE_SIZE },
@@ -173,6 +174,37 @@ const diary = () => {
     });
   };
 
+  // Filter diary entries based on search query
+  const filteredDiaryList = React.useMemo(() => {
+    if (!searchQuery.trim()) return diaryList;
+    const query = searchQuery.toLowerCase().trim();
+    return diaryList.filter((diary) => {
+      const impNote = (diary.imp_Note || '').toLowerCase();
+      const createdByName = (diary.created_by_name || diary.created_By_Name || '').toLowerCase();
+      const createdByEmail = (diary.created_by_email || diary.created_By_Email || '').toLowerCase();
+      
+      // Also search in subjects
+      let subjectsText = '';
+      if (diary.subjects) {
+        try {
+          const subjects = typeof diary.subjects === 'string' ? JSON.parse(diary.subjects) : diary.subjects;
+          if (Array.isArray(subjects)) {
+            subjectsText = subjects.map(s => 
+              `${s.subject_Name || ''} ${s.todo || ''}`
+            ).join(' ').toLowerCase();
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+      }
+      
+      return impNote.includes(query) || 
+             createdByName.includes(query) || 
+             createdByEmail.includes(query) ||
+             subjectsText.includes(query);
+    });
+  }, [diaryList, searchQuery]);
+
   const renderDiaryCard = ({ item: diary }) => {
     // Parse subjects if it's a string (JSON)
     let subjects = [];
@@ -184,13 +216,22 @@ const diary = () => {
       }
     }
 
+    // Handle both old and new field names for compatibility
+    const createdByName = diary.created_by_name || diary.created_By_Name || '';
+    const createdByEmail = diary.created_by_email || diary.created_By_Email || diary.created_by_Email || '';
+
     return (
       <View style={styles.card}>
         {/* Header */}
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderContent}>
             <Text style={styles.cardDate}>{formatDate(diary.date)}</Text>
-            <Text style={styles.cardEmail}>{diary.created_By_Email}</Text>
+            {createdByName ? (
+              <Text style={styles.cardName}>{createdByName}</Text>
+            ) : null}
+            {createdByEmail ? (
+              <Text style={styles.cardEmail}>{createdByEmail}</Text>
+            ) : null}
           </View>
           {!isStudent && (
             <View style={styles.cardActions}>
@@ -251,7 +292,11 @@ const diary = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search diary by note, creator, or subject..."
+        />
 
         {/* Diary List Header */}
         <View style={styles.listHeader}>
@@ -261,7 +306,7 @@ const diary = () => {
 
         {/* Diary Cards */}
         <FlatList
-          data={diaryList}
+          data={filteredDiaryList}
           keyExtractor={(diary, index) => getDiaryKey(diary, index)}
           renderItem={renderDiaryCard}
           contentContainerStyle={styles.scrollContent}
@@ -294,10 +339,16 @@ const diary = () => {
                   />
                 )}
               </View>
+            ) : filteredDiaryList.length === 0 && searchQuery ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  No diary entries found matching "{searchQuery}".
+                </Text>
+              </View>
             ) : null
           }
           ListFooterComponent={
-            diaryList.length > 0 && !isRefreshing && isLoadingMore ? (
+            diaryList.length > 0 && !isRefreshing && isLoadingMore && !searchQuery ? (
               <View style={styles.loadingMoreContainer}>
                 <Text style={styles.loadingText}>Loading more...</Text>
     </View>
@@ -387,6 +438,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Bold',
     color: '#111827',
     marginBottom: 4,
+  },
+  cardName: {
+    fontSize: hp(1.4),
+    fontFamily: 'Poppins-Medium',
+    color: '#374151',
+    marginBottom: 2,
   },
   cardEmail: {
     fontSize: hp(1.3),

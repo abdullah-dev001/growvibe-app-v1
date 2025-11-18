@@ -23,6 +23,7 @@ const Branches = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Ensure numeric schoolId and wait for session restoration
   const numericSchoolId = schoolId ? parseInt(schoolId, 10) : undefined;
@@ -157,6 +158,18 @@ const Branches = () => {
     });
   };
 
+  // Filter branches based on search query
+  const filteredBranchesList = React.useMemo(() => {
+    if (!searchQuery.trim()) return branchesList;
+    const query = searchQuery.toLowerCase().trim();
+    return branchesList.filter((branch) => {
+      const name = (branch.branch_Name || '').toLowerCase();
+      const address = (branch.branch_Address || '').toLowerCase();
+      const contact = (branch.branch_Contact || '').toLowerCase();
+      return name.includes(query) || address.includes(query) || contact.includes(query);
+    });
+  }, [branchesList, searchQuery]);
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -177,7 +190,11 @@ const Branches = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search branches by name, address, or contact..."
+        />
 
         {/* Branch List Header */}
         <View style={styles.listHeader}>
@@ -187,7 +204,7 @@ const Branches = () => {
 
         {/* Branch Cards */}
         <FlatList
-          data={branchesList}
+          data={filteredBranchesList}
           keyExtractor={(branch) => String(branch.id)}
           renderItem={({ item: branch }) => (
                 <BranchCard
@@ -230,7 +247,7 @@ const Branches = () => {
             ) : null
           }
           ListFooterComponent={
-            branchesList.length > 0 && !isRefreshing && isLoadingMore ? (
+            branchesList.length > 0 && !isRefreshing && isLoadingMore && !searchQuery ? (
               <BranchCardSkeleton />
             ) : null
           }

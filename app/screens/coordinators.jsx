@@ -23,6 +23,7 @@ const coordinators = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetCoordinatorsByBranchPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -147,6 +148,18 @@ const coordinators = () => {
     });
   };
 
+  // Filter coordinators based on search query
+  const filteredCoordinatorsList = React.useMemo(() => {
+    if (!searchQuery.trim()) return coordinatorsList;
+    const query = searchQuery.toLowerCase().trim();
+    return coordinatorsList.filter((coordinator) => {
+      const name = (coordinator.full_Name || '').toLowerCase();
+      const email = (coordinator.email || '').toLowerCase();
+      const phone = (coordinator.phone || '').toLowerCase();
+      return name.includes(query) || email.includes(query) || phone.includes(query);
+    });
+  }, [coordinatorsList, searchQuery]);
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -173,7 +186,11 @@ const coordinators = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search coordinators by name, email, or phone..."
+        />
 
         {/* Coordinator List Header */}
         <View style={styles.listHeader}>
@@ -185,7 +202,7 @@ const coordinators = () => {
 
         {/* Coordinator Cards */}
         <FlatList
-          data={coordinatorsList}
+          data={filteredCoordinatorsList}
           keyExtractor={(coordinator) => String(coordinator.auth_User_Id)}
           renderItem={({ item: coordinator }) => (
                 <View

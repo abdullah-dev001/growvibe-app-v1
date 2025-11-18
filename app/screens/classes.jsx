@@ -22,7 +22,7 @@ const classes = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
- // { chatId, chatName, chatImage }
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetClassesWithSummaryByBranchAndSessionPaginatedQuery(
     { branchId, sessionId, offset: 0, limit: PAGE_SIZE },
@@ -225,6 +225,17 @@ const classes = () => {
     });
   };
 
+  // Filter classes based on search query
+  const filteredClassesList = React.useMemo(() => {
+    if (!searchQuery.trim()) return classesList;
+    const query = searchQuery.toLowerCase().trim();
+    return classesList.filter((classItem) => {
+      const className = (classItem.class_Name || '').toLowerCase();
+      const section = (classItem.section || '').toLowerCase();
+      return className.includes(query) || section.includes(query);
+    });
+  }, [classesList, searchQuery]);
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -249,7 +260,11 @@ const classes = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search classes by name or section..."
+        />
 
         {/* Class List Header */}
         <View style={styles.listHeader}>
@@ -261,7 +276,7 @@ const classes = () => {
 
         {/* Class Cards */}
         <FlatList
-          data={classesList}
+          data={filteredClassesList}
           keyExtractor={(classItem) => String(classItem.class_id)}
           renderItem={({ item: classItem }) => (
                   <View

@@ -22,6 +22,7 @@ const principals = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: initialData, isFetching: isFetchingInitial, refetch } = useGetPrincipalsByBranchPaginatedQuery(
     { branchId, offset: 0, limit: PAGE_SIZE },
@@ -146,6 +147,18 @@ const principals = () => {
     });
   };
 
+  // Filter principals based on search query
+  const filteredPrincipalsList = React.useMemo(() => {
+    if (!searchQuery.trim()) return principalsList;
+    const query = searchQuery.toLowerCase().trim();
+    return principalsList.filter((principal) => {
+      const name = (principal.full_Name || '').toLowerCase();
+      const email = (principal.email || '').toLowerCase();
+      const phone = (principal.phone || '').toLowerCase();
+      return name.includes(query) || email.includes(query) || phone.includes(query);
+    });
+  }, [principalsList, searchQuery]);
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -172,7 +185,11 @@ const principals = () => {
         </View>
 
         {/* Search Bar */}
-        <SearchBar />
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search principals by name, email, or phone..."
+        />
 
         {/* Principal List Header */}
         <View style={styles.listHeader}>
@@ -184,7 +201,7 @@ const principals = () => {
 
         {/* Principal Cards */}
         <FlatList
-          data={principalsList}
+          data={filteredPrincipalsList}
           keyExtractor={(principal) => String(principal.auth_User_Id)}
           renderItem={({ item: principal }) => (
                 <View
