@@ -79,6 +79,22 @@ export const classApi = createApi({
                     }
                 }
 
+                let enforcedClassStatus = classData.class_Status;
+                if (classData.session_Id) {
+                    try {
+                        const { data: sessionRow } = await supabase
+                            .from("session")
+                            .select("session_Status")
+                            .eq("id", classData.session_Id)
+                            .single();
+                        if (sessionRow && sessionRow.session_Status === false) {
+                            enforcedClassStatus = false;
+                        }
+                    } catch (_) {
+                        // ignore session fetch errors, fall back to provided status
+                    }
+                }
+
                 // Create the class
                 const { data, error } = await supabase
                     .from("class")
@@ -89,7 +105,7 @@ export const classApi = createApi({
                             school_Id: classData.school_Id,
                             section: classData.section,
                             session_Id: classData.session_Id,
-                            class_Status: classData.class_Status,
+                            class_Status: enforcedClassStatus,
                             incharge_Id: classData.incharge_Id,
                         },
                     ])
@@ -220,6 +236,22 @@ export const classApi = createApi({
         }),
         updateClass: builder.mutation({
             async queryFn(classData) {
+                let enforcedClassStatus = classData.class_Status;
+                if (classData.session_Id) {
+                    try {
+                        const { data: sessionRow } = await supabase
+                            .from("session")
+                            .select("session_Status")
+                            .eq("id", classData.session_Id)
+                            .single();
+                        if (sessionRow && sessionRow.session_Status === false) {
+                            enforcedClassStatus = false;
+                        }
+                    } catch (_) {
+                        // ignore
+                    }
+                }
+
                 const { data, error } = await supabase
                     .from("class")
                     .update({
@@ -227,7 +259,7 @@ export const classApi = createApi({
                         school_Id: classData.school_Id,
                         section: classData.section,
                         session_Id: classData.session_Id,
-                        class_Status: classData.class_Status,
+                        class_Status: enforcedClassStatus,
                         incharge_Id: classData.incharge_Id || null,
                     })
                     .eq("id", classData.id)

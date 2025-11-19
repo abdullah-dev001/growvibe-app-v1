@@ -2,6 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
+import ArrowDown from '../../assets/icons/ArrowDown';
+import ArrowUp from '../../assets/icons/ArrowUp';
 import Calendar from '../../assets/icons/Calendar';
 import Pen from '../../assets/icons/Pen';
 import Plus from '../../assets/icons/Plus';
@@ -288,7 +290,7 @@ const students = () => {
               activeOpacity={0.7}
             >
               <Text style={styles.analyticsTitle}>Monthly Analytics</Text>
-              <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+              <Text style={styles.expandIcon}>{isExpanded ? <ArrowUp size={hp(2)} color="#374151" strokeWidth={2} /> : <ArrowDown size={hp(2)} color="#374151" strokeWidth={2} />}</Text>
             </TouchableOpacity>
             
             {isExpanded && (

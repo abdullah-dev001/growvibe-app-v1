@@ -10,6 +10,7 @@ import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
 import { useCreateClassMutation, useGetClassByIdQuery, useUpdateClassMutation } from '../../../redux/api/classApi';
 import { useGetTeachersWithoutClassQuery } from '../../../redux/api/teacherApi';
+import { useGetSessionByIdQuery } from '../../../redux/api/sessionApi';
 
 // Validation Schema Factory
 const getValidationSchema = () => Yup.object().shape({
@@ -32,6 +33,15 @@ const addClass = () => {
   });
   const isLoading = isCreating || isUpdating;
 
+  const sessionIdToCheck = classData?.session_Id || sessionId;
+  const { data: sessionInfo, isLoading: isLoadingSessionInfo } = useGetSessionByIdQuery(sessionIdToCheck, {
+    skip: !sessionIdToCheck,
+  });
+
+  const sessionStatusFromApi = sessionInfo?.session_Status;
+  const isSessionActive = sessionStatusFromApi === undefined ? true : !!sessionStatusFromApi;
+  const showSessionInactiveNotice = sessionStatusFromApi === false;
+
   // Always fetch teachers without class (available teachers) - same view used in add and edit mode
   const {
     data: teachersWithoutClassData,
@@ -46,6 +56,8 @@ const addClass = () => {
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
+      const enforcedClassStatus = isSessionActive ? values.class_Status : false;
+
       if (isEditMode) {
         await updateClass({
           id: classId,
@@ -53,7 +65,7 @@ const addClass = () => {
           school_Id: schoolId,
           section: values.class_Section,
           session_Id: sessionId,
-          class_Status: values.class_Status,
+          class_Status: enforcedClassStatus,
           incharge_Id: values.class_Incharge || null,
         }).unwrap();
 
@@ -72,7 +84,7 @@ const addClass = () => {
           school_Id: schoolId,
           section: values.class_Section,
           session_Id: sessionId,
-          class_Status: values.class_Status,
+          class_Status: enforcedClassStatus,
           incharge_Id: values.class_Incharge || null,
           created_By: user?.id || null,
         }).unwrap();
@@ -127,10 +139,11 @@ const addClass = () => {
               </View>
             ) : (
             <Formik
+              key={`${classData?.id || 'new'}-${isSessionActive ? 'active' : 'inactive'}`}
               initialValues={{
                 class_Name: classData?.class_Name || "",
                 class_Section: classData?.section || "",
-                class_Status: classData?.class_Status ?? true,
+                class_Status: classData?.class_Status ?? (isSessionActive ? true : false),
                 class_Incharge: classData?.incharge_Id || "",
               }}
               enableReinitialize
@@ -279,19 +292,31 @@ const addClass = () => {
                       <Text style={styles.fieldLabel}>
                         Class Status
                       </Text>
+                      {showSessionInactiveNotice && (
+                        <Text style={styles.sessionInactiveText}>
+                          This class belongs to an inactive session, so it must remain inactive until the
+                          session is reactivated.
+                        </Text>
+                      )}
                       <View style={styles.statusRow}>
                         <TouchableOpacity
-                          onPress={() => setFieldValue("class_Status", true)}
+                          onPress={() => {
+                            if (isSessionActive) {
+                              setFieldValue("class_Status", true);
+                            }
+                          }}
+                          disabled={!isSessionActive}
                           style={[
                             styles.statusButton,
                             { flex: 1 },
-                            values.class_Status ? styles.statusButtonActive : styles.statusButtonInactive
+                            values.class_Status && isSessionActive ? styles.statusButtonActive : styles.statusButtonInactive,
+                            !isSessionActive && styles.statusButtonDisabled,
                           ]}
                         >
                           <Text
                             style={[
                               styles.statusButtonText,
-                              { color: values.class_Status ? "#10B981" : "#6B7280" }
+                              { color: values.class_Status && isSessionActive ? "#10B981" : "#6B7280" },
                             ]}
                           >
                             Active
@@ -302,13 +327,13 @@ const addClass = () => {
                           style={[
                             styles.statusButton,
                             { flex: 1, marginLeft: 12 },
-                            !values.class_Status ? styles.statusButtonInactiveRed : styles.statusButtonInactive
+                            !values.class_Status ? styles.statusButtonInactiveRed : styles.statusButtonInactive,
                           ]}
                         >
                           <Text
                             style={[
                               styles.statusButtonText,
-                              { color: !values.class_Status ? "#EF4444" : "#6B7280" }
+                              { color: !values.class_Status ? "#EF4444" : "#6B7280" },
                             ]}
                           >
                             Inactive
@@ -395,6 +420,12 @@ const styles = StyleSheet.create({
     fontSize: hp(1.3),
     marginTop: hp(0.5),
   },
+  sessionInactiveText: {
+    fontSize: hp(1.3),
+    fontFamily: "Poppins-Regular",
+    color: "#EF4444",
+    marginBottom: hp(0.8),
+  },
   teacherSelector: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
@@ -447,6 +478,9 @@ const styles = StyleSheet.create({
   statusButtonInactiveRed: {
     backgroundColor: "#FEE2E2",
     borderColor: "#FECACA",
+  },
+  statusButtonDisabled: {
+    opacity: 0.6,
   },
   statusButtonText: {
     fontSize: hp(1.5),

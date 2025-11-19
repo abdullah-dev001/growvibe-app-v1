@@ -86,20 +86,30 @@ export const sessionApi = createApi({
         }),
         updateSession: builder.mutation({
             async queryFn(session) {
-                const { data, error } = await supabase
-                    .from("session")
-                    .update({
-                        session_Name: session.session_Name,
-                        session_Status: session.session_Status,
-                        session_Start: session.session_Start,
-                        session_End: session.session_End,
-                        branch_Id: session.branch_Id,
-                    })
-                    .eq("id", session.id)
-                    .select();
+                try {
+                    const { data, error } = await supabase.functions.invoke('update-session-status', {
+                        body: JSON.stringify({
+                            session_Id: session.id,
+                            session_Name: session.session_Name,
+                            session_Start: session.session_Start,
+                            session_End: session.session_End,
+                            session_Status: session.session_Status,
+                            branch_Id: session.branch_Id,
+                        }),
+                    });
 
-                if (error) throw error;
-                return { data };
+                    if (error) {
+                        return { error: { status: 'CUSTOM_ERROR', data: error } };
+                    }
+
+                    if (!data?.success) {
+                        return { error: { status: 'CUSTOM_ERROR', data: data || { message: 'Failed to update session' } } };
+                    }
+
+                    return { data: data.session || null };
+                } catch (err) {
+                    return { error: { status: 'CUSTOM_ERROR', data: err } };
+                }
             },
             invalidatesTags: (result, error, arg) => [
                 { type: "Sessions", id: "LIST" },

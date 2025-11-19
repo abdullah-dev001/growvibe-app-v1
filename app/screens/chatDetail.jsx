@@ -535,17 +535,22 @@ const chatDetail = () => {
             // Find the index of the first message that was visible before loading
             const index = messages.findIndex((msg) => msg.id === firstMessageId);
             if (index >= 0) {
+              const targetIndex = index + reversedOlder.length;
               // Scroll to maintain position (accounting for new messages prepended)
               try {
                 flatListRef.current.scrollToIndex({
-                  index: index + reversedOlder.length,
+                  index: targetIndex,
                   animated: false,
                   viewPosition: 0,
                 });
               } catch (e) {
                 // If scrollToIndex fails, use scrollToOffset as fallback
-                // Calculate approximate offset based on message count
-                // This is a fallback, so we'll just prevent auto-scroll to bottom
+                // Estimate offset based on average item length (approximately 120-130px per message)
+                const estimatedOffset = targetIndex * 125; // Approximate height per message
+                flatListRef.current.scrollToOffset({
+                  offset: estimatedOffset,
+                  animated: false,
+                });
               }
             }
           }
@@ -1858,7 +1863,18 @@ const chatDetail = () => {
             scrollEventThrottle={200}
             onScrollToIndexFailed={(info) => {
               // Handle scroll to index failure gracefully
-              console.log('Scroll to index failed:', info);
+              // Use scrollToOffset as fallback when index hasn't been measured yet
+              const wait = new Promise((resolve) => setTimeout(resolve, 500));
+              wait.then(() => {
+                if (flatListRef.current) {
+                  // Estimate offset based on average item length
+                  const estimatedOffset = info.averageItemLength * info.index;
+                  flatListRef.current.scrollToOffset({
+                    offset: Math.max(0, estimatedOffset),
+                    animated: false,
+                  });
+                }
+              });
             }}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>

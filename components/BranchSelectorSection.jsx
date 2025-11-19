@@ -54,9 +54,23 @@ const BranchSelectorSection = () => {
   };
 
   // Fetch sessions for selected branch
-  const { data: sessions, isLoading: isSessionsLoading } = useGetSessionsByBranchIdQuery(branchId, {
+  const {
+    data: sessions,
+    isLoading: isSessionsLoading,
+    refetch: refetchSessions,
+  } = useGetSessionsByBranchIdQuery(branchId, {
     skip: !branchId,
+    refetchOnMountOrArgChange: true,
+    refetchOnReconnect: true,
+    refetchOnFocus: true,
   });
+
+  // Refetch sessions whenever the branch changes (to avoid stale cache)
+  React.useEffect(() => {
+    if (branchId) {
+      refetchSessions();
+    }
+  }, [branchId, refetchSessions]);
 
   // Default select first session when sessions for the current branch load
   React.useEffect(() => {
