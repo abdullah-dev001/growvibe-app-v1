@@ -1,6 +1,8 @@
 import { Image } from "expo-image";
 import { Tabs, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Platform,
   Pressable,
   Text,
@@ -8,7 +10,7 @@ import {
   View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Chat from "../../assets/icons/Chat";
 import Home from "../../assets/icons/Home";
 import Profile from "../../assets/icons/Profile";
@@ -16,12 +18,52 @@ import Support from "../../assets/icons/Support";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { COLORS } from "../../constants/theme";
 import { hp } from "../../helpers/common";
+import { useCheckUserAccessMutation } from "../../redux/api/checkAuthUserApi";
+import { logout as logoutAction } from "../../redux/slices/authSlice";
+import { supabase } from "../../supabaseClient";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
   const router = useRouter();
-  
+  const [checkUserAccess] = useCheckUserAccessMutation();
+  const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+  useEffect(() => {
+    if (!user || hasCheckedAccess || isCheckingAccess) return;
+
+    const checkAccess = async () => {
+      setIsCheckingAccess(true);
+      const handleForcedLogout = async (message) => {
+        Alert.alert("Access Denied", message || "Your account has been deactivated.");
+        await supabase.auth.signOut();
+        dispatch(logoutAction());
+        setHasCheckedAccess(false);
+        router.replace('/login');
+      };
+
+      try {
+        const { data: accessCheck, error: accessError } = await checkUserAccess(user.id);
+
+        if (accessError) {
+          await handleForcedLogout(accessError.data?.message || "Something went wrong");
+          return;
+        }
+
+        if (accessCheck?.logout) {
+          await handleForcedLogout(accessCheck.reason);
+          return;
+        }
+
+        setHasCheckedAccess(true);
+      } finally {
+        setIsCheckingAccess(false);
+      }
+    };
+
+    checkAccess();
+  }, [user, hasCheckedAccess, isCheckingAccess]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "white" }}>

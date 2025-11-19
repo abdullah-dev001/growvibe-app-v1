@@ -243,42 +243,42 @@ const students = () => {
       { skip: !classId || !student.auth_User_Id || !isExpanded }
     );
 
-    return (
+            return (
       <View style={styles.card}>
-          {/* Header with Student Name and Status */}
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderRow}>
-              {/* Student Image */}
-              <SignedAvatar
-                imageUrl={student.user_Image}
-                style={styles.avatar}
-                placeholderLabel={student.full_Name || student.email || 'S'}
-              />
-              <View style={styles.cardHeaderContent}>
-                <Text style={styles.cardTitle}>
-                  {student.full_Name || 'N/A'}
-                </Text>
-                <Text style={styles.cardSubtitle}>
-                  {student.email || 'No email'}
-                </Text>
-              </View>
-            </View>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: student.profile_Status ? '#D1FAE5' : '#FEE2E2' }
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: getStatusColor(student.profile_Status) }
-                ]}
-              >
-                {student.profile_Status ? 'Active' : 'Inactive'}
-              </Text>
-            </View>
-          </View>
+                {/* Header with Student Name and Status */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderRow}>
+                    {/* Student Image */}
+                    <SignedAvatar
+                      imageUrl={student.user_Image}
+                        style={styles.avatar}
+                      placeholderLabel={student.full_Name || student.email || 'S'}
+                      />
+                    <View style={styles.cardHeaderContent}>
+                      <Text style={styles.cardTitle}>
+                        {student.full_Name || 'N/A'}
+                      </Text>
+                      <Text style={styles.cardSubtitle}>
+                        {student.email || 'No email'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: student.profile_Status ? '#D1FAE5' : '#FEE2E2' }
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: getStatusColor(student.profile_Status) }
+                      ]}
+                    >
+                      {student.profile_Status ? 'Active' : 'Inactive'}
+                    </Text>
+                  </View>
+                </View>
 
           {/* Monthly Analytics Section */}
           <View style={styles.analyticsSection}>
@@ -356,59 +356,59 @@ const students = () => {
             )}
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              onPress={() => handleResult(student)}
-              style={styles.resultButton}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.resultButtonText}>
-                Result
-              </Text>
-            </TouchableOpacity>
-            {!isStudent && (
-              <TouchableOpacity
-                onPress={() => {
-                  const studentId = student.auth_User_Id;
-                  const studentName = student.full_Name || 'Student';
-                  if (!studentId) {
-                    Alert.alert('Error', 'Student ID not available');
-                    return;
-                  }
-                  router.push({
-                    pathname: '/screens/fees',
-                    params: {
-                      studentId: studentId,
-                      studentName: studentName,
-                      branchId: branchId,
-                      schoolId: schoolId,
-                      classId: classId,
-                    },
-                  });
-                }}
-                style={[styles.resultButton, styles.feeButton]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.resultButtonText, styles.feeButtonText]}>
-                  Fee
-                </Text>
-              </TouchableOpacity>
-            )}
-            {canEditStudent && (
-              <TouchableOpacity
-                onPress={() => handleEdit(student)}
-                style={[styles.resultButton, styles.editButton]}
-                activeOpacity={0.7}
-              >
-                <Pen size={hp(1.4)} color="#1CACF3" strokeWidth={2} />
-                <Text style={[styles.resultButtonText, styles.editButtonText]}>
-                  Edit
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+                {/* Action Buttons */}
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    onPress={() => handleResult(student)}
+                    style={styles.resultButton}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.resultButtonText}>
+                      Result
+                    </Text>
+                  </TouchableOpacity>
+                  {!isStudent && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const studentId = student.auth_User_Id;
+                        const studentName = student.full_Name || 'Student';
+                        if (!studentId) {
+                          Alert.alert('Error', 'Student ID not available');
+                          return;
+                        }
+                        router.push({
+                          pathname: '/screens/fees',
+                          params: {
+                            studentId: studentId,
+                            studentName: studentName,
+                            branchId: branchId,
+                            schoolId: schoolId,
+                            classId: classId,
+                          },
+                        });
+                      }}
+                      style={[styles.resultButton, styles.feeButton]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.resultButtonText, styles.feeButtonText]}>
+                        Fee
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {canEditStudent && (
+                    <TouchableOpacity
+                      onPress={() => handleEdit(student)}
+                      style={[styles.resultButton, styles.editButton]}
+                      activeOpacity={0.7}
+                    >
+                      <Pen size={hp(1.4)} color="#1CACF3" strokeWidth={2} />
+                      <Text style={[styles.resultButtonText, styles.editButtonText]}>
+                        Edit
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
     );
   };
 

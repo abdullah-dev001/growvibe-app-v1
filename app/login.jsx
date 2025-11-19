@@ -17,9 +17,11 @@ import Button from "../components/Button";
 import Input from "../components/Input";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { hp, wp } from "../helpers/common";
+import { useCheckUserAccessMutation } from "../redux/api/checkAuthUserApi";
 import { resolveTeacherClassId, useLazyGetClassByIdQuery } from "../redux/api/classApi";
 import { useLazyGetProfileByRoleQuery } from "../redux/api/profileApi";
 import {
+  logout as logoutAction,
   setBranchId,
   setClassId,
   setClassInfo,
@@ -48,7 +50,7 @@ const Login = () => {
   const { user, sessionRestored } = useSelector((state) => state.auth);
   const [fetchProfile] = useLazyGetProfileByRoleQuery();
   const [fetchClass] = useLazyGetClassByIdQuery();
-
+  const [checkUserAccess] = useCheckUserAccessMutation();
   const handleLogin = async (values, { setSubmitting, setFieldError }) => {
     try {
       dispatch(setLoading(true));
@@ -58,11 +60,36 @@ const Login = () => {
         password: values.password,
       });
 
-      if (error) {
-        dispatch(setError(error.message));
-        Alert.alert("Login Failed", error.message);
+      if (error || !data?.user) {
+        const message = error?.message || "Unable to sign in. Please try again.";
+        dispatch(setError(message));
+        Alert.alert("Login Failed", message);
         setSubmitting(false);
-      } else {
+        dispatch(setLoading(false));
+        return;
+      }
+
+      const handleAccessDenied = async (message) => {
+        await supabase.auth.signOut();
+        dispatch(logoutAction());
+        Alert.alert("Access Denied", message || "Your account has been deactivated.");
+        setSubmitting(false);
+        dispatch(setLoading(false));
+        router.replace('/login');
+      };
+
+      const { data: accessCheck, error: accessError } = await checkUserAccess(data.user.id);
+      if (accessError) {
+        await handleAccessDenied(accessError.data?.message || "Something went wrong");
+        return;
+      }
+
+      if (accessCheck?.logout) {
+        await handleAccessDenied(accessCheck.reason);
+        return;
+      }
+
+      if (!error) {
         dispatch(
           setUser({
             id: data.user.id,
@@ -196,9 +223,12 @@ const Login = () => {
         setSubmitting(false);
       }
     } catch (error) {
-      dispatch(setError("An unexpected error occurred"));
-      Alert.alert("Error", "An unexpected error occurred");
+      const message = error?.message || "An unexpected error occurred";
+      dispatch(setError(message));
+      Alert.alert("Error", message);
       setSubmitting(false);
+    } finally {
+      dispatch(setLoading(false));
     }
   };
 

@@ -397,39 +397,39 @@ const Home = () => {
         )}
       </View>
       {(user?.role === 'student' || user?.role === 'teacher') && (
-        <View style={styles.monthlyAttendanceSection}>
-          <View>
-            <Text style={styles.monthlyTitle}>
-              Monthly Attendance
-            </Text>
+      <View style={styles.monthlyAttendanceSection}>
+        <View>
+          <Text style={styles.monthlyTitle}>
+            Monthly Attendance
+          </Text>
             {isLoadingMonthlyAnalytics ? (
               <View style={styles.attendanceStats}>
                 <Text style={styles.loadingText}>Loading analytics...</Text>
               </View>
             ) : monthlyAnalytics ? (
-              <View style={styles.attendanceStats}>
-                <View style={styles.statItem}>
-                  <View style={[styles.statCircle, styles.statCircleGreen]}>
-                    <Text style={styles.statCircleText}>
+          <View style={styles.attendanceStats}>
+            <View style={styles.statItem}>
+              <View style={[styles.statCircle, styles.statCircleGreen]}>
+                <Text style={styles.statCircleText}>
                       {monthlyAnalytics.present_percent?.toFixed(1) || 0}%
-                    </Text>
-                  </View>
-                  <Text style={styles.statLabel}>
-                    Present
-                  </Text>
+                </Text>
+              </View>
+              <Text style={styles.statLabel}>
+                Present
+              </Text>
                   <Text style={styles.statCount}>
                     {monthlyAnalytics.present || 0}/{monthlyAnalytics.total_days || 0}
                   </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <View style={[styles.statCircle, styles.statCircleRed]}>
-                    <Text style={styles.statCircleText}>
+            </View>
+            <View style={styles.statItem}>
+              <View style={[styles.statCircle, styles.statCircleRed]}>
+                <Text style={styles.statCircleText}>
                       {monthlyAnalytics.absent_percent?.toFixed(1) || 0}%
-                    </Text>
-                  </View>
-                  <Text style={styles.statLabel}>
-                    Absent
-                  </Text>
+                </Text>
+              </View>
+              <Text style={styles.statLabel}>
+                Absent
+              </Text>
                   <Text style={styles.statCount}>
                     {monthlyAnalytics.absent || 0}
                   </Text>
@@ -464,7 +464,7 @@ const Home = () => {
             ) : (
               <View style={styles.attendanceStats}>
                 <Text style={styles.emptyText}>No attendance data available</Text>
-              </View>
+            </View>
             )}
           </View>
         </View>

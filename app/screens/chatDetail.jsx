@@ -1793,20 +1793,20 @@ const chatDetail = () => {
             <View style={styles.dateSeparatorLine} />
           </View>
         )}
-        <MessageItem
-          item={item}
-          currentUserId={currentUserId}
-          chatType={chatType}
-          attachmentData={attachmentData}
-          voiceData={voiceData}
-          setVoiceData={setVoiceData}
-          downloadingAttachments={downloadingAttachments}
-          playingVoiceId={playingVoiceId}
-          voiceProgress={voiceProgress}
-          handleDownloadAttachment={handleDownloadAttachment}
-          handlePlayVoice={handlePlayVoice}
-          onImagePress={(url, name) => setImagePreview({ url, name })}
-        />
+      <MessageItem
+        item={item}
+        currentUserId={currentUserId}
+        chatType={chatType}
+        attachmentData={attachmentData}
+        voiceData={voiceData}
+        setVoiceData={setVoiceData}
+        downloadingAttachments={downloadingAttachments}
+        playingVoiceId={playingVoiceId}
+        voiceProgress={voiceProgress}
+        handleDownloadAttachment={handleDownloadAttachment}
+        handlePlayVoice={handlePlayVoice}
+        onImagePress={(url, name) => setImagePreview({ url, name })}
+      />
       </>
     );
   };

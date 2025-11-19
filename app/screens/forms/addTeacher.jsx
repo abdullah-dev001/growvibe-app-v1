@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Formik } from "formik";
 import React from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -10,7 +11,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { useSelector } from "react-redux";
 import * as Yup from "yup";
@@ -82,6 +82,17 @@ const addTeacher = () => {
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
+      const salaryValue =
+        values.salary && !Number.isNaN(Number(values.salary))
+          ? Number(values.salary)
+          : null;
+
+      if (salaryValue === null) {
+        Alert.alert("Invalid Input", "Please enter a valid salary amount.");
+        setSubmitting(false);
+        return;
+      }
+
       if (isEditMode) {
         const authId = teacherData?.auth_User_Id || teacherId;
         if (!authId) {
@@ -97,7 +108,7 @@ const addTeacher = () => {
           school_Id: schoolId,
           branch_Id: branchId,
           fullName: values.name,
-          salary: values.salary,
+          salary: salaryValue,
         }).unwrap();
 
         Alert.alert("Success", "Teacher updated successfully!", [
@@ -111,7 +122,7 @@ const addTeacher = () => {
           email: values.email,
           password: values.password,
           status: values.teacher_Status,
-          salary: values.salary,
+          salary: salaryValue,
           fullName: values.name,
           role: "teacher",
           school_Id: schoolId,
@@ -177,9 +188,13 @@ const addTeacher = () => {
               initialValues={{
                 email: teacherData?.email || "",
                 password: "",
-                salary: teacherData?.salary || "",
+                salary:
+                  teacherData?.salary !== undefined && teacherData?.salary !== null
+                    ? String(teacherData.salary)
+                    : "",
                 name: teacherData?.full_Name || "",
-                teacher_Status: teacherData?.profile_Status !== undefined ? teacherData.profile_Status : true,
+                teacher_Status:
+                  teacherData?.profile_Status !== undefined ? teacherData.profile_Status : true,
               }}
               validationSchema={getValidationSchema(isEditMode)}
               onSubmit={handleSubmit}
@@ -263,7 +278,7 @@ const addTeacher = () => {
                         value={values.salary}
                         onChangeText={handleChange("salary")}
                         onBlur={handleBlur("salary")}
-                        type="text"
+                        type="number"
                       />
                       {touched.salary && errors.salary && (
                         <Text style={styles.errorText}>

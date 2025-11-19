@@ -200,39 +200,39 @@ const teachers = () => {
       { skip: !teacher.auth_User_Id || !isExpanded }
     );
 
-    return (
+  return (
       <View style={styles.card}>
-        {/* Header with Image, Name and Status */}
-        <View style={styles.cardHeader}>
-          <SignedAvatar
-            imageUrl={teacher.user_Image || teacher.user_image}
-            style={styles.avatar}
-            placeholderLabel={teacher.full_Name || teacher.email || 'T'}
-          />
-          <View style={styles.cardHeaderContent}>
-            <Text style={styles.cardTitle}>
-              {teacher.full_Name || 'N/A'}
-            </Text>
-            <Text style={styles.cardSubtitle}>
-              {teacher.email || 'No email'}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: teacher.profile_Status ? '#D1FAE5' : '#FEE2E2' }
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                { color: getStatusColor(teacher.profile_Status) }
-              ]}
-            >
-              {teacher.profile_Status ? 'Active' : 'Inactive'}
-            </Text>
-          </View>
-        </View>
+                  {/* Header with Image, Name and Status */}
+                  <View style={styles.cardHeader}>
+                    <SignedAvatar
+                      imageUrl={teacher.user_Image || teacher.user_image}
+                      style={styles.avatar}
+                      placeholderLabel={teacher.full_Name || teacher.email || 'T'}
+                    />
+                    <View style={styles.cardHeaderContent}>
+                      <Text style={styles.cardTitle}>
+                        {teacher.full_Name || 'N/A'}
+                      </Text>
+                      <Text style={styles.cardSubtitle}>
+                        {teacher.email || 'No email'}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: teacher.profile_Status ? '#D1FAE5' : '#FEE2E2' }
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusText,
+                          { color: getStatusColor(teacher.profile_Status) }
+                        ]}
+                      >
+                        {teacher.profile_Status ? 'Active' : 'Inactive'}
+                      </Text>
+                    </View>
+                  </View>
 
         {/* Monthly Analytics Section */}
         <View style={styles.analyticsSection}>
@@ -310,53 +310,53 @@ const teachers = () => {
           )}
         </View>
 
-        {/* Teacher Details */}
-        <View style={styles.cardSection}>
-          <View style={styles.detailItem}>
-            <Text style={styles.cardLabel}>
-              Contact
-            </Text>
-            <Text style={styles.cardValue}>
-              {teacher.phone || "Not assigned yet..."}
-            </Text>
-          </View>
-          
-          <View style={styles.detailItem}>
-            <Text style={styles.cardLabel}>
-              Salary
-            </Text>
-            <Text style={styles.salaryValue}>
-              {teacher.salary || 'Not assigned yet...'}
-            </Text>
-          </View>
-        </View>
+                  {/* Teacher Details */}
+                  <View style={styles.cardSection}>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.cardLabel}>
+                        Contact
+                      </Text>
+                      <Text style={styles.cardValue}>
+                        {teacher.phone || "Not assigned yet..."}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.detailItem}>
+                      <Text style={styles.cardLabel}>
+                        Salary
+                      </Text>
+                      <Text style={styles.salaryValue}>
+                        {teacher.salary || 'Not assigned yet...'}
+                      </Text>
+                    </View>
+                  </View>
 
-        {/* Created Date */}
-        <View style={styles.cardDateRow}>
-          <View style={styles.dateRow}>
-            <Text style={styles.dateText}>
-              Created: {formatDate(teacher.created_at)}
-            </Text>
-          </View>
-        </View>
+                  {/* Created Date */}
+                  <View style={styles.cardDateRow}>
+                    <View style={styles.dateRow}>
+                      <Text style={styles.dateText}>
+                        Created: {formatDate(teacher.created_at)}
+                      </Text>
+                    </View>
+                  </View>
 
-        {/* Action Buttons */}
-        <View style={styles.cardActions}>
-          {/* Primary Actions */}
-          <View style={styles.primaryActions}>
-            <TouchableOpacity
-              onPress={() => handleEdit(teacher)}
-              style={styles.actionButton}
-              activeOpacity={0.7}
-            >
-              <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
-              <Text style={styles.editButtonText}>
-                Edit
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+                  {/* Action Buttons */}
+                  <View style={styles.cardActions}>
+                    {/* Primary Actions */}
+                    <View style={styles.primaryActions}>
+                      <TouchableOpacity
+                        onPress={() => handleEdit(teacher)}
+                        style={styles.actionButton}
+                        activeOpacity={0.7}
+                      >
+                        <Pen size={hp(1.6)} color="#1CACF3" strokeWidth={2} />
+                        <Text style={styles.editButtonText}>
+                          Edit
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
     );
   };
 
@@ -556,7 +556,7 @@ const teachers = () => {
             </View>
           </View>
         </Modal>
-      </View>
+    </View>
     </ScreenWrapper>
   );
 };
