@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Provider, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
+import { NotificationProvider } from "../contexts/NotificationContext";
 import { useSessionRestoration } from "../hooks/useSessionRestoration";
 import { useGetProfileByRoleQuery } from "../redux/api/profileApi";
 import { persistor, store } from "../redux/store";
@@ -52,7 +53,9 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <AppContent />
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
       </PersistGate>
     </Provider>
   );

@@ -17,13 +17,13 @@ async function loadNotificationsModule() {
   // Configure foreground notifications only once
   if (!notificationHandlerConfigured) {
     try {
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: false,
-          shouldSetBadge: false,
-        }),
-      });
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
       notificationHandlerConfigured = true;
     } catch (error) {
       console.log('Error configuring notification handler:', error.message);
@@ -87,11 +87,11 @@ export async function registerForPushNotificationsAsync(userId) {
   if (Platform.OS === 'android' && Notifications) {
     try {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
     } catch (error) {
       console.log('Error setting notification channel:', error.message);
     }

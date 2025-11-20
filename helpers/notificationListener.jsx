@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 import { getNotificationsModule } from './notificationsWrapper';
 
 export default function NotificationListener() {
   const notificationListener = useRef();
   const responseListener = useRef();
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     let Notifications = null;
@@ -19,12 +21,15 @@ export default function NotificationListener() {
 
         // Listen when a notification is received while app is foreground
         notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-          console.log('Notification received:', notification);
+          // Show banner when notification arrives in foreground
+          if (showNotification) {
+            showNotification(notification);
+          }
         });
 
         // Listen when user interacts with notification
         responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-          console.log('Notification response:', response);
+          // Handle navigation when user taps notification (handled by NotificationBanner onPress)
         });
       } catch (error) {
         // Silently fail if notifications can't be loaded (e.g., in Expo Go)
@@ -49,7 +54,7 @@ export default function NotificationListener() {
         }
       }
     };
-  }, []);
+  }, [showNotification]);
 
   return null;
 }
