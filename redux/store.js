@@ -9,6 +9,7 @@ import { branchApi } from './api/branchApi';
 import { chatApi } from './api/chatApi';
 import { checkAuthUserApi } from './api/checkAuthUserApi';
 import { classApi } from './api/classApi';
+import { dashboardApi } from './api/dashboardApi';
 import { coordinatorApi } from './api/coordinator';
 import { createAuthApi } from './api/createAuthApi';
 import { datesheetApi } from './api/datesheetApi';
@@ -59,6 +60,7 @@ const rootReducer = combineReducers({
   [attendanceApi.reducerPath]: attendanceApi.reducer,
   [attendanceSettingApi.reducerPath]: attendanceSettingApi.reducer,
   [checkAuthUserApi.reducerPath]: checkAuthUserApi.reducer,
+  [dashboardApi.reducerPath]: dashboardApi.reducer,
 });
 
 // Persist only the auth slice of the root state
@@ -101,6 +103,7 @@ export const store = configureStore({
         attendanceApi.middleware,
         attendanceSettingApi.middleware,
         checkAuthUserApi.middleware,
+        dashboardApi.middleware,
       ),
 });
 

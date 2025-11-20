@@ -2,14 +2,14 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Linking,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import Facebook from "../assets/icons/Facebook";
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     flex: 1,
-    flexShrink: 0,
+    // flexShrink: 0,
     backgroundColor: '#F3F4F6',
     borderRadius: 9999,
     alignItems: 'center',
@@ -534,24 +534,40 @@ const styles = StyleSheet.create({
   },
   socialButtons: {
     flexDirection: 'row',
+    flexShrink: 1,
+    flexGrow: 0,
   },
   socialButtonInsta: {
     backgroundColor: '#FC1BA8',
-    flexShrink: 1,
+    flexShrink: 0,
+    flexGrow: 0,
     borderRadius: 9999,
     padding: 12,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    height: "fit-content",
+    width: "fit-content",
     marginLeft: 8,
   },
   socialButtonFb: {
     backgroundColor: '#0077B5',
-    flexShrink: 1,
+    flexShrink: 0,
+    flexGrow: 0,
     borderRadius: 9999,
+    justifyContent: "center",
+    alignItems: "center",
     padding: 12,
+    paddingHorizontal: 16,
     marginLeft: 8,
+    height: "fit-content",
+    width: "fit-content",
   },
   socialButtonDisabled: {
     backgroundColor: '#E5E7EB',
     opacity: 0.6,
+    height: "fit-content",
+    width: "fit-content",
   },
   contentSection: {
     paddingHorizontal: 16,
