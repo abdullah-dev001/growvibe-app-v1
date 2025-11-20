@@ -75,7 +75,6 @@ export async function registerForPushNotificationsAsync(userId) {
     }
 
     token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log('Expo Push Token:', token);
 
     // Save token in Supabase
     await savePushToken(userId, token);
@@ -108,5 +107,4 @@ async function savePushToken(userId, token) {
     .select();
 
   if (error) console.log('Error saving push token:', error);
-  else console.log('Token saved:', data);
 }
