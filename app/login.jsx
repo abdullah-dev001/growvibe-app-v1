@@ -17,6 +17,7 @@ import Button from "../components/Button";
 import Input from "../components/Input";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { hp, wp } from "../helpers/common";
+import { registerForPushNotificationsAsync } from "../notifications";
 import { useCheckUserAccessMutation } from "../redux/api/checkAuthUserApi";
 import { resolveTeacherClassId, useLazyGetClassByIdQuery } from "../redux/api/classApi";
 import { useLazyGetProfileByRoleQuery } from "../redux/api/profileApi";
@@ -99,6 +100,11 @@ const Login = () => {
             role: data.user.app_metadata.role,
           })
         );
+
+        // Get push token and save it to Supabase
+        if(data?.user?.id){
+        const pushToken = await registerForPushNotificationsAsync(data?.user?.id);
+        }
 
         // Derive and set schoolId immediately from metadata (so downstream screens have it)
         try {

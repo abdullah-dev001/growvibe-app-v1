@@ -1,5 +1,11 @@
 import { decode } from 'base64-arraybuffer';
-import { Audio } from 'expo-av';
+import { 
+  createAudioPlayer, 
+  requestRecordingPermissionsAsync, 
+  setAudioModeAsync,
+  RecordingPresets,
+  useAudioRecorder
+} from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
@@ -59,7 +65,7 @@ const chatDetail = () => {
   const [attachmentData, setAttachmentData] = useState({}); // { messageId: { url, type, name } }
   const [downloadingAttachments, setDownloadingAttachments] = useState({});
   const [playingVoiceId, setPlayingVoiceId] = useState(null);
-  const [voicePlayers, setVoicePlayers] = useState({}); // { messageId: Audio.Sound }
+  const [voicePlayers, setVoicePlayers] = useState({}); // { messageId: AudioPlayer }
   const [voiceData, setVoiceData] = useState({}); // { messageId: { url, duration, signedUrl } }
   const [voiceUrlCache, setVoiceUrlCache] = useState({}); // Cache for signed URLs to avoid hitting bucket
   const [voiceProgress, setVoiceProgress] = useState({}); // { messageId: { currentTime, duration, isPlaying } }
@@ -73,6 +79,8 @@ const chatDetail = () => {
   const isTypingRef = useRef(false);
   const isChannelSubscribedRef = useRef(false);
   const recordingRef = useRef(null);
+  // Create audio recorder using hook (must be at component level)
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const loadMoreTimeoutRef = useRef(null);
   const isLoadingMoreRef = useRef(false);
   const hasTriggeredLoadRef = useRef(false);
@@ -976,7 +984,7 @@ const chatDetail = () => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: false,
         quality: 0.8,
         allowsMultipleSelection: false,
@@ -1298,28 +1306,23 @@ const chatDetail = () => {
 
   const handleStartRecording = async () => {
     try {
-      // Request microphone permissions using expo-av Audio module
-      const { status } = await Audio.requestPermissionsAsync();
+      // Request microphone permissions using expo-audio
+      const { status } = await requestRecordingPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Please grant microphone permissions to record voice messages');
         return;
       }
 
       // Set audio mode for recording
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      // Create recording instance using expo-av
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        (status) => {
-          // Recording status updates
-        }
-      );
-
-      recordingRef.current = recording;
+      // Prepare and start recording
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      recordingRef.current = audioRecorder;
       setIsRecording(true);
       setRecordingDuration(0);
     } catch (err) {
@@ -1337,9 +1340,9 @@ const chatDetail = () => {
     try {
       setIsRecording(false);
       
-      // Stop and get the URI
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
+      // Stop recording and get the URI
+      await recordingRef.current.stop();
+      const uri = recordingRef.current.uri;
       
       if (!uri) {
         Alert.alert('Error', 'Failed to get recording URI');
@@ -1349,7 +1352,7 @@ const chatDetail = () => {
       }
 
       // Get duration from recording status
-      const status = await recordingRef.current.getStatusAsync();
+      const status = recordingRef.current.getStatus();
       const durationInSeconds = status.durationMillis ? Math.floor(status.durationMillis / 1000) : recordingDuration;
 
       const fileInfo = await FileSystem.getInfoAsync(uri);
@@ -1381,7 +1384,7 @@ const chatDetail = () => {
   const handleCancelRecording = async () => {
     if (recordingRef.current) {
       try {
-        await recordingRef.current.stopAndUnloadAsync();
+        await recordingRef.current.stop();
       } catch (e) {
         // Ignore errors
       }
@@ -1516,26 +1519,25 @@ const chatDetail = () => {
   };
 
 
-  // Handle voice playback using expo-av Audio.Sound
+  // Handle voice playback using expo-audio AudioPlayer
   const handlePlayVoice = async (messageId, voiceUrl) => {
     try {
       // Set audio mode for playback
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
+        shouldPlayInBackground: false,
+        interruptionModeAndroid: 'duckOthers',
       });
 
       // Stop any currently playing voice
       if (playingVoiceId && playingVoiceId !== messageId) {
-        const prevSound = voicePlayers[playingVoiceId];
-        if (prevSound) {
+        const prevPlayer = voicePlayers[playingVoiceId];
+        if (prevPlayer) {
           try {
-            await prevSound.unloadAsync();
+            prevPlayer.remove();
           } catch (e) {
-            // Ignore errors when unloading
+            // Ignore errors when removing
           }
         }
         setVoicePlayers((prev) => {
@@ -1545,18 +1547,17 @@ const chatDetail = () => {
         });
       }
 
-      const existingSound = voicePlayers[messageId];
+      const existingPlayer = voicePlayers[messageId];
       
-      if (existingSound && playingVoiceId === messageId) {
+      if (existingPlayer && playingVoiceId === messageId) {
         // Pause/resume if already loaded
         try {
-          const status = await existingSound.getStatusAsync();
-          if (status.isLoaded && status.isPlaying) {
-            await existingSound.pauseAsync();
+          if (existingPlayer.isLoaded && existingPlayer.playing) {
+            existingPlayer.pause();
             setPlayingVoiceId(null);
             // Update progress to show paused state
-            const currentTime = status.positionMillis / 1000;
-            const duration = status.durationMillis ? status.durationMillis / 1000 : null;
+            const currentTime = existingPlayer.currentTime;
+            const duration = existingPlayer.duration || 0;
             setVoiceProgress((prev) => ({
               ...prev,
               [messageId]: {
@@ -1565,12 +1566,12 @@ const chatDetail = () => {
                 isPlaying: false,
               },
             }));
-          } else if (status.isLoaded) {
-            await existingSound.playAsync();
+          } else if (existingPlayer.isLoaded) {
+            existingPlayer.play();
             setPlayingVoiceId(messageId);
             // Update progress to show playing state
-            const currentTime = status.positionMillis / 1000;
-            const duration = status.durationMillis ? status.durationMillis / 1000 : null;
+            const currentTime = existingPlayer.currentTime;
+            const duration = existingPlayer.duration || 0;
             setVoiceProgress((prev) => ({
               ...prev,
               [messageId]: {
@@ -1581,9 +1582,9 @@ const chatDetail = () => {
             }));
           }
         } catch (e) {
-          // If sound is corrupted, create a new one
+          // If player is corrupted, create a new one
           try {
-            await existingSound.unloadAsync();
+            existingPlayer.remove();
           } catch (unloadErr) {
             // Ignore
           }
@@ -1592,12 +1593,12 @@ const chatDetail = () => {
             delete updated[messageId];
             return updated;
           });
-          // Fall through to create new sound
+          // Fall through to create new player
         }
       }
 
-      // Create new sound if needed
-      if (!existingSound || playingVoiceId !== messageId) {
+      // Create new player if needed
+      if (!existingPlayer || playingVoiceId !== messageId) {
         // Extract file path from URL
         const filePath = extractVoiceFilePath(voiceUrl);
         let playbackUrl = voiceUrl;
@@ -1644,23 +1645,18 @@ const chatDetail = () => {
           }
         }
 
-        // Create and load sound
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: playbackUrl },
-          { 
-            shouldPlay: true,
-            isLooping: false,
-          }
-        );
+        // Create and load player
+        const player = createAudioPlayer({ uri: playbackUrl }, { updateInterval: 500 });
+        player.play();
 
         setVoicePlayers((prev) => ({
           ...prev,
-          [messageId]: sound,
+          [messageId]: player,
         }));
         setPlayingVoiceId(messageId);
 
         // Listen for playback status updates (progress and finish)
-        sound.setOnPlaybackStatusUpdate((status) => {
+        player.addListener('playbackStatusUpdate', (status) => {
           if (status.isLoaded) {
             if (status.didJustFinish) {
               setPlayingVoiceId(null);
@@ -1671,14 +1667,14 @@ const chatDetail = () => {
               });
             } else {
               // Update progress
-              const currentTime = status.positionMillis / 1000; // Convert to seconds
-              const duration = status.durationMillis ? status.durationMillis / 1000 : null;
+              const currentTime = status.currentTime;
+              const duration = status.duration || 0;
               setVoiceProgress((prev) => ({
                 ...prev,
                 [messageId]: {
                   currentTime,
                   duration,
-                  isPlaying: status.isPlaying,
+                  isPlaying: status.playing,
                 },
               }));
             }
