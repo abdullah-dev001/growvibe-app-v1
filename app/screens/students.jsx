@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   subTitle: {
@@ -643,6 +643,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontSize: 12,
     textTransform: 'uppercase',
+    fontFamily: 'Poppins-SemiBold',
   },
   listDivider: {
     flex: 1,
@@ -690,7 +691,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
     marginBottom: hp(0.3),
   },
@@ -875,7 +876,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: hp(2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   modalCloseButton: {
@@ -884,6 +885,7 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: hp(2.5),
     color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
   },
   modalBody: {
     padding: 16,

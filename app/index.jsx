@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     width: "100%",
     textAlign: "center",
+    fontFamily: "Poppins-SemiBold",
   },
   mainContent: {
     flex: 1,
@@ -103,11 +104,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: -0.5,
     textAlign: "center",
+    fontFamily: "Poppins-SemiBold",
   },
   subtitle: {
     color: "#4B5563", // gray-600
     width: "85%",
     fontWeight: "400",
     textAlign: "center",
+    fontFamily: "Poppins-Regular",
   },
 });

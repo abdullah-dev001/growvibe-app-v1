@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     color: "#111827",
     marginBottom: hp(0.5),
   },
@@ -604,6 +604,7 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontSize: hp(1.3),
     marginTop: hp(0.5),
+    fontFamily: "Poppins-Regular",
   },
   actionButtons: {
     flexDirection: "row",

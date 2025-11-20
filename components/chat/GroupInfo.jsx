@@ -1081,7 +1081,7 @@ const styles = StyleSheet.create({
   },
   groupImageText: {
     fontSize: hp(4),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
   editImageOverlay: {
@@ -1206,7 +1206,7 @@ const styles = StyleSheet.create({
   },
   memberAvatarText: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
   memberInfo: {
@@ -1344,7 +1344,7 @@ const styles = StyleSheet.create({
   },
   teacherAvatarText: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
   teacherInfo: {

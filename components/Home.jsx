@@ -766,8 +766,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   optionTitle: {
-    fontFamily: "Poppins-Bold",
-    fontWeight: '700',
+    fontFamily: "Poppins-SemiBold",
+    fontWeight: '600',
     fontSize: hp(2.2),
   },
   optionDescription: {

@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     color: "#111827",
     marginBottom: hp(0.5),
   },

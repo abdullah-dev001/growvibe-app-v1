@@ -66,5 +66,6 @@ const styles = StyleSheet.create({
   clearText: {
     fontSize: 18,
     color: "#A0AEC0",
+    fontFamily: "Poppins-Regular",
   },
 });

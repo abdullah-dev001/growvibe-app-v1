@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: hp(1.7),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
     lineHeight: hp(2.2),
   },

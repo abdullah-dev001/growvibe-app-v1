@@ -1,5 +1,5 @@
-import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
+import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,13 +19,13 @@ import {
 import { useSelector } from 'react-redux';
 import Pen from '../../assets/icons/Pen';
 import RightArrow from '../../assets/icons/RightArrow';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp } from '../../helpers/common';
 import { useLazyGetCoordinatorsByBranchPaginatedQuery } from '../../redux/api/coordinator';
 import { useLazyGetOwnersPaginatedQuery } from '../../redux/api/ownerApi';
 import { useGetPrincipalsByBranchQuery } from '../../redux/api/principalApi';
 import { useGetTeachersByBranchPaginatedQuery, useLazyGetTeachersByBranchPaginatedQuery } from '../../redux/api/teacherApi';
 import { supabase } from '../../supabaseClient';
-import ScreenWrapper from '../../components/ScreenWrapper';
 
 const groupInfo = () => {
   const router = useRouter();
@@ -1277,7 +1277,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   scrollView: {
@@ -1307,7 +1307,7 @@ const styles = StyleSheet.create({
   },
   groupImageText: {
     fontSize: hp(4),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#6B7280',
   },
   editImageOverlay: {
@@ -1330,7 +1330,7 @@ const styles = StyleSheet.create({
   },
   groupName: {
     fontSize: hp(2.2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   editNameButton: {
@@ -1389,7 +1389,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   manageButton: {
@@ -1426,7 +1426,7 @@ const styles = StyleSheet.create({
   },
   memberAvatarText: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#6B7280',
   },
   memberInfo: {
@@ -1523,7 +1523,7 @@ const styles = StyleSheet.create({
   },
   teacherAvatarText: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#6B7280',
   },
   teacherInfo: {
@@ -1577,7 +1577,7 @@ const styles = StyleSheet.create({
   },
   userAvatarText: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#6B7280',
   },
   userInfo: {

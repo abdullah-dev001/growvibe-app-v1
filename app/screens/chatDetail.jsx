@@ -1,10 +1,10 @@
 import { decode } from 'base64-arraybuffer';
-import { 
-  createAudioPlayer, 
-  requestRecordingPermissionsAsync, 
-  setAudioModeAsync,
-  RecordingPresets,
-  useAudioRecorder
+import {
+    createAudioPlayer,
+    RecordingPresets,
+    requestRecordingPermissionsAsync,
+    setAudioModeAsync,
+    useAudioRecorder
 } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -2045,7 +2045,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: hp(2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
   headerText: {
@@ -2119,7 +2119,7 @@ const styles = StyleSheet.create({
   },
   senderAvatarText: {
     fontSize: hp(1),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
   senderName: {

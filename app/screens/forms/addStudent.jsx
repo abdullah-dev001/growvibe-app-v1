@@ -8,8 +8,8 @@ import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
-import { useCreateAuthMutation, useUpdateAuthMutation } from '../../../redux/api/createAuthApi';
 import { useAddStudentToClassChatMutation } from '../../../redux/api/chatApi';
+import { useCreateAuthMutation, useUpdateAuthMutation } from '../../../redux/api/createAuthApi';
 import { useGetStudentByIdQuery } from '../../../redux/api/studentApi';
 
 // Validation Schema Factory
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
     marginBottom: hp(0.5),
   },

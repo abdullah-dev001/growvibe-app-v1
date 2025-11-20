@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   },
   avatarPlaceholderText: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
 });

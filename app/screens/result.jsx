@@ -1,5 +1,5 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Plus from '../../assets/icons/Plus';
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   subTitle: {
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: hp(1.8),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
     marginBottom: 4,
   },
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   },
   totalMarksValue: {
     fontSize: hp(1.6),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#10B981',
   },
   studentResultSection: {
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   },
   studentNameValue: {
     fontSize: hp(1.5),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   studentTotalMarksSection: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   },
   studentTotalMarksValue: {
     fontSize: hp(1.5),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#10B981',
   },
   subjectsSection: {

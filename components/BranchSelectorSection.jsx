@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { hp } from "../helpers/common";
@@ -13,11 +13,11 @@ import { useGetBranchesBySchoolQuery } from "../redux/api/branchApi";
 import { useGetSchoolsByOwnerQuery } from "../redux/api/schoolApi";
 import { useGetSessionsByBranchIdQuery } from "../redux/api/sessionApi";
 import {
-  clearBranchId,
-  clearSessionId,
-  setBranchId,
-  setSchoolId,
-  setSessionId,
+    clearBranchId,
+    clearSessionId,
+    setBranchId,
+    setSchoolId,
+    setSessionId,
 } from "../redux/slices/authSlice";
 
 const BranchSelectorSection = () => {
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: hp(2),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     color: "#111827",
     marginBottom: hp(1.5),
   },
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   },
   branchCardTitle: {
     fontSize: hp(1.6),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     marginBottom: hp(0.5),
     flex: 1,
   },
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   sessionCardTitle: {
     fontSize: hp(1.6),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     marginBottom: hp(0.5),
     flex: 1,
   },

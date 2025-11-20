@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   subTitle: {
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   weekTitle: {
     fontSize: hp(2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   daysContainer: {
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: hp(2.2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
     marginBottom: 8,
   },

@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(3.4),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     letterSpacing: -0.5,
   },
   subTitle: {
@@ -275,6 +275,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontSize: 12,
     textTransform: "uppercase",
+    fontFamily: "Poppins-SemiBold",
   },
   listDivider: {
     flex: 1,

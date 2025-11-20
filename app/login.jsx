@@ -389,6 +389,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#FFFFFF",
     fontWeight: "600",
+    fontFamily: "Poppins-SemiBold",
   },
   formContainer: {
     width: "100%",
@@ -403,16 +404,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#6B7280", // gray-500
     fontWeight: "400",
+    fontFamily: "Poppins-Regular",
   },
   footerText: {
     textAlign: "center",
     color: "#FFFFFF",
     fontWeight: "500",
     width: "100%",
+    fontFamily: "Poppins-Medium",
   },
   footerHighlight: {
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
+    fontFamily: "Poppins-SemiBold",
   },
 });
 

@@ -228,6 +228,7 @@ const StatsSection = () => {
               styles.statValue,
               {
                 color: getTextColor(item.textColor),
+                fontFamily: 'Poppins-SemiBold',
                 fontSize: item?.title === "Branch Name" ? hp(1.6) : hp(3.4),
               },
             ]}
@@ -263,8 +264,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statValue: {
-    fontFamily: 'Poppins-Bold',
-    fontWeight: '700',
+    fontFamily: 'Poppins-SemiBold',
+    fontWeight: '600',
   },
   statTitle: {
     fontSize: 18,

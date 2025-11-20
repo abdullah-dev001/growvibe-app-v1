@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     color: "#111827",
     marginBottom: hp(0.5),
   },
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
   checkmarkText: {
     fontSize: hp(1.2),
     color: "#FFFFFF",
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
   },
   emptyStudentList: {
     padding: 24,

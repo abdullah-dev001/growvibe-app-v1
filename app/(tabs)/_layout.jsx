@@ -94,6 +94,7 @@ export default function TabLayout() {
                     fontSize: hp(1.3),
                     fontWeight: "500",
                     letterSpacing: -0.4,
+                    fontFamily: "Poppins-Medium",
                   }}
                 >
                   Home
@@ -119,6 +120,7 @@ export default function TabLayout() {
                     fontSize: hp(1.3),
                     fontWeight: "500",
                     letterSpacing: -0.4,
+                    fontFamily: "Poppins-Medium",
                   }}
                 >
                   Chat
@@ -143,6 +145,7 @@ export default function TabLayout() {
                     fontSize: hp(1.3),
                     fontWeight: "500",
                     letterSpacing: -0.4,
+                    fontFamily: "Poppins-Medium",
                   }}
                 >
                   Support
@@ -167,6 +170,7 @@ export default function TabLayout() {
                     fontWeight: "500",
                     fontSize: hp(1.3),
                     letterSpacing: -0.4,
+                    fontFamily: "Poppins-Medium",
                   }}
                 >
                   Profile

@@ -2,14 +2,14 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  Linking,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    Linking,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import Facebook from "../assets/icons/Facebook";
@@ -651,8 +651,8 @@ const styles = StyleSheet.create({
   },
   modalName: {
     fontSize: 20,
-    fontFamily: 'Poppins-Bold',
-    fontWeight: '700',
+    fontFamily: 'Poppins-SemiBold',
+    fontWeight: '600',
     color: '#1F2937',
   },
   modalUsername: {

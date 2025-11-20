@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
     marginBottom: 4,
   },
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: hp(2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#6B7280',
   },
   chatInfo: {

@@ -1,12 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import ScreenWrapper from '../../components/ScreenWrapper';
 import Button from '../../components/Button';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp } from '../../helpers/common';
 import {
-  useGetAttendanceSettingQuery,
-  useUpsertAttendanceSettingMutation,
+    useGetAttendanceSettingQuery,
+    useUpsertAttendanceSettingMutation,
 } from '../../redux/api/attendanceSettingApi';
 
 const HOLIDAY_OPTIONS = [
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: hp(2.4),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
   subtitle: {

@@ -11,7 +11,6 @@ import { useSelector } from "react-redux";
 import { hp } from "../helpers/common";
 import BranchSelectorSection from "./BranchSelectorSection";
 import StatsSection from "./StatsSection";
-import TaskSection from "./TaskSection";
 import Topbar from "./Topbar";
 
 // Dashboard options configuration
@@ -238,7 +237,7 @@ const styles = StyleSheet.create({
   },
   optionsTitle: {
     fontSize: hp(2),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     color: "#111827",
     marginBottom: hp(1.5),
   },
@@ -259,8 +258,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   optionTitle: {
-    fontFamily: "Poppins-Bold",
-    fontWeight: '700',
+    fontFamily: "Poppins-SemiBold",
+    fontWeight: '600',
     fontSize: hp(2.2),
   },
   optionDescription: {

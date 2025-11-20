@@ -9,8 +9,8 @@ import Input from '../../../components/Input';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { hp } from '../../../helpers/common';
 import { useCreateClassMutation, useGetClassByIdQuery, useUpdateClassMutation } from '../../../redux/api/classApi';
-import { useGetTeachersWithoutClassQuery } from '../../../redux/api/teacherApi';
 import { useGetSessionByIdQuery } from '../../../redux/api/sessionApi';
+import { useGetTeachersWithoutClassQuery } from '../../../redux/api/teacherApi';
 
 // Validation Schema Factory
 const getValidationSchema = () => Yup.object().shape({
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: hp(2.5),
-    fontFamily: "Poppins-Bold",
+    fontFamily: "Poppins-SemiBold",
     color: "#111827",
     marginBottom: hp(0.5),
   },

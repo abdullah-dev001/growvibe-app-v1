@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { supabase } from '../../supabaseClient';
 import { hp } from '../../helpers/common';
+import { supabase } from '../../supabaseClient';
 
 // Extract file path from Supabase storage URL
 const extractFilePath = (url) => {
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   senderAvatarText: {
     fontSize: hp(1.2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
 });

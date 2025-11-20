@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: hp(2),
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
   },
   headerText: {
