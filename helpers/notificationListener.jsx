@@ -19,16 +19,16 @@ export default function NotificationListener() {
           return;
         }
 
-        // Listen when a notification is received while app is foreground
-        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+    // Listen when a notification is received while app is foreground
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
           // Show banner when notification arrives in foreground
           if (showNotification) {
             showNotification(notification);
           }
-        });
+    });
 
-        // Listen when user interacts with notification
-        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+    // Listen when user interacts with notification
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
           // Handle navigation when user taps notification (handled by NotificationBanner onPress)
         });
       } catch (error) {
@@ -44,10 +44,10 @@ export default function NotificationListener() {
       if (Notifications) {
         try {
           if (notificationListener.current) {
-            Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(notificationListener.current);
           }
           if (responseListener.current) {
-            Notifications.removeNotificationSubscription(responseListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
           }
         } catch (error) {
           // Ignore cleanup errors

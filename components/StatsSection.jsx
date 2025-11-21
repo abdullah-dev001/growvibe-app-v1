@@ -109,140 +109,140 @@ const StatsSection = () => {
     // Admin stats
     if (user?.role === "admin" && adminData) {
       return [
-        {
-          title: "School Count",
+          {
+            title: "School Count",
           value: formatNumber(adminData.total_schools),
-          bg: "bg-blue-50",
-          border: "border-blue-100",
-          textColor: "text-blue-500",
-          url: "/screens/schools",
-        },
-        {
-          title: "Total Users",
+            bg: "bg-blue-50",
+            border: "border-blue-100",
+            textColor: "text-blue-500",
+            url: "/screens/schools",
+          },
+          {
+            title: "Total Users",
           value: formatNumber(adminData.total_users),
-          bg: "bg-yellow-50",
-          border: "border-yellow-100",
-          textColor: "text-yellow-500",
-        },
-        {
-          title: "Active Schools",
+            bg: "bg-yellow-50",
+            border: "border-yellow-100",
+            textColor: "text-yellow-500",
+          },
+          {
+            title: "Active Schools",
           value: formatNumber(adminData.active_schools),
-          bg: "bg-green-50",
-          border: "border-green-100",
-          textColor: "text-green-500",
-        },
-        {
-          title: "Owners",
+            bg: "bg-green-50",
+            border: "border-green-100",
+            textColor: "text-green-500",
+          },
+          {
+            title: "Owners",
           value: formatNumber(adminData.total_owners),
-          bg: "bg-red-50",
-          border: "border-red-100",
-          textColor: "text-red-500",
+            bg: "bg-red-50",
+            border: "border-red-100",
+            textColor: "text-red-500",
           url: "/screens/owners",
-        },
+          },
       ];
     }
 
     // Owner school stats (when no branch selected)
     if (user?.role === "owner" && ownerSchoolData && !branchId) {
       return [
-        {
+          {
           title: "Subscription Fee",
           value: formatCurrency(ownerSchoolData.subscription_fee),
-          bg: "bg-blue-50",
-          border: "border-blue-100",
-          textColor: "text-blue-500",
-        },
-        {
+            bg: "bg-blue-50",
+            border: "border-blue-100",
+            textColor: "text-blue-500",
+          },
+          {
           title: "Payment Status",
           value: formatPaymentStatus(ownerSchoolData.payment_clear),
-          bg: "bg-yellow-50",
-          border: "border-yellow-100",
-          textColor: "text-yellow-500",
-        },
-        {
-          title: "Total Teachers",
+            bg: "bg-yellow-50",
+            border: "border-yellow-100",
+            textColor: "text-yellow-500",
+          },
+          {
+            title: "Total Teachers",
           value: formatNumber(ownerSchoolData.total_teachers),
-          bg: "bg-green-50",
-          border: "border-green-100",
-          textColor: "text-green-500",
-        },
-        {
-          title: "Total Students",
+            bg: "bg-green-50",
+            border: "border-green-100",
+            textColor: "text-green-500",
+          },
+          {
+            title: "Total Students",
           value: formatNumber(ownerSchoolData.total_students),
-          bg: "bg-red-50",
-          border: "border-red-100",
-          textColor: "text-red-500",
-        },
+            bg: "bg-red-50",
+            border: "border-red-100",
+            textColor: "text-red-500",
+          },
       ];
     }
-
+    
     // Owner branch stats (when branch selected)
     if (user?.role === "owner" && ownerBranchData && branchId) {
       return [
-        {
+          {
           title: "Monthly Revenue",
           value: formatCurrency(ownerBranchData.monthly_revenue),
-          bg: "bg-blue-50",
-          border: "border-blue-100",
-          textColor: "text-blue-500",
-        },
-        {
-          title: "Total Students",
+            bg: "bg-blue-50",
+            border: "border-blue-100",
+            textColor: "text-blue-500",
+          },
+          {
+            title: "Total Students",
           value: formatNumber(ownerBranchData.total_students),
-          bg: "bg-yellow-50",
-          border: "border-yellow-100",
-          textColor: "text-yellow-500",
-        },
-        {
-          title: "Total Teachers",
+            bg: "bg-yellow-50",
+            border: "border-yellow-100",
+            textColor: "text-yellow-500",
+          },
+          {
+            title: "Total Teachers",
           value: formatNumber(ownerBranchData.total_teachers),
-          bg: "bg-green-50",
-          border: "border-green-100",
-          textColor: "text-green-500",
-        },
-        {
-          title: "Subscription Fee",
+            bg: "bg-green-50",
+            border: "border-green-100",
+            textColor: "text-green-500",
+          },
+          {
+            title: "Subscription Fee",
           value: formatCurrency(ownerBranchData.subscription_fee),
-          bg: "bg-red-50",
-          border: "border-red-100",
-          textColor: "text-red-500",
-        },
+            bg: "bg-red-50",
+            border: "border-red-100",
+            textColor: "text-red-500",
+          },
       ];
     }
-
+    
     // Principal/Coordinator stats
     if ((user?.role === "principal" || user?.role === "coordinator") && principalData) {
       return [
-        {
-          title: "Total Classes",
+          {
+            title: "Total Classes",
           value: formatNumber(principalData.total_classes),
-          bg: "bg-blue-50",
-          border: "border-blue-100",
-          textColor: "text-blue-500",
+            bg: "bg-blue-50",
+            border: "border-blue-100",
+            textColor: "text-blue-500",
           url: "/screens/classes",
-        },
-        {
-          title: "Total Students",
+          },
+          {
+            title: "Total Students",
           value: formatNumber(principalData.total_students),
-          bg: "bg-yellow-50",
-          border: "border-yellow-100",
-          textColor: "text-yellow-500",
+            bg: "bg-yellow-50",
+            border: "border-yellow-100",
+            textColor: "text-yellow-500",
           url: "/screens/students",
-        },
-        {
-          title: "Total Teachers",
+          },
+          {
+            title: "Total Teachers",
           value: formatNumber(principalData.total_teachers),
-          bg: "bg-green-50",
-          border: "border-green-100",
-          textColor: "text-green-500",
+            bg: "bg-green-50",
+            border: "border-green-100",
+            textColor: "text-green-500",
           url: "/screens/teachers",
-        },
-        {
-          title: "Branch Name",
+          },
+          {
+            title: "Branch Name",
           value: principalData.branch_name || "N/A",
-          bg: "bg-red-50",
-          border: "border-red-100",
-          textColor: "text-red-500",
+            bg: "bg-red-50",
+            border: "border-red-100",
+            textColor: "text-red-500",
         },
       ];
     }
