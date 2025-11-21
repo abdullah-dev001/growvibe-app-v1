@@ -163,6 +163,24 @@ export const taskApi = createApi({
       },
       invalidatesTags: [{ type: "Tasks", id: "LIST" }],
     }),
+    deleteTask: builder.mutation({
+      async queryFn({ id }) {
+        try {
+          const { error } = await supabase
+            .from("task")
+            .delete()
+            .eq("id", id);
+
+          if (error) {
+            return { error: { status: "CUSTOM_ERROR", data: error } };
+          }
+          return { data: { id } };
+        } catch (err) {
+          return { error: { status: "CUSTOM_ERROR", data: err } };
+        }
+      },
+      invalidatesTags: [{ type: "Tasks", id: "LIST" }],
+    }),
   }),
 });
 
@@ -171,6 +189,7 @@ export const {
   useLazyGetTasksPaginatedQuery,
   useCreateTaskMutation,
   useUpdateTaskStatusMutation,
+  useDeleteTaskMutation,
 } = taskApi;
 
 

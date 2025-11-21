@@ -3,11 +3,12 @@ import React, { useEffect, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
 import Plus from "../../assets/icons/Plus";
+import Trash from "../../assets/icons/Trash";
 import Button from "../../components/Button";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
 import { hp } from "../../helpers/common";
-import { useGetTasksPaginatedQuery, useLazyGetTasksPaginatedQuery, useUpdateTaskStatusMutation } from "../../redux/api/taskApi";
+import { useGetTasksPaginatedQuery, useLazyGetTasksPaginatedQuery, useUpdateTaskStatusMutation, useDeleteTaskMutation } from "../../redux/api/taskApi";
 
 const PAGE_SIZE = 5;
 
@@ -75,6 +76,7 @@ const tasks = () => {
 
   const [trigger, { isFetching, error: tasksError }] = useLazyGetTasksPaginatedQuery();
   const [updateStatus] = useUpdateTaskStatusMutation();
+  const [deleteTask] = useDeleteTaskMutation();
 
   const getTaskKey = (t) => String(t?.id);
 
@@ -187,6 +189,41 @@ const tasks = () => {
     // Assignee can update too
     if (task?.assigned_To === authId) return true;
     return false;
+  };
+
+  const canDeleteTask = (task) => {
+    if (!role || !authId) return false;
+    if (role === "admin") return false;
+    // Only creator can delete
+    return task?.created_By === authId;
+  };
+
+  const handleDeleteTask = (task) => {
+    Alert.alert(
+      "Delete Task",
+      `Are you sure you want to delete "${task.title || "this task"}"? This action cannot be undone.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteTask({ id: task.id }).unwrap();
+              // Remove task from local list
+              setTasksList((prev) => prev.filter((t) => t.id !== task.id));
+              // Refresh the list
+              await refetch();
+            } catch (e) {
+              Alert.alert("Error", e?.data?.message || e?.message || "Failed to delete task");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderTabSwitcher = () => {
@@ -306,20 +343,31 @@ const tasks = () => {
                     </Text>
                   )}
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor:
-                        task.status === "resolved"
-                          ? "#D1FAE5"
-                          : "#FEF3C7",
-                    },
-                  ]}
-                >
-                  <Text style={styles.statusText}>
-                    {task.status === "resolved" ? "Resolved" : "Pending"}
-                  </Text>
+                <View style={styles.headerRight}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          task.status === "resolved"
+                            ? "#D1FAE5"
+                            : "#FEF3C7",
+                      },
+                    ]}
+                  >
+                    <Text style={styles.statusText}>
+                      {task.status === "resolved" ? "Resolved" : "Pending"}
+                    </Text>
+                  </View>
+                  {canDeleteTask(task) && (
+                    <TouchableOpacity
+                      onPress={() => handleDeleteTask(task)}
+                      style={styles.deleteButton}
+                      activeOpacity={0.7}
+                    >
+                      <Trash size={hp(1.8)} color="#EF4444" strokeWidth={2} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
 
@@ -529,6 +577,19 @@ const styles = StyleSheet.create({
   },
   cardHeaderContent: {
     flex: 1,
+    marginRight: 8,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  deleteButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardTitle: {
     fontSize: hp(1.8),
