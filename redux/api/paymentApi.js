@@ -1,4 +1,5 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { sendPushNotificationToUser } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const paymentApi = createApi({
@@ -62,6 +63,7 @@ export const paymentApi = createApi({
         createPayment: builder.mutation({
             async queryFn(paymentData) {
                 try {
+                    // Insert payment
                     const { data, error } = await supabase
                         .from("payment")
                         .insert([
@@ -80,6 +82,40 @@ export const paymentApi = createApi({
                     if (error) {
                         return { error: { status: 'CUSTOM_ERROR', data: error } };
                     }
+
+                    // Send push notification to school owner
+                    try {
+                        // Get school's owner_Id
+                        const { data: schoolData, error: schoolError } = await supabase
+                            .from("school")
+                            .select("owner_Id, school_Name")
+                            .eq("id", paymentData.school_Id)
+                            .single();
+
+                        if (!schoolError && schoolData?.owner_Id) {
+                            const notificationTitle = "New Payment Created";
+                            const statusText = paymentData.payment_Status ? "Paid" : "Pending";
+                            const notificationBody = `A new payment of Rs.${paymentData.fee.toLocaleString("en-US")} for ${paymentData.month} (${statusText}) has been created for ${schoolData.school_Name || 'your school'}.`;
+                            
+                            await sendPushNotificationToUser(
+                                schoolData.owner_Id,
+                                notificationTitle,
+                                notificationBody,
+                                {
+                                    type: "payment",
+                                    schoolId: paymentData.school_Id,
+                                    paymentId: data?.[0]?.id,
+                                    month: paymentData.month,
+                                    fee: paymentData.fee,
+                                    status: paymentData.payment_Status ? "paid" : "pending",
+                                }
+                            );
+                        }
+                    } catch (notificationError) {
+                        // Log error but don't fail the payment creation
+                        console.log("Error sending push notification:", notificationError);
+                    }
+
                     return { data };
                 } catch (err) {
                     return { error: { status: 'CUSTOM_ERROR', data: err } };
