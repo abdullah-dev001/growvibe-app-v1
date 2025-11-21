@@ -1,4 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getUserFullName } from "../../helpers/getUserFullName";
+import { sendPushNotificationToUsers } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const diaryApi = createApi({
@@ -69,6 +71,62 @@ export const diaryApi = createApi({
                 });
 
                 if (error) throw error;
+
+                // Send push notifications to class users (incharge + students)
+                if (data && diaryData.class_Id && diaryData.branch_Id) {
+                    try {
+                        const creatorName = await getUserFullName(diaryData.created_By);
+                        const notificationTitle = "New Diary Entry Created";
+                        const notificationBody = `${creatorName} has created a new diary entry: "${diaryData.diary_Title || 'Diary Entry'}".`;
+                        const classUserIds = [];
+
+                        // Get class incharge (teacher)
+                        const { data: classData } = await supabase
+                            .from("class")
+                            .select("incharge_Id")
+                            .eq("id", diaryData.class_Id)
+                            .maybeSingle();
+
+                        if (classData?.incharge_Id && classData.incharge_Id !== diaryData.created_By) {
+                            classUserIds.push(classData.incharge_Id);
+                        }
+
+                        // Get all students in the class
+                        const { data: students } = await supabase
+                            .from("student_profile")
+                            .select("auth_User_Id")
+                            .eq("class_Id", diaryData.class_Id)
+                            .eq("branch_Id", diaryData.branch_Id);
+
+                        if (students) {
+                            students.forEach(s => {
+                                if (s.auth_User_Id && s.auth_User_Id !== diaryData.created_By) {
+                                    classUserIds.push(s.auth_User_Id);
+                                }
+                            });
+                        }
+
+                        // Send notifications
+                        if (classUserIds.length > 0) {
+                            await sendPushNotificationToUsers(
+                                [...new Set(classUserIds)],
+                                notificationTitle,
+                                notificationBody,
+                                {
+                                    type: "diary",
+                                    diaryId: data?.diary_Id || data?.id,
+                                    title: diaryData.diary_Title,
+                                    branchId: diaryData.branch_Id,
+                                    classId: diaryData.class_Id,
+                                    createdBy: diaryData.created_By,
+                                }
+                            );
+                        }
+                    } catch (notificationError) {
+                        console.log("Error sending push notification:", notificationError);
+                    }
+                }
+
                 return { data };
             },
             invalidatesTags: (result, error, arg) => [

@@ -1,4 +1,5 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { sendPushNotificationToUser } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const feeApi = createApi({
@@ -58,6 +59,46 @@ export const feeApi = createApi({
           if (error) {
             return { error: { status: 'CUSTOM_ERROR', data: error } };
           }
+
+          // Send push notification to student
+          if (data && data[0] && feeData.student_Id) {
+            try {
+              // Get student's auth_Id from student_profile table
+              const { data: studentData, error: studentError } = await supabase
+                .from("student_profile")
+                .select("auth_User_Id")
+                .eq("id", feeData.student_Id)
+                .maybeSingle();
+
+              if (!studentError && studentData?.auth_User_Id) {
+                const statusText = feeData.fee_Status ? feeData.fee_Status.charAt(0).toUpperCase() + feeData.fee_Status.slice(1) : "Pending";
+                const notificationTitle = "New Fee Added";
+                const notificationBody = `A new fee of ${feeData.fee.toLocaleString("en-US")} for ${feeData.month} (${statusText}) has been added to your account.`;
+                
+                await sendPushNotificationToUser(
+                  studentData.auth_User_Id,
+                  notificationTitle,
+                  notificationBody,
+                  {
+                    type: "fee",
+                    feeId: data[0].id,
+                    studentId: feeData.student_Id,
+                    month: feeData.month,
+                    fee: feeData.fee,
+                    remainingFee: feeData.remaining_Fee,
+                    status: feeData.fee_Status || "pending",
+                    schoolId: feeData.school_Id,
+                    branchId: feeData.branch_Id,
+                    classId: feeData.class_Id,
+                  }
+                );
+              }
+            } catch (notificationError) {
+              // Log error but don't fail the fee creation
+              console.log("Error sending push notification:", notificationError);
+            }
+          }
+
           return { data };
         } catch (err) {
           return { error: { status: 'CUSTOM_ERROR', data: err } };

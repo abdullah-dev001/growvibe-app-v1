@@ -1,4 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getUserFullName } from "../../helpers/getUserFullName";
+import { sendPushNotificationToUsers } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const attendanceApi = createApi({
@@ -17,6 +19,65 @@ export const attendanceApi = createApi({
           if (error) {
             return { error: { status: "CUSTOM_ERROR", data: error } };
           }
+
+          // Send push notifications to users whose attendance was marked
+          if (data && attendanceData.users && attendanceData.users.length > 0) {
+            try {
+              const markedBy = attendanceData.marked_By || attendanceData.created_By;
+              const creatorName = await getUserFullName(markedBy);
+              const notificationTitle = "Attendance Marked";
+              let notificationBody = "";
+              let userIds = [];
+
+              // Get user IDs from the attendance data (users array contains user_Id)
+              const userAuthIds = attendanceData.users
+                .map(u => u.user_Id)
+                .filter(id => id && id !== markedBy);
+
+              userIds = [...new Set(userAuthIds)];
+
+              // If attendance is for a class (students), also notify class incharge
+              if (attendanceData.class_Id && attendanceData.branch_Id) {
+                const { data: classData } = await supabase
+                  .from("class")
+                  .select("incharge_Id")
+                  .eq("id", attendanceData.class_Id)
+                  .maybeSingle();
+
+                if (classData?.incharge_Id && classData.incharge_Id !== markedBy) {
+                  userIds.push(classData.incharge_Id);
+                }
+
+                notificationBody = `${creatorName} has marked attendance for ${attendanceData.date || 'today'}.`;
+              } else if (attendanceData.branch_Id && attendanceData.users[0]?.role) {
+                // For teachers/branch-based attendance
+                const role = attendanceData.users[0].role;
+                notificationBody = `${creatorName} has marked ${role} attendance for ${attendanceData.date || 'today'}.`;
+              } else {
+                notificationBody = `${creatorName} has marked your attendance for ${attendanceData.date || 'today'}.`;
+              }
+
+              // Send notifications
+              if (userIds.length > 0) {
+                await sendPushNotificationToUsers(
+                  [...new Set(userIds)],
+                  notificationTitle,
+                  notificationBody,
+                  {
+                    type: "attendance",
+                    date: attendanceData.date,
+                    branchId: attendanceData.branch_Id,
+                    classId: attendanceData.class_Id,
+                    role: attendanceData.users[0]?.role,
+                    markedBy: markedBy,
+                  }
+                );
+              }
+            } catch (notificationError) {
+              console.log("Error sending push notification:", notificationError);
+            }
+          }
+
           return { data };
         } catch (err) {
           return { error: { status: "CUSTOM_ERROR", data: err } };

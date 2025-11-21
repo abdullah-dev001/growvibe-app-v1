@@ -1,4 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getUserFullName } from "../../helpers/getUserFullName";
+import { sendPushNotificationToUsers } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const noteApi = createApi({
@@ -30,6 +32,135 @@ export const noteApi = createApi({
                     if (error) {
                         return { error: { status: 'CUSTOM_ERROR', data: error } };
                     }
+
+                    // Send push notifications based on note target
+                    try {
+                        const creatorName = await getUserFullName(noteData.created_By);
+                        const notificationTitle = "New Note Created";
+                        let notificationBody = `${creatorName} has created a new note: "${noteData.note_Title}".`;
+                        let userIds = [];
+
+                        if (noteData.is_For_Entire_Branch) {
+                            // Send to all users in the branch (except creator)
+                            // Get all users from different profile tables for this branch
+                            const allUserIds = [];
+
+                            // Get principals
+                            const { data: principals } = await supabase
+                                .from("principal_profile")
+                                .select("auth_Id")
+                                .eq("branch_Id", noteData.branch_Id);
+
+                            if (principals) {
+                                principals.forEach(p => {
+                                    if (p.auth_Id && p.auth_Id !== noteData.created_By) {
+                                        allUserIds.push(p.auth_Id);
+                                    }
+                                });
+                            }
+
+                            // Get coordinators
+                            const { data: coordinators } = await supabase
+                                .from("coordinator_profile")
+                                .select("auth_Id")
+                                .eq("branch_Id", noteData.branch_Id);
+
+                            if (coordinators) {
+                                coordinators.forEach(c => {
+                                    if (c.auth_Id && c.auth_Id !== noteData.created_By) {
+                                        allUserIds.push(c.auth_Id);
+                                    }
+                                });
+                            }
+
+                            // Get teachers
+                            const { data: teachers } = await supabase
+                                .from("teacher_profile")
+                                .select("auth_User_Id")
+                                .eq("branch_Id", noteData.branch_Id);
+
+                            if (teachers) {
+                                teachers.forEach(t => {
+                                    if (t.auth_User_Id && t.auth_User_Id !== noteData.created_By) {
+                                        allUserIds.push(t.auth_User_Id);
+                                    }
+                                });
+                            }
+
+                            // Get students
+                            const { data: students } = await supabase
+                                .from("student_profile")
+                                .select("auth_User_Id")
+                                .eq("branch_Id", noteData.branch_Id);
+
+                            if (students) {
+                                students.forEach(s => {
+                                    if (s.auth_User_Id && s.auth_User_Id !== noteData.created_By) {
+                                        allUserIds.push(s.auth_User_Id);
+                                    }
+                                });
+                            }
+
+                            userIds = [...new Set(allUserIds)]; // Remove duplicates
+                        } else if (noteData.specific_Class) {
+                            // Send to class incharge and all students in that class
+                            const classUserIds = [];
+
+                            // Get class incharge (teacher)
+                            const { data: classData } = await supabase
+                                .from("class")
+                                .select("incharge_Id")
+                                .eq("id", noteData.specific_Class)
+                                .maybeSingle();
+
+                            if (classData?.incharge_Id && classData.incharge_Id !== noteData.created_By) {
+                                classUserIds.push(classData.incharge_Id);
+                            }
+
+                            // Get all students in the class
+                            const { data: students } = await supabase
+                                .from("student_profile")
+                                .select("auth_User_Id")
+                                .eq("class_Id", noteData.specific_Class)
+                                .eq("branch_Id", noteData.branch_Id);
+
+                            if (students) {
+                                students.forEach(s => {
+                                    if (s.auth_User_Id && s.auth_User_Id !== noteData.created_By) {
+                                        classUserIds.push(s.auth_User_Id);
+                                    }
+                                });
+                            }
+
+                            userIds = [...new Set(classUserIds)]; // Remove duplicates
+                        }
+
+                        // Send notifications to all target users
+                        if (userIds.length > 0) {
+                            await sendPushNotificationToUsers(
+                                userIds,
+                                notificationTitle,
+                                notificationBody,
+                                {
+                                    type: "note",
+                                    noteId: data?.[0]?.id,
+                                    title: noteData.note_Title,
+                                    description: noteData.note_Description,
+                                    expireDate: noteData.expire_Date,
+                                    isForEntireBranch: noteData.is_For_Entire_Branch,
+                                    specificClass: noteData.specific_Class,
+                                    className: noteData.class_Name,
+                                    branchId: noteData.branch_Id,
+                                    schoolId: noteData.school_Id,
+                                    createdBy: noteData.created_By,
+                                }
+                            );
+                        }
+                    } catch (notificationError) {
+                        // Log error but don't fail the note creation
+                        console.log("Error sending push notification:", notificationError);
+                    }
+
                     return { data };
                 } catch (err) {
                     return { error: { status: 'CUSTOM_ERROR', data: err } };

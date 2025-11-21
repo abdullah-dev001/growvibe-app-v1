@@ -1,10 +1,10 @@
 import { decode } from 'base64-arraybuffer';
 import {
-    createAudioPlayer,
-    RecordingPresets,
-    requestRecordingPermissionsAsync,
-    setAudioModeAsync,
-    useAudioRecorder
+  createAudioPlayer,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder
 } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -14,16 +14,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import AttachmentPreview from '../../components/chat/AttachmentPreview';
@@ -35,6 +35,7 @@ import TypingIndicator from '../../components/chat/TypingIndicator';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import MessageSkeleton from '../../components/skeletons/MessageSkeleton';
 import { hp } from '../../helpers/common';
+import { sendGroupMessageNotification } from '../../helpers/sendGroupMessageNotification';
 import { useLazyGetProfileByRoleQuery } from '../../redux/api/profileApi';
 import { supabase } from '../../supabaseClient';
 
@@ -951,6 +952,22 @@ const chatDetail = () => {
           .eq("chat_Id", chatId)
           .eq("user_Id", currentUserId);
 
+        // Send push notification to group members (only for group chats)
+        if (chatType === 'group') {
+          try {
+            await sendGroupMessageNotification(
+              chatId,
+              currentUserId,
+              'text',
+              messageContent,
+              chatName
+            );
+          } catch (notificationError) {
+            // Log error but don't fail message sending
+            console.log('Error sending group message notification:', notificationError);
+          }
+        }
+
         // Remove pending message when real message arrives (will be handled by realtime subscription)
         // But also remove it here as a fallback
         setPendingMessages((prev) => {
@@ -1175,6 +1192,22 @@ const chatDetail = () => {
         .eq("chat_Id", chatId)
         .eq("user_Id", currentUserId);
 
+      // Send push notification to group members (only for group chats)
+      if (chatType === 'group') {
+        try {
+          const attachmentName = attachmentData.name || 'an attachment';
+          await sendGroupMessageNotification(
+            chatId,
+            currentUserId,
+            'attachment',
+            attachmentName,
+            chatName
+          );
+        } catch (notificationError) {
+          console.log('Error sending group message notification:', notificationError);
+        }
+      }
+
       if (isTypingRef.current) {
         isTypingRef.current = false;
         sendTypingEvent(false);
@@ -1292,6 +1325,21 @@ const chatDetail = () => {
         .update({ last_Read: lastReadTime })
         .eq("chat_Id", chatId)
         .eq("user_Id", currentUserId);
+
+      // Send push notification to group members (only for group chats)
+      if (chatType === 'group') {
+        try {
+          await sendGroupMessageNotification(
+            chatId,
+            currentUserId,
+            'voice',
+            'voice message',
+            chatName
+          );
+        } catch (notificationError) {
+          console.log('Error sending group message notification:', notificationError);
+        }
+      }
 
       if (isTypingRef.current) {
         isTypingRef.current = false;

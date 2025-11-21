@@ -1,4 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getUserFullName } from "../../helpers/getUserFullName";
+import { sendPushNotificationToUser } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const ticketApi = createApi({
@@ -70,6 +72,44 @@ export const ticketApi = createApi({
                     if (error) {
                         return { error: { status: 'CUSTOM_ERROR', data: error } };
                     }
+
+                    // Send push notification to admin
+                    try {
+                        // Get admin's auth_Id from admin_profile table
+                        const { data: adminData, error: adminError } = await supabase
+                            .from('admin_profile')
+                            .select('auth_Id')
+                            .order('created_at', { ascending: true })
+                            .limit(1)
+                            .maybeSingle();
+
+                        if (!adminError && adminData?.auth_Id) {
+                            // Get creator's name for personalization (role not available in ticketData, so it will try all tables)
+                            const creatorName = await getUserFullName(ticketData.created_By);
+
+                            const priorityText = ticketData.ticket_Priority || "Medium";
+                            const notificationTitle = "New Support Ticket Created";
+                            const notificationBody = `${creatorName} has created a new ${priorityText.toLowerCase()} priority ticket: "${ticketData.ticket_Title}".`;
+                            
+                            await sendPushNotificationToUser(
+                                adminData.auth_Id,
+                                notificationTitle,
+                                notificationBody,
+                                {
+                                    type: "ticket",
+                                    ticketId: data?.id || data?.data?.id,
+                                    createdBy: ticketData.created_By,
+                                    title: ticketData.ticket_Title,
+                                    priority: ticketData.ticket_Priority || "Medium",
+                                    status: "open",
+                                }
+                            );
+                        }
+                    } catch (notificationError) {
+                        // Log error but don't fail the ticket creation
+                        console.log("Error sending push notification:", notificationError);
+                    }
+
                     return { data };
                 } catch (err) {
                     return { error: { status: 'CUSTOM_ERROR', data: err } };

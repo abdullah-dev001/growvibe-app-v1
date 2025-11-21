@@ -1,4 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getUserFullName } from "../../helpers/getUserFullName";
+import { sendPushNotificationToUsers } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const resultApi = createApi({
@@ -134,6 +136,73 @@ export const resultApi = createApi({
                 });
 
                 if (error) throw error;
+
+                // Send push notifications to class users (incharge + students)
+                // First, get the student's class_Id from student_profile
+                if (data && resultData.student_Id && resultData.branch_Id) {
+                    try {
+                        // Get student's class_Id (student_Id is auth_User_Id)
+                        const { data: studentData } = await supabase
+                            .from("student_profile")
+                            .select("class_Id")
+                            .eq("auth_User_Id", resultData.student_Id)
+                            .maybeSingle();
+
+                        if (studentData?.class_Id) {
+                            const creatorName = await getUserFullName(resultData.created_By);
+                            const notificationTitle = "New Result Published";
+                            const notificationBody = `${creatorName} has published a new result: "${resultData.result_Title || 'Result'}".`;
+                            const classUserIds = [];
+
+                            // Get class incharge (teacher)
+                            const { data: classData } = await supabase
+                                .from("class")
+                                .select("incharge_Id")
+                                .eq("id", studentData.class_Id)
+                                .maybeSingle();
+
+                            if (classData?.incharge_Id && classData.incharge_Id !== resultData.created_By) {
+                                classUserIds.push(classData.incharge_Id);
+                            }
+
+                            // Get all students in the class
+                            const { data: students } = await supabase
+                                .from("student_profile")
+                                .select("auth_User_Id")
+                                .eq("class_Id", studentData.class_Id)
+                                .eq("branch_Id", resultData.branch_Id);
+
+                            if (students) {
+                                students.forEach(s => {
+                                    if (s.auth_User_Id && s.auth_User_Id !== resultData.created_By) {
+                                        classUserIds.push(s.auth_User_Id);
+                                    }
+                                });
+                            }
+
+                            // Send notifications
+                            if (classUserIds.length > 0) {
+                                await sendPushNotificationToUsers(
+                                    [...new Set(classUserIds)],
+                                    notificationTitle,
+                                    notificationBody,
+                                    {
+                                        type: "result",
+                                        resultId: data?.result_Id || data?.id,
+                                        title: resultData.result_Title,
+                                        branchId: resultData.branch_Id,
+                                        classId: studentData.class_Id,
+                                        studentId: resultData.student_Id,
+                                        createdBy: resultData.created_By,
+                                    }
+                                );
+                            }
+                        }
+                    } catch (notificationError) {
+                        console.log("Error sending push notification:", notificationError);
+                    }
+                }
+
                 return { data };
             },
             invalidatesTags: (result, error, arg) => [

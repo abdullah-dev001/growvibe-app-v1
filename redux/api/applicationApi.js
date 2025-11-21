@@ -1,4 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getUserFullName } from "../../helpers/getUserFullName";
+import { sendPushNotificationToUser } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 // Helper: resolve assigned_To for an application based on role and context
@@ -173,6 +175,36 @@ export const applicationApi = createApi({
           if (error) {
             return { error: { status: "CUSTOM_ERROR", data: error } };
           }
+
+          // Send push notification to assigned user
+          if (data && data[0] && applicationData.assigned_To) {
+            try {
+              // Get creator's name for personalization
+              const creatorName = await getUserFullName(applicationData.created_By);
+
+              const notificationTitle = "New Application Assigned";
+              const notificationBody = `${creatorName} has created a new application: "${applicationData.title}" and assigned it to you.`;
+              
+              await sendPushNotificationToUser(
+                applicationData.assigned_To,
+                notificationTitle,
+                notificationBody,
+                {
+                  type: "application",
+                  applicationId: data[0].id,
+                  schoolId: applicationData.school_Id,
+                  branchId: applicationData.branch_Id,
+                  createdBy: applicationData.created_By,
+                  title: applicationData.title,
+                  status: applicationData.status || "pending",
+                }
+              );
+            } catch (notificationError) {
+              // Log error but don't fail the application creation
+              console.log("Error sending push notification:", notificationError);
+            }
+          }
+
           return { data };
         } catch (err) {
           return { error: { status: "CUSTOM_ERROR", data: err } };

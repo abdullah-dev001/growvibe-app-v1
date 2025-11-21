@@ -1,4 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getUserFullName } from "../../helpers/getUserFullName";
+import { sendPushNotificationToUser } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const taskApi = createApi({
@@ -98,6 +100,38 @@ export const taskApi = createApi({
           if (error) {
             return { error: { status: "CUSTOM_ERROR", data: error } };
           }
+
+          // Send push notification to assigned user
+          if (data && data[0] && taskData.assigned_To) {
+            try {
+              // Get creator's name for personalization
+              const creatorName = await getUserFullName(taskData.created_By);
+
+              const priorityText = taskData.priority ? taskData.priority.charAt(0).toUpperCase() + taskData.priority.slice(1) : "Medium";
+              const notificationTitle = "New Task Assigned";
+              const notificationBody = `${creatorName} has assigned you a new ${priorityText.toLowerCase()} priority task: "${taskData.title}".`;
+              
+              await sendPushNotificationToUser(
+                taskData.assigned_To,
+                notificationTitle,
+                notificationBody,
+                {
+                  type: "task",
+                  taskId: data[0].id,
+                  schoolId: taskData.school_Id,
+                  branchId: taskData.branch_Id,
+                  createdBy: taskData.created_By,
+                  title: taskData.title,
+                  priority: taskData.priority || "medium",
+                  status: taskData.status || "pending",
+                }
+              );
+            } catch (notificationError) {
+              // Log error but don't fail the task creation
+              console.log("Error sending push notification:", notificationError);
+            }
+          }
+
           return { data };
         } catch (err) {
           return { error: { status: "CUSTOM_ERROR", data: err } };
