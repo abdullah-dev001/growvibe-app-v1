@@ -43,7 +43,7 @@ export default function Index() {
               One app to manage your entire school journey smarter, safer, and
               more connected than ever before.
             </Text>
-            <View style={{ width: wp(85), marginTop: hp(2), marginBottom: hp(6) }}>
+            <View style={{ width: wp(85), marginTop: hp(1.6), marginBottom: hp(6) }}>
               <Button
                 title="Step Into Smarter Learning"
                 onPress={() => router.push("/login")}
@@ -102,8 +102,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 48,
     fontWeight: "600",
-    letterSpacing: -0.5,
+    letterSpacing: -0.9,
     textAlign: "center",
+    lineHeight: hp(7),
     fontFamily: "Poppins-SemiBold",
   },
   subtitle: {

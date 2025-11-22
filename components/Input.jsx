@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Eye from "../assets/icons/Eye";
 import EyeOff from "../assets/icons/EyeOff";
@@ -155,6 +155,7 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-Regular",
     color: "#111827",
     paddingVertical: 0,
+    paddingTop: hp(0.5),
     paddingHorizontal: 0,
   },
   rightIcon: {
