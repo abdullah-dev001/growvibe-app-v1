@@ -26,6 +26,10 @@ const getValidationSchema = () => Yup.object().shape({
       /^[\+]?[1-9][\d]{0,15}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
       'Please enter a valid phone number or email'
     ),
+  branch_Subscription_Fee: Yup.number()
+    .typeError('Subscription fee must be a number')
+    .min(0, 'Subscription fee cannot be negative')
+    .required('Branch subscription fee is required'),
   branch_Status: Yup.boolean().required('Branch status is required'),
 });
 
@@ -50,6 +54,7 @@ const addBranch = () => {
           branch_Name: values.branch_Name,
           branch_Address: values.branch_Address,
           branch_Contact: values.branch_Contact,
+          branch_Subscription_Fee: parseFloat(values.branch_Subscription_Fee) || 0,
           branch_Status: values.branch_Status,
         };
 
@@ -70,6 +75,7 @@ const addBranch = () => {
           branch_Name: values.branch_Name,
           branch_Address: values.branch_Address,
           branch_Contact: values.branch_Contact,
+          branch_Subscription_Fee: parseFloat(values.branch_Subscription_Fee) || 0,
           branch_Status: values.branch_Status,
           school_Id: schoolId,
         };
@@ -128,6 +134,7 @@ const addBranch = () => {
               branch_Name: branchData?.branch_Name || '',
               branch_Address: branchData?.branch_Address || '',
               branch_Contact: branchData?.branch_Contact || '',
+              branch_Subscription_Fee: branchData?.branch_Subscription_Fee || '',
               branch_Status: branchData?.branch_Status ?? true,
             }}
             enableReinitialize
@@ -202,6 +209,30 @@ const addBranch = () => {
                     {touched.branch_Contact && errors.branch_Contact && (
                       <Text style={styles.errorText}>
                         {errors.branch_Contact}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Branch Subscription Fee */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>
+                      Branch Subscription Fee (Rs.) *
+                    </Text>
+                    <Input
+                      placeholder="Enter subscription fee"
+                      value={values.branch_Subscription_Fee?.toString() || ''}
+                      onChangeText={(text) => {
+                        // Allow only numbers and decimal point
+                        const numericValue = text.replace(/[^0-9.]/g, '');
+                        handleChange('branch_Subscription_Fee')(numericValue);
+                      }}
+                      onBlur={handleBlur('branch_Subscription_Fee')}
+                      type="numeric"
+                      keyboardType="numeric"
+                    />
+                    {touched.branch_Subscription_Fee && errors.branch_Subscription_Fee && (
+                      <Text style={styles.errorText}>
+                        {errors.branch_Subscription_Fee}
                       </Text>
                     )}
                   </View>

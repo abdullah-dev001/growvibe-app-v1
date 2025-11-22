@@ -17,6 +17,7 @@ export const branchApi = createApi({
                             branch_Name: branch.branch_Name,
                             branch_Address: branch.branch_Address,
                             branch_Contact: branch.branch_Contact,
+                            branch_Subscription_Fee: branch.branch_Subscription_Fee,
                             branch_Status: branch.branch_Status,
                         },
                     ])
@@ -130,6 +131,7 @@ export const branchApi = createApi({
                         branch_Name: branch.branch_Name,
                         branch_Address: branch.branch_Address,
                         branch_Contact: branch.branch_Contact,
+                        branch_Subscription_Fee: branch.branch_Subscription_Fee,
                         branch_Status: branch.branch_Status,
                     })
                     .eq("id", branch.id)
