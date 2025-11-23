@@ -71,6 +71,12 @@ const Login = () => {
       }
 
       const handleAccessDenied = async (message) => {
+        // Delete push token before logout
+        const { deletePushToken } = await import('../notifications');
+        if (data?.user?.id) {
+          await deletePushToken(data.user.id);
+        }
+        
         await supabase.auth.signOut();
         dispatch(logoutAction());
         Alert.alert("Access Denied", message || "Your account has been deactivated.");

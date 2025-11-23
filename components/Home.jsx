@@ -104,15 +104,6 @@ const STUDENT_OPTIONS = {
     borderColor: "border-pink-100",
     textColor: "text-pink-500",
   },
-  attendance: {
-    id: "attendance",
-    title: "View Attendance",
-    description: "View your attendance records",
-    link: "/screens/mark-attendance",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-100",
-    textColor: "text-orange-500",
-  },
   datesheet: {
     id: "datesheet",
     title: "View Datesheet",

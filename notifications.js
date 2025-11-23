@@ -101,10 +101,71 @@ export async function registerForPushNotificationsAsync(userId) {
 
 // Save token to Supabase
 async function savePushToken(userId, token) {
-  const { data, error } = await supabase
-    .from('push_token')
-    .upsert({ user_Id: userId, token })
-    .select();
+  if (!userId || !token) {
+    console.log('Missing userId or token for savePushToken');
+    return;
+  }
 
-  if (error) console.log('Error saving push token:', error);
+  try {
+    // First, delete any existing token for this device (to prevent conflicts with previous users)
+    const { error: deleteError } = await supabase
+      .from('push_token')
+      .delete()
+      .eq('token', token);
+
+    if (deleteError) {
+      console.log('Error deleting old push token:', deleteError);
+    }
+
+    // Also delete any existing token for this user (in case they're logging in on a different device)
+    const { error: deleteUserTokenError } = await supabase
+      .from('push_token')
+      .delete()
+      .eq('user_Id', userId);
+
+    if (deleteUserTokenError) {
+      console.log('Error deleting user push token:', deleteUserTokenError);
+    }
+
+    // Now insert the token for the current user
+    const { data, error } = await supabase
+      .from('push_token')
+      .insert({ user_Id: userId, token })
+      .select();
+
+    if (error) {
+      console.log('Error saving push token:', error);
+      // If insert fails due to unique constraint, try update
+      if (error.code === '23505') {
+        const { error: updateError } = await supabase
+          .from('push_token')
+          .update({ user_Id: userId })
+          .eq('token', token);
+        
+        if (updateError) {
+          console.log('Error updating push token:', updateError);
+        }
+      }
+    } else {}
+  } catch (err) {
+    console.log('Error in savePushToken:', err);
+  }
+}
+
+// Delete push token from Supabase on logout
+export async function deletePushToken(userId) {
+  if (!userId) return;
+  
+  try {
+    const { error } = await supabase
+      .from('push_token')
+      .delete()
+      .eq('user_Id', userId);
+
+    if (error) {
+      console.log('Error deleting push token:', error);
+    }
+  } catch (err) {
+    console.log('Error in deletePushToken:', err);
+  }
 }

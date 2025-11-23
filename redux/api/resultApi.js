@@ -141,11 +141,11 @@ export const resultApi = createApi({
                 // First, get the student's class_Id from student_profile
                 if (data && resultData.student_Id && resultData.branch_Id) {
                     try {
-                        // Get student's class_Id (student_Id is auth_User_Id)
+                        // Get student's class_Id (student_Id is auth_Id)
                         const { data: studentData } = await supabase
                             .from("student_profile")
                             .select("class_Id")
-                            .eq("auth_User_Id", resultData.student_Id)
+                            .eq("auth_Id", resultData.student_Id)
                             .maybeSingle();
 
                         if (studentData?.class_Id) {
@@ -168,14 +168,14 @@ export const resultApi = createApi({
                             // Get all students in the class
                             const { data: students } = await supabase
                                 .from("student_profile")
-                                .select("auth_User_Id")
+                                .select("auth_Id")
                                 .eq("class_Id", studentData.class_Id)
                                 .eq("branch_Id", resultData.branch_Id);
 
                             if (students) {
                                 students.forEach(s => {
-                                    if (s.auth_User_Id && s.auth_User_Id !== resultData.created_By) {
-                                        classUserIds.push(s.auth_User_Id);
+                                    if (s.auth_Id && s.auth_Id !== resultData.created_By) {
+                                        classUserIds.push(s.auth_Id);
                                     }
                                 });
                             }

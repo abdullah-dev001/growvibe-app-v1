@@ -181,6 +181,12 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
         style: "destructive",
         onPress: async () => {
           try {
+            // Delete push token before logout
+            const { deletePushToken } = await import('../notifications');
+            if (user?.id) {
+              await deletePushToken(user.id);
+            }
+            
             await supabase.auth.signOut();
             dispatch(logout());
             router.replace("/");

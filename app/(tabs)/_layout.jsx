@@ -37,6 +37,12 @@ export default function TabLayout() {
       setIsCheckingAccess(true);
       const handleForcedLogout = async (message) => {
         Alert.alert("Access Denied", message || "Your account has been deactivated.");
+        // Delete push token before logout
+        const { deletePushToken } = await import('../../notifications');
+        if (user?.id) {
+          await deletePushToken(user.id);
+        }
+        
         await supabase.auth.signOut();
         dispatch(logoutAction());
         setHasCheckedAccess(false);

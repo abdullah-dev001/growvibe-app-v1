@@ -94,14 +94,14 @@ export const diaryApi = createApi({
                         // Get all students in the class
                         const { data: students } = await supabase
                             .from("student_profile")
-                            .select("auth_User_Id")
+                            .select("auth_Id")
                             .eq("class_Id", diaryData.class_Id)
                             .eq("branch_Id", diaryData.branch_Id);
 
                         if (students) {
                             students.forEach(s => {
-                                if (s.auth_User_Id && s.auth_User_Id !== diaryData.created_By) {
-                                    classUserIds.push(s.auth_User_Id);
+                                if (s.auth_Id && s.auth_Id !== diaryData.created_By) {
+                                    classUserIds.push(s.auth_Id);
                                 }
                             });
                         }

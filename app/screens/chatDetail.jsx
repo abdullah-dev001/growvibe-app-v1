@@ -659,16 +659,49 @@ const chatDetail = () => {
               if (exists) {
                 return prev;
               }
-              // Remove any pending messages with the same content from the same sender
+              
+              const messageType = data.message_Type || data.message_type;
+              const msgMessageType = (msg) => msg.message_Type || msg.message_type;
+              
+              // Remove any pending messages from the same sender
               const filtered = prev.filter((msg) => {
-                if (msg.isPending && msg.sender_Id === currentUserId && msg.content === data.content) {
-                  // Remove from pending messages
+                if (msg.isPending && msg.sender_Id === currentUserId) {
+                  const pendingMsgType = msgMessageType(msg);
+                  
+                  // For text messages, match by content
+                  if (messageType === 'text' && pendingMsgType === 'text' && msg.content === data.content) {
                   setPendingMessages((prevPending) => {
                     const updated = { ...prevPending };
                     delete updated[msg.id];
                     return updated;
                   });
                   return false;
+                  }
+                  
+                  // For voice messages, match by type and duration (within 2 seconds tolerance)
+                  if (messageType === 'voice' && pendingMsgType === 'voice') {
+                    const msgDuration = parseInt(msg.duration) || 0;
+                    const dataDuration = parseInt(data.duration) || 0;
+                    // Match if durations are close (within 2 seconds) or if pending has no duration yet
+                    if (Math.abs(msgDuration - dataDuration) <= 2 || msgDuration === 0) {
+                      setPendingMessages((prevPending) => {
+                        const updated = { ...prevPending };
+                        delete updated[msg.id];
+                        return updated;
+                      });
+                      return false;
+                    }
+                  }
+                  
+                  // For attachment messages, match by type (content will be different - pending has no URL)
+                  if (messageType === 'attachment' && pendingMsgType === 'attachment') {
+                    setPendingMessages((prevPending) => {
+                      const updated = { ...prevPending };
+                      delete updated[msg.id];
+                      return updated;
+                    });
+                    return false;
+                  }
                 }
                 return true;
               });
@@ -1148,9 +1181,58 @@ const chatDetail = () => {
     const attachmentToSend = attachment;
     setAttachment(null);
 
+    // Create a temporary message ID for the pending message
+    const tempId = `pending-${Date.now()}-${Math.random()}`;
+    const tempMessage = {
+      id: tempId,
+      chat_Id: chatId,
+      sender_Id: currentUserId,
+      sender_name: user?.email?.split('@')[0] || 'You',
+      sender_image: null,
+      message_Type: "attachment",
+      message_type: "attachment",
+      content: JSON.stringify({
+        url: null,
+        name: attachmentToSend.name || 'Attachment',
+        type: attachmentToSend.type || 'file',
+        path: null,
+      }),
+      created_at: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      isPending: true,
+    };
+
+    // Add pending message to the list immediately
+    setMessages((prev) => [...prev, tempMessage]);
+    setPendingMessages((prev) => ({
+      ...prev,
+      [tempId]: { 
+        content: JSON.stringify({
+          name: attachmentToSend.name || 'Attachment',
+          type: attachmentToSend.type || 'file',
+        }), 
+        type: 'attachment', 
+        timestamp: new Date().toISOString() 
+      },
+    }));
+
+    // Scroll to bottom to show the pending message
+    setTimeout(() => {
+      if (flatListRef.current) {
+        flatListRef.current.scrollToEnd({ animated: true });
+      }
+    }, 100);
+
     try {
       const attachmentData = await uploadAttachmentFile(attachmentToSend);
       if (!attachmentData || !attachmentData.url) {
+        // Remove pending message on error
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        setPendingMessages((prev) => {
+          const updated = { ...prev };
+          delete updated[tempId];
+          return updated;
+        });
         setAttachment(attachmentToSend);
         setIsUploading(false);
         return;
@@ -1177,11 +1259,25 @@ const chatDetail = () => {
         .single();
 
       if (messageError) {
+        // Remove pending message on error
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        setPendingMessages((prev) => {
+          const updated = { ...prev };
+          delete updated[tempId];
+          return updated;
+        });
         Alert.alert('Error', 'Failed to send attachment');
         setAttachment(attachmentToSend);
         setIsUploading(false);
         return;
       }
+
+      // Remove pending message when real message arrives (will be handled by realtime subscription)
+      setPendingMessages((prev) => {
+        const updated = { ...prev };
+        delete updated[tempId];
+        return updated;
+      });
 
       const messageCreatedAt = insertedMessage?.created_at || new Date().toISOString();
       const lastReadTime = new Date(new Date(messageCreatedAt).getTime() + 1000).toISOString();
@@ -1229,14 +1325,21 @@ const chatDetail = () => {
     }
 
     try {
+      // Check duration first (more reliable than file size)
+      if (durationSeconds > 40) {
+        Alert.alert('Error', 'Voice message is too long. Maximum duration is 40 seconds.');
+        return null;
+      }
+
       const fileInfo = await FileSystem.getInfoAsync(voiceUri);
       if (!fileInfo.exists) {
         Alert.alert('Error', 'Voice file no longer exists');
         return null;
       }
 
-      if (fileInfo.size && fileInfo.size > 500 * 1024) {
-        Alert.alert('Error', 'Voice message is too large. Maximum size is 500KB (1 minute)');
+      // File size check as secondary validation (increased limit for 40 seconds)
+      if (fileInfo.size && fileInfo.size > 600 * 1024) {
+        Alert.alert('Error', 'Voice message is too large. Maximum size is 600KB (40 seconds)');
         return null;
       }
 
@@ -1292,9 +1395,52 @@ const chatDetail = () => {
 
     setIsUploading(true);
 
+    // Create a temporary message ID for the pending message
+    const tempId = `pending-${Date.now()}-${Math.random()}`;
+    const tempMessage = {
+      id: tempId,
+      chat_Id: chatId,
+      sender_Id: currentUserId,
+      sender_name: user?.email?.split('@')[0] || 'You',
+      sender_image: null,
+      message_Type: "voice",
+      message_type: "voice",
+      content: '',
+      duration: `${durationSeconds}`,
+      created_at: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      isPending: true,
+    };
+
+    // Add pending message to the list immediately
+    setMessages((prev) => [...prev, tempMessage]);
+    setPendingMessages((prev) => ({
+      ...prev,
+      [tempId]: { 
+        content: '', 
+        type: 'voice', 
+        duration: durationSeconds,
+        timestamp: new Date().toISOString() 
+      },
+    }));
+
+    // Scroll to bottom to show the pending message
+    setTimeout(() => {
+      if (flatListRef.current) {
+        flatListRef.current.scrollToEnd({ animated: true });
+      }
+    }, 100);
+
     try {
       const voiceData = await uploadVoiceFile(voiceUri, durationSeconds);
       if (!voiceData || !voiceData.url) {
+        // Remove pending message on error
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        setPendingMessages((prev) => {
+          const updated = { ...prev };
+          delete updated[tempId];
+          return updated;
+        });
         setIsUploading(false);
         return;
       }
@@ -1312,10 +1458,24 @@ const chatDetail = () => {
         .single();
 
       if (messageError) {
+        // Remove pending message on error
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        setPendingMessages((prev) => {
+          const updated = { ...prev };
+          delete updated[tempId];
+          return updated;
+        });
         Alert.alert('Error', 'Failed to send voice message');
         setIsUploading(false);
         return;
       }
+
+      // Remove pending message when real message arrives (will be handled by realtime subscription)
+      setPendingMessages((prev) => {
+        const updated = { ...prev };
+        delete updated[tempId];
+        return updated;
+      });
 
       const messageCreatedAt = insertedMessage?.created_at || new Date().toISOString();
       const lastReadTime = new Date(new Date(messageCreatedAt).getTime() + 1000).toISOString();
@@ -1403,6 +1563,14 @@ const chatDetail = () => {
       const status = recordingRef.current.getStatus();
       const durationInSeconds = status.durationMillis ? Math.floor(status.durationMillis / 1000) : recordingDuration;
 
+      // Check duration first (more reliable than file size)
+      if (durationInSeconds > 40) {
+        Alert.alert('Error', 'Voice message is too long. Maximum duration is 40 seconds.');
+        setRecordingDuration(0);
+        recordingRef.current = null;
+        return;
+      }
+
       const fileInfo = await FileSystem.getInfoAsync(uri);
       if (!fileInfo.exists) {
         Alert.alert('Error', 'Voice file does not exist');
@@ -1411,8 +1579,9 @@ const chatDetail = () => {
         return;
       }
 
-      if (fileInfo.size && fileInfo.size > 500 * 1024) {
-        Alert.alert('Error', 'Voice message is too large. Maximum size is 500KB (1 minute)');
+      // File size check as secondary validation (increased limit for 40 seconds)
+      if (fileInfo.size && fileInfo.size > 600 * 1024) {
+        Alert.alert('Error', 'Voice message is too large. Maximum size is 600KB (40 seconds)');
         setRecordingDuration(0);
         recordingRef.current = null;
         return;

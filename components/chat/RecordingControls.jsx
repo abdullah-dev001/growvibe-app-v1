@@ -7,14 +7,32 @@ const RecordingControls = ({
   onCancel, 
   onStop 
 }) => {
+  const MAX_DURATION = 40; // 40 second limit
+  const WARNING_THRESHOLD = 30; // Show warning at 30 seconds
+  const remainingSeconds = MAX_DURATION - recordingDuration;
+  const isWarning = recordingDuration >= WARNING_THRESHOLD;
+  const isCritical = recordingDuration >= 35;
+  const isAtLimit = recordingDuration >= MAX_DURATION;
+
   const formatDuration = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Auto-stop at limit
+  React.useEffect(() => {
+    if (isAtLimit && onStop) {
+      onStop();
+    }
+  }, [isAtLimit, onStop]);
+
   return (
-    <View style={styles.recordingContainer}>
+    <View style={[
+      styles.recordingContainer,
+      isWarning && styles.recordingContainerWarning,
+      isCritical && styles.recordingContainerCritical
+    ]}>
       <TouchableOpacity
         style={styles.cancelRecordingButton}
         onPress={onCancel}
@@ -24,14 +42,37 @@ const RecordingControls = ({
       </TouchableOpacity>
       <View style={styles.recordingInfo}>
         <View style={styles.recordingIndicator}>
-          <View style={styles.recordingDot} />
-          <Text style={styles.recordingText}>
+          <View style={[
+            styles.recordingDot,
+            isWarning && styles.recordingDotWarning,
+            isCritical && styles.recordingDotCritical
+          ]} />
+          <Text style={[
+            styles.recordingText,
+            isWarning && styles.recordingTextWarning,
+            isCritical && styles.recordingTextCritical
+          ]}>
             Recording {formatDuration(recordingDuration)}
           </Text>
         </View>
+        {isWarning && (
+          <Text style={[
+            styles.warningText,
+            isCritical && styles.warningTextCritical
+          ]}>
+            {isAtLimit 
+              ? 'Time limit reached!' 
+              : `Only ${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''} left`
+            }
+          </Text>
+        )}
       </View>
       <TouchableOpacity
-        style={styles.stopRecordingButton}
+        style={[
+          styles.stopRecordingButton,
+          isWarning && styles.stopRecordingButtonWarning,
+          isCritical && styles.stopRecordingButtonCritical
+        ]}
         onPress={onStop}
         activeOpacity={0.7}
       >
@@ -50,6 +91,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     minHeight: 44,
+  },
+  recordingContainerWarning: {
+    backgroundColor: '#FEF3C7',
+  },
+  recordingContainerCritical: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 2,
+    borderColor: '#EF4444',
   },
   cancelRecordingButton: {
     width: 32,
@@ -80,10 +129,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
     marginRight: 8,
   },
+  recordingDotWarning: {
+    backgroundColor: '#F59E0B',
+  },
+  recordingDotCritical: {
+    backgroundColor: '#DC2626',
+  },
   recordingText: {
     fontSize: hp(1.4),
     fontFamily: 'Poppins-Medium',
     color: '#991B1B',
+  },
+  recordingTextWarning: {
+    color: '#92400E',
+  },
+  recordingTextCritical: {
+    color: '#991B1B',
+    fontWeight: '600',
+  },
+  warningText: {
+    fontSize: hp(1.2),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#92400E',
+    marginTop: 2,
+  },
+  warningTextCritical: {
+    color: '#991B1B',
+    fontWeight: '700',
   },
   stopRecordingButton: {
     width: 40,
@@ -93,6 +165,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
+  },
+  stopRecordingButtonWarning: {
+    backgroundColor: '#F59E0B',
+  },
+  stopRecordingButtonCritical: {
+    backgroundColor: '#DC2626',
   },
   stopIcon: {
     width: 16,

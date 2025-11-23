@@ -73,6 +73,7 @@ const MessageItem = ({
             setVoiceData={setVoiceData}
             voiceProgress={voiceProgress}
             handlePlayVoice={handlePlayVoice}
+            isPending={item.isPending}
           />
         ) : messageType === 'attachment' ? (
           <AttachmentMessage
@@ -83,6 +84,7 @@ const MessageItem = ({
             downloadingAttachments={downloadingAttachments}
             handleDownloadAttachment={handleDownloadAttachment}
             onImagePress={onImagePress}
+            isPending={item.isPending}
           />
         ) : (
           <TextMessage messageContent={messageContent} isMe={isMe} />

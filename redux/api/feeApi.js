@@ -66,17 +66,17 @@ export const feeApi = createApi({
               // Get student's auth_Id from student_profile table
               const { data: studentData, error: studentError } = await supabase
                 .from("student_profile")
-                .select("auth_User_Id")
+                .select("auth_Id")
                 .eq("id", feeData.student_Id)
                 .maybeSingle();
 
-              if (!studentError && studentData?.auth_User_Id) {
+              if (!studentError && studentData?.auth_Id) {
                 const statusText = feeData.fee_Status ? feeData.fee_Status.charAt(0).toUpperCase() + feeData.fee_Status.slice(1) : "Pending";
                 const notificationTitle = "New Fee Added";
                 const notificationBody = `A new fee of ${feeData.fee.toLocaleString("en-US")} for ${feeData.month} (${statusText}) has been added to your account.`;
                 
                 await sendPushNotificationToUser(
-                  studentData.auth_User_Id,
+                  studentData.auth_Id,
                   notificationTitle,
                   notificationBody,
                   {

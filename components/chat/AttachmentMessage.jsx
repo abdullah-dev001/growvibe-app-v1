@@ -11,10 +11,48 @@ const AttachmentMessage = ({
   isMe, 
   downloadingAttachments,
   handleDownloadAttachment,
-  onImagePress
+  onImagePress,
+  isPending = false
 }) => {
+  // Check if it's an image attachment
+  let isImageAttachment = false;
   if (attachmentInfo?.type?.startsWith('image/')) {
-    const imageUrl = attachmentInfo.displayUrl || attachmentInfo.url;
+    isImageAttachment = true;
+  } else if (messageContent) {
+    try {
+      const parsed = JSON.parse(messageContent);
+      if (parsed?.type?.startsWith('image/')) {
+        isImageAttachment = true;
+      }
+    } catch {
+      // Not JSON, ignore
+    }
+  }
+
+  if (isImageAttachment) {
+    const imageUrl = attachmentInfo?.displayUrl || attachmentInfo?.url;
+    
+    // Show loading state for pending image messages
+    if (isPending || !imageUrl) {
+      return (
+        <View style={styles.attachmentMessageContainer}>
+          <View style={[styles.attachmentImagePreview, { backgroundColor: isMe ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
+            <ActivityIndicator size="small" color={isMe ? '#FFFFFF' : '#1CACF3'} />
+          </View>
+          <View style={styles.attachmentImageInfo}>
+            <Text
+              style={[
+                styles.attachmentFileName,
+                { color: isMe ? '#FFFFFF' : '#111827', opacity: 0.7 },
+              ]}
+              numberOfLines={1}
+            >
+              Sending image...
+            </Text>
+          </View>
+        </View>
+      );
+    }
     
     return (
       <View style={styles.attachmentMessageContainer}>
@@ -79,10 +117,25 @@ const AttachmentMessage = ({
   const fileNameColor = isMe ? '#FFFFFF' : '#111827';
   const downloadTextColor = isMe ? '#FFFFFF' : '#1CACF3';
 
+  // Parse message content if attachmentInfo is not available (for pending messages)
+  let attachmentName = attachmentInfo?.name;
+  if (!attachmentName && messageContent) {
+    try {
+      const parsed = JSON.parse(messageContent);
+      attachmentName = parsed.name || 'Attachment';
+    } catch {
+      attachmentName = 'Attachment';
+    }
+  }
+
   return (
     <View style={styles.attachmentFileContainer}>
       <View style={[styles.attachmentIcon, { backgroundColor: iconBg }]}>
-        <Attachment size={hp(2.2)} color={iconColor} strokeWidth={2} />
+        {isPending ? (
+          <ActivityIndicator size="small" color={iconColor} />
+        ) : (
+          <Attachment size={hp(2.2)} color={iconColor} strokeWidth={2} />
+        )}
       </View>
       <View style={styles.attachmentInfo}>
         <Text
@@ -92,26 +145,32 @@ const AttachmentMessage = ({
           ]}
           numberOfLines={1}
         >
-          {attachmentInfo?.name || messageContent || 'Attachment'}
+          {attachmentName || 'Attachment'}
         </Text>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => {
-            if (attachmentInfo?.url) {
-              handleDownloadAttachment(
-                messageId,
-                attachmentInfo.url,
-                attachmentInfo.type,
-                attachmentInfo.name
-              );
-            }
-          }}
-          disabled={downloadingAttachments[messageId]}
-        >
-          <Text style={[styles.attachmentDownloadText, { color: downloadTextColor }]}>
-            {downloadingAttachments[messageId] ? 'Downloading...' : 'Download'}
+        {isPending ? (
+          <Text style={[styles.attachmentDownloadText, { color: downloadTextColor, opacity: 0.7 }]}>
+            Sending...
           </Text>
-        </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              if (attachmentInfo?.url) {
+                handleDownloadAttachment(
+                  messageId,
+                  attachmentInfo.url,
+                  attachmentInfo.type,
+                  attachmentInfo.name
+                );
+              }
+            }}
+            disabled={downloadingAttachments[messageId]}
+          >
+            <Text style={[styles.attachmentDownloadText, { color: downloadTextColor }]}>
+              {downloadingAttachments[messageId] ? 'Downloading...' : 'Download'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

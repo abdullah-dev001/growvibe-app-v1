@@ -6,15 +6,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import Pen from '../../assets/icons/Pen';
@@ -1606,6 +1606,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1CACF3',
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: hp(5),
   },
   addSelectedButtonText: {
     fontSize: hp(1.5),

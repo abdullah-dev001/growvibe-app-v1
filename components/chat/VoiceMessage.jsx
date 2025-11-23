@@ -12,7 +12,8 @@ const VoiceMessage = ({
   voiceData, 
   setVoiceData,
   voiceProgress,
-  handlePlayVoice 
+  handlePlayVoice,
+  isPending = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const animatedValues = useRef(
@@ -133,6 +134,27 @@ const VoiceMessage = ({
   const waveformColor = isMe ? '#FFFFFF' : '#1CACF3';
   const durationColor = isMe ? '#FFFFFF' : '#111827';
   const separatorColor = isMe ? '#FFFFFF' : '#6B7280';
+
+  // Show loading state for pending messages
+  if (isPending) {
+    return (
+      <View style={styles.voiceMessageContainer}>
+        <View style={[styles.voicePlayButton, { backgroundColor: playButtonBg }]}>
+          <ActivityIndicator size="small" color={iconColor} />
+        </View>
+        <View style={styles.voiceMessageInfo}>
+          <Text style={[styles.voiceDuration, { color: durationColor, opacity: 0.7 }]}>
+            Sending voice message...
+          </Text>
+          {duration && (
+            <Text style={[styles.voiceDuration, { color: durationColor, opacity: 0.7, fontSize: hp(1.2) }]}>
+              {formatVoiceDuration(duration)}
+            </Text>
+          )}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.voiceMessageContainer}>

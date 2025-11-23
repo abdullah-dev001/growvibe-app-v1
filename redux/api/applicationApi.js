@@ -218,8 +218,20 @@ export const applicationApi = createApi({
       ],
     }),
     updateApplicationStatus: builder.mutation({
-      async queryFn({ id, status }) {
+      async queryFn({ id, status, updatedBy }) {
         try {
+          // First, fetch the current application to get creator info
+          const { data: currentApp, error: fetchError } = await supabase
+            .from("application")
+            .select("created_By, title, status")
+            .eq("id", id)
+            .single();
+
+          if (fetchError) {
+            return { error: { status: "CUSTOM_ERROR", data: fetchError } };
+          }
+
+          // Update the application status
           const { data, error } = await supabase
             .from("application")
             .update({ status })
@@ -229,12 +241,51 @@ export const applicationApi = createApi({
           if (error) {
             return { error: { status: "CUSTOM_ERROR", data: error } };
           }
+
+          // Send push notification to creator when status is changed by assignee
+          if (data && data[0] && currentApp?.created_By && updatedBy && currentApp.created_By !== updatedBy) {
+            try {
+              // Get assignee's name (the one who updated the status)
+              const assigneeName = await getUserFullName(updatedBy);
+              
+              // Get status text for notification
+              const statusText = status ? status.charAt(0).toUpperCase() + status.slice(1) : "Updated";
+              const applicationTitle = currentApp.title || "your application";
+              
+              const notificationTitle = "Application Status Updated";
+              const notificationBody = `${assigneeName} has updated the status of application "${applicationTitle}" to ${statusText}.`;
+              
+              await sendPushNotificationToUser(
+                currentApp.created_By,
+                notificationTitle,
+                notificationBody,
+                {
+                  type: "application_status_update",
+                  applicationId: id,
+                  status: status,
+                  updatedBy: updatedBy,
+                  title: applicationTitle,
+                }
+              );
+            } catch (notificationError) {
+              // Log error but don't fail the status update
+              console.log("Error sending push notification:", notificationError);
+            }
+          }
+
           return { data };
         } catch (err) {
           return { error: { status: "CUSTOM_ERROR", data: err } };
         }
       },
-      invalidatesTags: [{ type: "Applications", id: "LIST" }],
+      invalidatesTags: (result, error, arg) => {
+        // Invalidate all application-related tags to ensure fresh data
+        // This ensures all queries get fresh data after status update
+        return [
+          { type: "Applications", id: "LIST" },
+          { type: "Applications", id: arg?.id }, // Invalidate specific application
+        ];
+      },
     }),
   }),
 });

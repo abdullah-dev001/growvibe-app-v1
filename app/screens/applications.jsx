@@ -220,8 +220,33 @@ const applications = () => {
 
   const handleStatusChange = async (application, newStatus) => {
     try {
-      await updateStatus({ id: application.id, status: newStatus }).unwrap();
+      // Optimistically update local state for immediate UI feedback
+      setApplicationsList((prev) =>
+        prev.map((app) =>
+          app.id === application.id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      await updateStatus({ 
+        id: application.id, 
+        status: newStatus,
+        updatedBy: authId // Pass the current user ID who is updating the status
+      }).unwrap();
+      
+      // Refresh the local list with fresh data from server
+      setOffset(0);
+      setHasMore(true);
+      await loadPage(0, true);
+      
+      // Also refetch the initial query to ensure cache is updated
+      await refetch();
     } catch (e) {
+      // Revert optimistic update on error
+      setApplicationsList((prev) =>
+        prev.map((app) =>
+          app.id === application.id ? { ...app, status: application.status } : app
+        )
+      );
       Alert.alert("Error", e?.data?.message || e?.message || "Failed to update status");
     }
   };

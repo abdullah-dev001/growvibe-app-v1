@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Send from '../../assets/icons/Send';
 import { hp } from '../../helpers/common';
 
 const AttachmentPreview = ({ attachment, isUploading, onRemove, onSend }) => {
@@ -39,7 +40,7 @@ const AttachmentPreview = ({ attachment, isUploading, onRemove, onSend }) => {
         {isUploading ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <Text style={styles.sendIcon}>→</Text>
+          <Send size={hp(2)} color="#FFFFFF" strokeWidth={2} />
         )}
       </TouchableOpacity>
     </View>

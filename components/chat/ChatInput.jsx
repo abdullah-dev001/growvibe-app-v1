@@ -73,6 +73,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     minHeight: 44,
     maxHeight: 100,
+    marginBottom: hp(2),
   },
   attachmentButton: {
     width: 36,

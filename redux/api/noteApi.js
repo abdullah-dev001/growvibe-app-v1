@@ -76,13 +76,13 @@ export const noteApi = createApi({
                             // Get teachers
                             const { data: teachers } = await supabase
                                 .from("teacher_profile")
-                                .select("auth_User_Id")
+                                .select("auth_Id")
                                 .eq("branch_Id", noteData.branch_Id);
 
                             if (teachers) {
                                 teachers.forEach(t => {
-                                    if (t.auth_User_Id && t.auth_User_Id !== noteData.created_By) {
-                                        allUserIds.push(t.auth_User_Id);
+                                    if (t.auth_Id && t.auth_Id !== noteData.created_By) {
+                                        allUserIds.push(t.auth_Id);
                                     }
                                 });
                             }
@@ -90,13 +90,13 @@ export const noteApi = createApi({
                             // Get students
                             const { data: students } = await supabase
                                 .from("student_profile")
-                                .select("auth_User_Id")
+                                .select("auth_Id")
                                 .eq("branch_Id", noteData.branch_Id);
 
                             if (students) {
                                 students.forEach(s => {
-                                    if (s.auth_User_Id && s.auth_User_Id !== noteData.created_By) {
-                                        allUserIds.push(s.auth_User_Id);
+                                    if (s.auth_Id && s.auth_Id !== noteData.created_By) {
+                                        allUserIds.push(s.auth_Id);
                                     }
                                 });
                             }
@@ -120,14 +120,14 @@ export const noteApi = createApi({
                             // Get all students in the class
                             const { data: students } = await supabase
                                 .from("student_profile")
-                                .select("auth_User_Id")
+                                .select("auth_Id")
                                 .eq("class_Id", noteData.specific_Class)
                                 .eq("branch_Id", noteData.branch_Id);
 
                             if (students) {
                                 students.forEach(s => {
-                                    if (s.auth_User_Id && s.auth_User_Id !== noteData.created_By) {
-                                        classUserIds.push(s.auth_User_Id);
+                                    if (s.auth_Id && s.auth_Id !== noteData.created_By) {
+                                        classUserIds.push(s.auth_Id);
                                     }
                                 });
                             }

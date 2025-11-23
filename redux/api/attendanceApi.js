@@ -1,6 +1,6 @@
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
 import { getUserFullName } from "../../helpers/getUserFullName";
-import { sendPushNotificationToUsers } from "../../helpers/sendPushNotification";
+import { sendPushNotificationToUser } from "../../helpers/sendPushNotification";
 import { supabase } from "../../supabaseClient";
 
 export const attendanceApi = createApi({
@@ -26,15 +26,17 @@ export const attendanceApi = createApi({
               const markedBy = attendanceData.marked_By || attendanceData.created_By;
               const creatorName = await getUserFullName(markedBy);
               const notificationTitle = "Attendance Marked";
-              let notificationBody = "";
-              let userIds = [];
+              
+              // Create a map of user IDs to their attendance status
+              const userStatusMap = {};
+              attendanceData.users.forEach(u => {
+                if (u.user_Id && u.user_Id !== markedBy) {
+                  userStatusMap[u.user_Id] = u.status || 'present';
+                }
+              });
 
-              // Get user IDs from the attendance data (users array contains user_Id)
-              const userAuthIds = attendanceData.users
-                .map(u => u.user_Id)
-                .filter(id => id && id !== markedBy);
-
-              userIds = [...new Set(userAuthIds)];
+              let userIds = Object.keys(userStatusMap);
+              let classInchargeId = null;
 
               // If attendance is for a class (students), also notify class incharge
               if (attendanceData.class_Id && attendanceData.branch_Id) {
@@ -45,33 +47,56 @@ export const attendanceApi = createApi({
                   .maybeSingle();
 
                 if (classData?.incharge_Id && classData.incharge_Id !== markedBy) {
-                  userIds.push(classData.incharge_Id);
+                  classInchargeId = classData.incharge_Id;
+                  userIds.push(classInchargeId);
                 }
-
-                notificationBody = `${creatorName} has marked attendance for ${attendanceData.date || 'today'}.`;
-              } else if (attendanceData.branch_Id && attendanceData.users[0]?.role) {
-                // For teachers/branch-based attendance
-                const role = attendanceData.users[0].role;
-                notificationBody = `${creatorName} has marked ${role} attendance for ${attendanceData.date || 'today'}.`;
-              } else {
-                notificationBody = `${creatorName} has marked your attendance for ${attendanceData.date || 'today'}.`;
               }
 
-              // Send notifications
+              // Send individual notifications to each user with their specific status
               if (userIds.length > 0) {
-                await sendPushNotificationToUsers(
-                  [...new Set(userIds)],
-                  notificationTitle,
-                  notificationBody,
-                  {
-                    type: "attendance",
-                    date: attendanceData.date,
-                    branchId: attendanceData.branch_Id,
-                    classId: attendanceData.class_Id,
-                    role: attendanceData.users[0]?.role,
-                    markedBy: markedBy,
+                const notifications = userIds.map(userId => {
+                  const status = userStatusMap[userId];
+                  const statusText = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Present';
+                  const isIncharge = userId === classInchargeId;
+                  
+                  let notificationBody = "";
+                  if (isIncharge) {
+                    // Class incharge gets a different message (no status)
+                    notificationBody = `${creatorName} has marked attendance for ${attendanceData.date || 'today'}.`;
+                  } else {
+                    // Users get their specific status
+                    notificationBody = `${creatorName} has marked you as ${statusText} for ${attendanceData.date || 'today'}.`;
                   }
-                );
+
+                  return {
+                    userId,
+                    title: notificationTitle,
+                    body: notificationBody,
+                    data: {
+                      type: "attendance",
+                      date: attendanceData.date,
+                      branchId: attendanceData.branch_Id,
+                      classId: attendanceData.class_Id,
+                      role: attendanceData.users[0]?.role,
+                      markedBy: markedBy,
+                      status: status || null, // Include status in data payload (null for incharge)
+                    }
+                  };
+                });
+
+                // Send notifications individually to include status for each user
+                for (const notification of notifications) {
+                  try {
+                    await sendPushNotificationToUser(
+                      notification.userId,
+                      notification.title,
+                      notification.body,
+                      notification.data
+                    );
+                  } catch (err) {
+                    console.log(`Error sending notification to user ${notification.userId}:`, err);
+                  }
+                }
               }
             } catch (notificationError) {
               console.log("Error sending push notification:", notificationError);

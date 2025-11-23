@@ -37,6 +37,9 @@ export async function sendPushNotificationToUser(userId, title, body, data = {})
       data: {
         ...data,
         type: data.type || 'general',
+        userId: userId, // Include user ID for filtering
+        user_Id: userId, // Include both formats for compatibility
+        recipientId: userId, // Additional format for compatibility
       },
     };
 
@@ -85,16 +88,22 @@ export async function sendPushNotificationToUsers(userIds, title, body, data = {
       return 0;
     }
 
-    // Get push tokens for all users
+    // Get push tokens for all users (include user_Id for filtering)
     const { data: pushTokenData, error: tokenError } = await supabase
       .from('push_token')
-      .select('token')
+      .select('token, user_Id')
       .in('user_Id', userIds);
 
     if (tokenError || !pushTokenData || pushTokenData.length === 0) {
       console.log('No push tokens found for users');
       return 0;
     }
+
+    // Create a map of tokens to user IDs for proper filtering
+    const tokenToUserIdMap = {};
+    pushTokenData.forEach(item => {
+      tokenToUserIdMap[item.token] = item.user_Id;
+    });
 
     const tokens = pushTokenData.map((item) => item.token);
 
@@ -104,16 +113,22 @@ export async function sendPushNotificationToUsers(userIds, title, body, data = {
 
     for (let i = 0; i < tokens.length; i += chunkSize) {
       const chunk = tokens.slice(i, i + chunkSize);
-      const messages = chunk.map((token) => ({
-        to: token,
-        sound: 'default',
-        title,
-        body,
-        data: {
-          ...data,
-          type: data.type || 'general',
-        },
-      }));
+      const messages = chunk.map((token) => {
+        const tokenUserId = tokenToUserIdMap[token];
+        return {
+          to: token,
+          sound: 'default',
+          title,
+          body,
+          data: {
+            ...data,
+            type: data.type || 'general',
+            userId: tokenUserId, // Include user ID for filtering
+            user_Id: tokenUserId, // Include both formats for compatibility
+            recipientId: tokenUserId, // Additional format for compatibility
+          },
+        };
+      });
 
       const response = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
