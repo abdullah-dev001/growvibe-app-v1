@@ -2,14 +2,14 @@ import { useRouter } from "expo-router";
 import { Formik } from "formik";
 import React, { useMemo, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSelector } from "react-redux";
 import * as Yup from "yup";
@@ -392,7 +392,7 @@ const addTask = () => {
                   ]}
                   numberOfLines={1}
                 >
-                  {cls.class_Name}
+                  {cls.class_Name + " - " + cls?.section}
                 </Text>
               </TouchableOpacity>
             ))}
