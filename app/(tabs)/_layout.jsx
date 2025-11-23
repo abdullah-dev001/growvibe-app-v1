@@ -233,8 +233,8 @@ export default function TabLayout() {
               cachePolicy={"disk"}
               contentFit="cover"
               style={{ 
-                width: hp(11), 
-                height: hp(11), 
+                width: hp(10), 
+                height: hp(10), 
                 // borderRadius: hp(4.5),
               }}
               source={require("../../assets/screens-assets/growvibe-light.png")}

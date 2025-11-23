@@ -117,14 +117,21 @@ export const schoolApi = createApi({
         }),
         updateSchool: builder.mutation({
             async queryFn(school) {
+                const updateData = {
+                    school_Name: school.school_Name,
+                    school_Address: school.school_Address,
+                    school_Contact: school.school_Contact,
+                    school_Status: school.school_Status,
+                };
+
+                // Include logo if provided
+                if (school.school_Logo !== undefined) {
+                    updateData.school_Logo = school.school_Logo;
+                }
+
                 const { data, error } = await supabase
                     .from("school")
-                    .update({
-                        school_Name: school.school_Name,
-                        school_Address: school.school_Address,
-                        school_Contact: school.school_Contact,
-                        school_Status: school.school_Status,
-                    })
+                    .update(updateData)
                     .eq("id", school.id)
                     .select();
 
