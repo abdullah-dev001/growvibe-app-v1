@@ -5,11 +5,45 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp } from '../../helpers/common';
 import { supabase } from '../../supabaseClient';
 
+// Error Boundary-like wrapper for React Native
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ProfileLayout Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <ScreenWrapper>
+          <View style={styles.center}>
+            <Text style={styles.errorTitle}>Unable to display profile</Text>
+            <Text style={styles.errorSubtitle}>
+              {this.state.error?.message || 'An error occurred while loading the profile. Please try again.'}
+            </Text>
+          </View>
+        </ScreenWrapper>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const AdminProfile = () => {
   const [adminId, setAdminId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasError, setHasError] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,8 +70,17 @@ const AdminProfile = () => {
           setAdminId(null);
           setHasError(true);
         } else if (data?.auth_Id) {
-          setAdminId(data.auth_Id);
-          setHasError(false);
+          // Validate the auth_Id before setting
+          if (typeof data.auth_Id === 'string' && data.auth_Id.trim().length > 0) {
+            setAdminId(data.auth_Id);
+            setHasError(false);
+            // Add a small delay to ensure state is ready
+            setTimeout(() => setIsReady(true), 100);
+          } else {
+            setError('Invalid admin profile ID.');
+            setAdminId(null);
+            setHasError(true);
+          }
         } else {
           setError('Admin profile not found.');
           setAdminId(null);
@@ -96,21 +139,50 @@ const AdminProfile = () => {
     );
   }
 
-  try {
-    return (
-      <ProfileLayout
-        profileUserId={adminId}
-        profileRole="admin"
-        readOnly
-      />
-    );
-  } catch (renderError) {
-    console.log('Error rendering ProfileLayout:', renderError);
+  // Safety check before rendering ProfileLayout
+  if (!adminId || typeof adminId !== 'string' || !adminId.trim()) {
     return (
       <ScreenWrapper>
         <View style={styles.center}>
           <Text style={styles.errorTitle}>Unable to display profile</Text>
-          <Text style={styles.errorSubtitle}>An error occurred while loading the profile. Please try again.</Text>
+          <Text style={styles.errorSubtitle}>Invalid admin profile data. Please try again.</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  // Wait until ready to prevent race conditions
+  if (!isReady) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#1CACF3" />
+          <Text style={styles.statusText}>Preparing profile...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  // Wrap ProfileLayout in ErrorBoundary to catch any rendering errors
+  try {
+    return (
+      <ErrorBoundary>
+        <ProfileLayout
+          profileUserId={adminId}
+          profileRole="admin"
+          readOnly
+        />
+      </ErrorBoundary>
+    );
+  } catch (error) {
+    console.error('AdminProfile: Error rendering ProfileLayout:', error);
+    return (
+      <ScreenWrapper>
+        <View style={styles.center}>
+          <Text style={styles.errorTitle}>Unable to display profile</Text>
+          <Text style={styles.errorSubtitle}>
+            {error?.message || 'An error occurred. Please try again.'}
+          </Text>
         </View>
       </ScreenWrapper>
     );

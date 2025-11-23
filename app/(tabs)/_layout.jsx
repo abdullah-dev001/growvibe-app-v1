@@ -195,9 +195,17 @@ export default function TabLayout() {
         <Pressable
           onPress={() => {
             try {
-              router.push('/screens/adminProfile');
+              // Navigate to admin profile screen
+              router.push({
+                pathname: '/screens/adminProfile',
+              });
             } catch (error) {
-              console.log('Error navigating to admin profile:', error);
+              console.error('Error navigating to admin profile:', error);
+              Alert.alert(
+                'Navigation Error',
+                'Unable to open admin profile. Please try again.',
+                [{ text: 'OK' }]
+              );
             }
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

@@ -41,15 +41,21 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
     data: profile, 
     isLoading: isLoadingProfile,
     error: profileError,
-    isError: isProfileError
+    isError: isProfileError,
+    isFetching: isFetchingProfile
   } = useGetProfileByRoleQuery(
     { userId: effectiveUserId, role: effectiveRole },
-    { skip: !effectiveUserId || !effectiveRole }
+    { 
+      skip: !effectiveUserId || !effectiveRole,
+      // Add refetchOnMountOrArgChange to prevent unnecessary refetches
+      refetchOnMountOrArgChange: false
+    }
   );
 
   // State for signed URLs
   const [bannerImageSignedUrl, setBannerImageSignedUrl] = useState(null);
   const [userImageSignedUrl, setUserImageSignedUrl] = useState(null);
+
 
   // Default placeholder images
   const defaultBannerImage = "https://images.unsplash.com/photo-1697886720515-a50d1cff4c2f?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170";
@@ -143,14 +149,30 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
         }
       } catch (err) {
         if (isMounted) {
-          console.log('Error in generateSignedUrls:', err);
-          setBannerImageSignedUrl(null);
-          setUserImageSignedUrl(null);
+          console.error('Error in generateSignedUrls:', err);
+          // Don't crash the app, just set URLs to null
+          try {
+            setBannerImageSignedUrl(null);
+            setUserImageSignedUrl(null);
+          } catch (setStateError) {
+            console.error('Error setting state in generateSignedUrls:', setStateError);
+          }
         }
       }
     };
 
-    generateSignedUrls();
+    // Wrap in try-catch to prevent unhandled promise rejections
+    try {
+      generateSignedUrls().catch((err) => {
+        console.error('Unhandled error in generateSignedUrls promise:', err);
+        if (isMounted) {
+          setBannerImageSignedUrl(null);
+          setUserImageSignedUrl(null);
+        }
+      });
+    } catch (err) {
+      console.error('Error calling generateSignedUrls:', err);
+    }
 
     return () => {
       isMounted = false;
@@ -158,8 +180,21 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
   }, [profile]);
 
   // Process profile data with safe null checks
-  const emailSource = profile?.contact_Email || profile?.email || user?.email || null;
-  const derivedUsername = profile?.username || (emailSource ? emailSource.split("@")[0] : "user");
+  let emailSource = null;
+  let derivedUsername = "user";
+  
+  try {
+    emailSource = profile?.contact_Email || profile?.email || user?.email || null;
+    if (profile?.username) {
+      derivedUsername = profile.username;
+    } else if (emailSource && typeof emailSource === 'string' && emailSource.includes('@')) {
+      derivedUsername = emailSource.split("@")[0];
+    }
+  } catch (e) {
+    console.error('Error processing email/username:', e);
+    emailSource = null;
+    derivedUsername = "user";
+  }
   
   // Safe string splitting helper
   const safeSplit = (str, delimiter = ",") => {
@@ -171,37 +206,64 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
     }
   };
 
-  const userProfile = profile ? {
-    fullName: profile.full_Name || "N/A",
-    username: derivedUsername,
-    role: profile.role || effectiveRole || "user",
-    about: profile.about || "No description available.",
-    bannerImage: bannerImageSignedUrl || defaultBannerImage,
-    userImage: userImageSignedUrl || null,
-    email: profile.contact_Email || "N/A",
-    phone: profile.phone || "N/A",
-    dateOfBirth: profile.date_Of_Birth || null,
-    languages: safeSplit(profile.language),
-    location: profile.location || "N/A",
-    instaUrl: profile.instagram_Url || null,
-    fbUrl: profile.facebook_Url || null,
-    interest: safeSplit(profile.interest),
-  } : {
-    fullName: isLoadingProfile ? "Loading..." : "N/A",
-    username: derivedUsername || "user",
-    role: effectiveRole || "user",
-    about: isLoadingProfile ? "Loading profile..." : "No description available.",
-    bannerImage: defaultBannerImage,
-    userImage: null,
-    email: user?.email || "N/A",
-    phone: "N/A",
-    dateOfBirth: null,
-    languages: [],
-    location: "N/A",
-    instaUrl: null,
-    fbUrl: null,
-    interest: [],
-  };
+  // Safely create userProfile object with extensive error handling
+  let userProfile;
+  try {
+    if (profile) {
+      userProfile = {
+        fullName: profile?.full_Name || "N/A",
+        username: derivedUsername || "user",
+        role: profile?.role || effectiveRole || "user",
+        about: profile?.about || "No description available.",
+        bannerImage: bannerImageSignedUrl || defaultBannerImage,
+        userImage: userImageSignedUrl || null,
+        email: profile?.contact_Email || profile?.email || "N/A",
+        phone: profile?.phone || "N/A",
+        dateOfBirth: profile?.date_Of_Birth || null,
+        languages: safeSplit(profile?.language),
+        location: profile?.location || "N/A",
+        instaUrl: profile?.instagram_Url || null,
+        fbUrl: profile?.facebook_Url || null,
+        interest: safeSplit(profile?.interest),
+      };
+    } else {
+      userProfile = {
+        fullName: isLoadingProfile ? "Loading..." : "N/A",
+        username: derivedUsername || "user",
+        role: effectiveRole || "user",
+        about: isLoadingProfile ? "Loading profile..." : "No description available.",
+        bannerImage: defaultBannerImage,
+        userImage: null,
+        email: user?.email || "N/A",
+        phone: "N/A",
+        dateOfBirth: null,
+        languages: [],
+        location: "N/A",
+        instaUrl: null,
+        fbUrl: null,
+        interest: [],
+      };
+    }
+  } catch (e) {
+    console.error('ProfileLayout: Error creating userProfile:', e);
+    // Fallback to safe defaults
+    userProfile = {
+      fullName: "N/A",
+      username: "user",
+      role: effectiveRole || "user",
+      about: "No description available.",
+      bannerImage: defaultBannerImage,
+      userImage: null,
+      email: "N/A",
+      phone: "N/A",
+      dateOfBirth: null,
+      languages: [],
+      location: "N/A",
+      instaUrl: null,
+      fbUrl: null,
+      interest: [],
+    };
+  }
 
   const ImageSkeleton = ({ width, height, borderRadius = 0 }) => (
     <View
@@ -256,6 +318,34 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
         <Text style={styles.errorSubtext}>
           {profileError?.message || 'An error occurred while loading the profile. Please try again.'}
         </Text>
+      </ScrollView>
+    );
+  }
+
+  // Safety check: if we're still loading, show loading state
+  if (isLoadingProfile && !profile) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.errorContainer}
+      >
+        <ActivityIndicator size="large" color="#1CACF3" />
+        <Text style={styles.errorSubtext}>Loading profile...</Text>
+      </ScrollView>
+    );
+  }
+
+
+  // Ensure userProfile exists before rendering
+  if (!userProfile) {
+    console.error('ProfileLayout: userProfile is null/undefined');
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.errorContainer}
+      >
+        <Text style={styles.errorText}>Error loading profile data</Text>
+        <Text style={styles.errorSubtext}>Please try again later.</Text>
       </ScrollView>
     );
   }
