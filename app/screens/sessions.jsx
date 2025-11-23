@@ -347,6 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.5,
     fontSize: 12,
+    fontFamily: 'Poppins-Medium',
     textTransform: "uppercase",
   },
   listDivider: {

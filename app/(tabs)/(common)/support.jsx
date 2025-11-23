@@ -456,6 +456,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
     letterSpacing: 0.5,
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     textTransform: 'uppercase',
   },

@@ -8,7 +8,7 @@ import Button from "../../components/Button";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import SearchBar from "../../components/SearchBar";
 import { hp } from "../../helpers/common";
-import { useGetTasksPaginatedQuery, useLazyGetTasksPaginatedQuery, useUpdateTaskStatusMutation, useDeleteTaskMutation } from "../../redux/api/taskApi";
+import { useDeleteTaskMutation, useGetTasksPaginatedQuery, useLazyGetTasksPaginatedQuery, useUpdateTaskStatusMutation } from "../../redux/api/taskApi";
 
 const PAGE_SIZE = 5;
 
@@ -546,6 +546,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontSize: 12,
     textTransform: "uppercase",
+    fontFamily: 'Poppins-Medium',
   },
   listDivider: {
     flex: 1,

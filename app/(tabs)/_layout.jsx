@@ -17,7 +17,7 @@ import Profile from "../../assets/icons/Profile";
 import Support from "../../assets/icons/Support";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { COLORS } from "../../constants/theme";
-import { hp } from "../../helpers/common";
+import { hp, wp } from "../../helpers/common";
 import { useCheckUserAccessMutation } from "../../redux/api/checkAuthUserApi";
 import { logout as logoutAction } from "../../redux/slices/authSlice";
 import { supabase } from "../../supabaseClient";
@@ -118,7 +118,7 @@ export default function TabLayout() {
           <Tabs.Screen
             name="(common)/chat"
             options={{
-              tabBarItemStyle: { marginRight: hp(7.5) },
+              tabBarItemStyle: { marginRight: wp(20) },
               tabBarLabel: ({ color }) => (
                 <Text
                   style={{
@@ -193,31 +193,52 @@ export default function TabLayout() {
         </Tabs>
 
         <Pressable
-          onPress={() => router.push('/screens/adminProfile')}
-          style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 }}
+          onPress={() => {
+            try {
+              router.push('/screens/adminProfile');
+            } catch (error) {
+              console.log('Error navigating to admin profile:', error);
+            }
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{
+            position: "absolute",
+            bottom: Platform.OS === "ios" ? hp(8) : hp(5.7) + insets.bottom,
+            left: "50%",
+            transform: [{ translateX: -hp(4.5) }],
+            width: hp(9),
+            height: hp(9),
+            zIndex: 1000,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 6,
+          }}
         >
           <View
             style={{
-              position: "absolute",
-              bottom: Platform.OS === "ios" ? hp(8) : hp(5.5) + insets.bottom,
-              left: "50%",
-              transform: [{ translateX: -hp(4.5) }],
-              width: hp(9),
-              height: hp(9),
-              overflow: "hidden",
-              borderRadius: hp(4.5),
-              backgroundColor: COLORS.primary,
+              width: "100%",
+              height: "100%",
+              overflow: "visible",
+              // borderRadius: hp(4.5),
+              // backgroundColor: COLORS.primary,
               alignItems: "center",
               justifyContent: "center",
-              elevation: 6,
             }}
+            pointerEvents="none"
           >
             <Image
               transition={500}
               cachePolicy={"disk"}
-              contentFit="contain"
-              style={{ width: hp(9), height: hp(9), borderRadius: hp(4.5), overflow: "hidden", objectFit: "cover" }}
-              source={require("../../assets/screens-assets/devlookchatbot.png")}
+              contentFit="cover"
+              style={{ 
+                width: hp(11), 
+                height: hp(11), 
+                // borderRadius: hp(4.5),
+              }}
+              source={require("../../assets/screens-assets/growvibe-light.png")}
+              pointerEvents="none"
             />
           </View>
         </Pressable>

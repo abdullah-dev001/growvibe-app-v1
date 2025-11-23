@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   Modal,
@@ -25,6 +26,7 @@ import { supabase } from "../supabaseClient";
 
 export default function ProfileLayout({ profileUserId = null, profileRole = null, readOnly = false }) {
   const [showImagePopup, setShowImagePopup] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const dispatch = useDispatch();
   const router = useRouter();
 
@@ -35,7 +37,12 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
   const canEditProfile = isOwnProfile && !readOnly;
   
   // Fetch profile using RTK Query (cached, not persisted in Redux)
-  const { data: profile, isLoading: isLoadingProfile } = useGetProfileByRoleQuery(
+  const { 
+    data: profile, 
+    isLoading: isLoadingProfile,
+    error: profileError,
+    isError: isProfileError
+  } = useGetProfileByRoleQuery(
     { userId: effectiveUserId, role: effectiveRole },
     { skip: !effectiveUserId || !effectiveRole }
   );
@@ -67,66 +74,103 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
 
   // Generate signed URLs for existing images
   useEffect(() => {
+    let isMounted = true;
+
     const generateSignedUrls = async () => {
-      if (!profile) {
-        setBannerImageSignedUrl(null);
-        setUserImageSignedUrl(null);
+      if (!profile || !isMounted) {
+        if (isMounted) {
+          setBannerImageSignedUrl(null);
+          setUserImageSignedUrl(null);
+        }
         return;
       }
 
-      // Generate signed URL for banner image
-      if (profile.banner_Image) {
-        const bannerImagePath = extractFilePath(profile.banner_Image);
-        if (bannerImagePath) {
-          try {
-            const { data, error } = await supabase.storage
-              .from("profile-attachments")
-              .createSignedUrl(bannerImagePath, 3600);
-            if (!error && data?.signedUrl) {
-              setBannerImageSignedUrl(data.signedUrl);
-            } else {
-              setBannerImageSignedUrl(null);
+      try {
+        // Generate signed URL for banner image
+        if (profile.banner_Image) {
+          const bannerImagePath = extractFilePath(profile.banner_Image);
+          if (bannerImagePath && isMounted) {
+            try {
+              const { data, error } = await supabase.storage
+                .from("profile-attachments")
+                .createSignedUrl(bannerImagePath, 3600);
+              if (isMounted) {
+                if (!error && data?.signedUrl) {
+                  setBannerImageSignedUrl(data.signedUrl);
+                } else {
+                  setBannerImageSignedUrl(null);
+                }
+              }
+            } catch (e) {
+              if (isMounted) {
+                console.log('Error generating banner image URL:', e);
+                setBannerImageSignedUrl(null);
+              }
             }
-          } catch (e) {
+          } else if (isMounted) {
             setBannerImageSignedUrl(null);
           }
-        } else {
+        } else if (isMounted) {
           setBannerImageSignedUrl(null);
         }
-      } else {
-        setBannerImageSignedUrl(null);
-      }
 
-      // Generate signed URL for user image
-      if (profile.user_Image) {
-        const userImagePath = extractFilePath(profile.user_Image);
-        if (userImagePath) {
-          try {
-            const { data, error } = await supabase.storage
-              .from("profile-attachments")
-              .createSignedUrl(userImagePath, 3600);
-            if (!error && data?.signedUrl) {
-              setUserImageSignedUrl(data.signedUrl);
-            } else {
-              setUserImageSignedUrl(null);
+        // Generate signed URL for user image
+        if (profile.user_Image && isMounted) {
+          const userImagePath = extractFilePath(profile.user_Image);
+          if (userImagePath && isMounted) {
+            try {
+              const { data, error } = await supabase.storage
+                .from("profile-attachments")
+                .createSignedUrl(userImagePath, 3600);
+              if (isMounted) {
+                if (!error && data?.signedUrl) {
+                  setUserImageSignedUrl(data.signedUrl);
+                } else {
+                  setUserImageSignedUrl(null);
+                }
+              }
+            } catch (e) {
+              if (isMounted) {
+                console.log('Error generating user image URL:', e);
+                setUserImageSignedUrl(null);
+              }
             }
-          } catch (e) {
+          } else if (isMounted) {
             setUserImageSignedUrl(null);
           }
-        } else {
+        } else if (isMounted) {
           setUserImageSignedUrl(null);
         }
-      } else {
-        setUserImageSignedUrl(null);
+      } catch (err) {
+        if (isMounted) {
+          console.log('Error in generateSignedUrls:', err);
+          setBannerImageSignedUrl(null);
+          setUserImageSignedUrl(null);
+        }
       }
     };
 
     generateSignedUrls();
+
+    return () => {
+      isMounted = false;
+    };
   }, [profile]);
 
-  // Process profile data
+  // Process profile data with safe null checks
   const emailSource = profile?.contact_Email || profile?.email || user?.email || null;
   const derivedUsername = profile?.username || (emailSource ? emailSource.split("@")[0] : "user");
+  
+  // Safe string splitting helper
+  const safeSplit = (str, delimiter = ",") => {
+    if (!str || typeof str !== 'string') return [];
+    try {
+      return str.split(delimiter).map(item => item.trim()).filter(item => item.length > 0);
+    } catch (e) {
+      return [];
+    }
+  };
+
   const userProfile = profile ? {
     fullName: profile.full_Name || "N/A",
     username: derivedUsername,
@@ -137,11 +181,11 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
     email: profile.contact_Email || "N/A",
     phone: profile.phone || "N/A",
     dateOfBirth: profile.date_Of_Birth || null,
-    languages: profile.language ? profile.language.split(",").map(l => l.trim()) : [],
+    languages: safeSplit(profile.language),
     location: profile.location || "N/A",
     instaUrl: profile.instagram_Url || null,
     fbUrl: profile.facebook_Url || null,
-    interest: profile.interest ? profile.interest.split(",").map(i => i.trim()) : [],
+    interest: safeSplit(profile.interest),
   } : {
     fullName: isLoadingProfile ? "Loading..." : "N/A",
     username: derivedUsername || "user",
@@ -181,6 +225,8 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
         style: "destructive",
         onPress: async () => {
           try {
+            setIsLoggingOut(true);
+            
             // Delete push token before logout
             const { deletePushToken } = await import('../notifications');
             if (user?.id) {
@@ -191,12 +237,28 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
             dispatch(logout());
             router.replace("/");
           } catch (error) {
+            setIsLoggingOut(false);
             Alert.alert("Error", error.message);
           }
         },
       },
     ]);
   };
+
+  // Show error state if profile fetch failed
+  if (isProfileError && !isLoadingProfile && !profile) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.errorContainer}
+      >
+        <Text style={styles.errorText}>Unable to load profile</Text>
+        <Text style={styles.errorSubtext}>
+          {profileError?.message || 'An error occurred while loading the profile. Please try again.'}
+        </Text>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView
@@ -211,7 +273,19 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
           contentFit="cover"
           style={styles.bannerImage}
           source={{ uri: userProfile.bannerImage }}
-          onError={() => {}}
+          onError={(error) => {
+            console.log('Banner image error:', error);
+            // Fallback to default image on error
+            if (userProfile.bannerImage !== defaultBannerImage) {
+              // Already using default, no need to update
+            }
+          }}
+          onLoadStart={() => {
+            // Image is starting to load
+          }}
+          onLoadEnd={() => {
+            // Image finished loading
+          }}
         />
         <View style={styles.avatarContainer}>
           <View style={[styles.avatarWrapper, { height: hp(15.5), width: hp(15.5) }]}>
@@ -223,7 +297,16 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
                   contentFit="cover"
                   style={styles.avatarImage}
                   source={{ uri: userProfile.userImage }}
-                  onError={() => {}}
+                  onError={(error) => {
+                    console.log('User image error:', error);
+                    // Image will fallback to placeholder view
+                  }}
+                  onLoadStart={() => {
+                    // Image is starting to load
+                  }}
+                  onLoadEnd={() => {
+                    // Image finished loading
+                  }}
                 />
               ) : (
                 <View style={[styles.avatarImage, { backgroundColor: "#E5E7EB" }]} />
@@ -376,10 +459,20 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
         {canEditProfile && (
           <Pressable
             onPress={handleLogout}
-            style={styles.logoutButton}
+            style={[styles.logoutButton, isLoggingOut && styles.logoutButtonDisabled]}
+            disabled={isLoggingOut}
           >
-            <Text style={styles.logoutText}>Logout</Text>
-            <Logout size={22} color="#ef4444" strokeWidth={2} />
+            {isLoggingOut ? (
+              <>
+                <Text style={styles.logoutText}>Logging out...</Text>
+                <ActivityIndicator size="small" color="#ef4444" />
+              </>
+            ) : (
+              <>
+                <Text style={styles.logoutText}>Logout</Text>
+                <Logout size={22} color="#ef4444" strokeWidth={2} />
+              </>
+            )}
           </Pressable>
         )}
       </View>
@@ -404,7 +497,16 @@ export default function ProfileLayout({ profileUserId = null, profileRole = null
                   contentFit="cover"
                   style={styles.modalImage}
                   source={{ uri: userProfile.userImage }}
-                  onError={() => {}}
+                  onError={(error) => {
+                    console.log('Modal image error:', error);
+                    // Image will fallback to placeholder view
+                  }}
+                  onLoadStart={() => {
+                    // Image is starting to load
+                  }}
+                  onLoadEnd={() => {
+                    // Image finished loading
+                  }}
                 />
               ) : (
                 <View style={[styles.modalImage, { backgroundColor: "#E5E7EB" }]} />
@@ -429,6 +531,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 48,
+  },
+  errorText: {
+    fontSize: hp(2),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#111827',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: hp(1.5),
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: hp(2),
   },
   bannerContainer: {
     width: '100%',
@@ -638,6 +761,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EF4444',
     marginVertical: 20,
+  },
+  logoutButtonDisabled: {
+    opacity: 0.6,
   },
   logoutText: {
     color: '#EF4444',

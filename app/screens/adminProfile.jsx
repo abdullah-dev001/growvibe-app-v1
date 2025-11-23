@@ -9,11 +9,18 @@ const AdminProfile = () => {
   const [adminId, setAdminId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchAdmin = async () => {
+      if (!isMounted) return;
+      
       setIsLoading(true);
       setError(null);
+      setHasError(false);
+      
       try {
         const { data, error: adminError } = await supabase
           .from('admin_profile')
@@ -22,24 +29,38 @@ const AdminProfile = () => {
           .limit(1)
           .maybeSingle();
 
+        if (!isMounted) return;
+
         if (adminError) {
           setError(adminError.message || 'Failed to load admin profile');
           setAdminId(null);
+          setHasError(true);
         } else if (data?.auth_Id) {
           setAdminId(data.auth_Id);
+          setHasError(false);
         } else {
           setError('Admin profile not found.');
           setAdminId(null);
+          setHasError(true);
         }
       } catch (err) {
-        setError(err.message || 'Failed to load admin profile');
+        if (!isMounted) return;
+        console.log('Error fetching admin profile:', err);
+        setError(err?.message || 'Failed to load admin profile');
         setAdminId(null);
+        setHasError(true);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchAdmin();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (isLoading) {
@@ -53,7 +74,7 @@ const AdminProfile = () => {
     );
   }
 
-  if (error || !adminId) {
+  if (hasError || (!isLoading && !adminId)) {
     return (
       <ScreenWrapper>
         <View style={styles.center}>
@@ -64,13 +85,36 @@ const AdminProfile = () => {
     );
   }
 
-  return (
-    <ProfileLayout
-      profileUserId={adminId}
-      profileRole="admin"
-      readOnly
-    />
-  );
+  if (!adminId) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#1CACF3" />
+          <Text style={styles.statusText}>Loading admin profile...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  try {
+    return (
+      <ProfileLayout
+        profileUserId={adminId}
+        profileRole="admin"
+        readOnly
+      />
+    );
+  } catch (renderError) {
+    console.log('Error rendering ProfileLayout:', renderError);
+    return (
+      <ScreenWrapper>
+        <View style={styles.center}>
+          <Text style={styles.errorTitle}>Unable to display profile</Text>
+          <Text style={styles.errorSubtitle}>An error occurred while loading the profile. Please try again.</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 };
 
 export default AdminProfile;

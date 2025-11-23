@@ -255,6 +255,7 @@ const styles = StyleSheet.create({
   listTitle: {
     color: "#6B7280",
     fontWeight: "600",
+    fontFamily: 'Poppins-Medium',
     letterSpacing: 0.5,
     fontSize: 12,
     textTransform: "uppercase",
